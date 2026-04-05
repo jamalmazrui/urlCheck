@@ -1,0 +1,24 @@
+# Python cache and virtual environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Build output
+build/
+dist/
+*.spec
+
+# urlCheck scan output (generated at runtime)
+untitled-page*/
+error.txt
+results.json
+report.csv
+page.html
+page.png
+report.htm
+report.xlsx
+
+# OS and editor artifacts
+.DS_Store
+Thumbs.db

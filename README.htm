@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>README</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      white-space: pre-wrap;
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<h1 id="urlcheck">urlCheck</h1>
+<p><strong>Author:</strong> Jamal Mazrui<br />
+<strong>License:</strong> MIT</p>
+<p><code>urlCheck</code> is a Windows command-line tool that checks web
+pages for accessibility problems. It opens a page in Microsoft Edge,
+runs the axe-core testing engine, and saves a set of output files in a
+new folder. The folder name comes from the page title.</p>
+<hr />
+<h2 id="what-you-need">What you need</h2>
+<ul>
+<li>Windows 10 or later with Microsoft Edge installed</li>
+<li>Python 3.14 or later from <a
+href="https://www.python.org/downloads/">python.org</a></li>
+<li>An internet connection during each scan (to load the axe-core
+testing engine)</li>
+</ul>
+<hr />
+<h2 id="setup">Setup</h2>
+<p>Install the required Python packages:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>py <span class="at">-3</span>.14 <span class="at">-m</span> pip install -<span class="at">-upgrade</span> pip</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>py <span class="at">-3</span>.14 <span class="at">-m</span> pip install <span class="at">-r</span> requirements.txt</span></code></pre></div>
+<p>Set up Playwright to work with Edge (one time only):</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>py <span class="at">-3</span>.14 <span class="at">-m</span> playwright install msedge</span></code></pre></div>
+<p>No Node.js installation is needed.</p>
+<hr />
+<h2 id="how-to-use-it">How to use it</h2>
+<p>Use <code>urlCheck.cmd</code> instead of <code>urlCheck.exe</code>
+directly. The <code>.cmd</code> wrapper suppresses a harmless internal
+message that can appear when the program closes.</p>
+<p><strong>Show help:</strong></p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>urlCheck.cmd <span class="at">-h</span></span></code></pre></div>
+<p><strong>Show version:</strong></p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>urlCheck.cmd <span class="at">-v</span></span></code></pre></div>
+<p><strong>Check a web page:</strong></p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>urlCheck.cmd https:/<span class="at">/example</span>.com</span></code></pre></div>
+<p><strong>Check a page using just the domain name</strong> (https:// is
+added automatically):</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>urlCheck.cmd microsoft.com</span></code></pre></div>
+<p><strong>Check a JavaScript-heavy page with extra wait
+time:</strong></p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>urlCheck.cmd microsoft.com -<span class="at">-wait</span> 5</span></code></pre></div>
+<p>Use <code>--wait</code> followed by a number of seconds when a page
+loads content slowly, or builds its layout with JavaScript after the
+initial load. Without extra wait time, the scan may run before all
+content is on the page.</p>
+<p><strong>Check a local HTML file:</strong></p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>urlCheck.cmd <span class="st">&quot;C:\work\sample.html&quot;</span></span></code></pre></div>
+<p><strong>Check a list of URLs from a text file:</strong></p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>urlCheck.cmd urls.txt</span></code></pre></div>
+<p>If you are running from source instead of the built
+<code>.exe</code>, use:</p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>py <span class="at">-3</span>.14 urlCheck.py microsoft.com -<span class="at">-wait</span> 3</span></code></pre></div>
+<p>The program prints its name and version right away. Then it shows
+progress as it works. After each scan it prints a short summary of what
+it found.</p>
+<hr />
+<h2 id="scanning-a-list-of-urls">Scanning a list of URLs</h2>
+<p>If you give <code>urlCheck</code> a text file, it treats each line as
+a URL to check. Blank lines and lines that start with <code>#</code> are
+skipped.</p>
+<p>Each URL gets its own output folder. The program does not open
+<code>report.htm</code> automatically when running a list.</p>
+<p><strong>Example <code>urls.txt</code>:</strong></p>
+<pre><code># Pages to check - April 2026
+https://example.com
+https://example.org/about
+https://example.net/contact</code></pre>
+<p>At the end, the program tells you how many pages were checked and how
+many had errors.</p>
+<hr />
+<h2 id="output-files">Output files</h2>
+<p>Each scan creates a folder named after the page title. Inside that
+folder you will find these files:</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>File</th>
+<th>What it contains</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>report.htm</code></td>
+<td>A readable accessibility report with headings and links</td>
+</tr>
+<tr>
+<td><code>report.csv</code></td>
+<td>A spreadsheet-ready list of violations, one row per issue</td>
+</tr>
+<tr>
+<td><code>report.xlsx</code></td>
+<td>An Excel workbook with multiple sheets of results</td>
+</tr>
+<tr>
+<td><code>results.json</code></td>
+<td>The full raw data from axe-core, including all metadata</td>
+</tr>
+<tr>
+<td><code>page.html</code></td>
+<td>A saved copy of the page source with styles included</td>
+</tr>
+<tr>
+<td><code>page.png</code></td>
+<td>A full-page screenshot</td>
+</tr>
+</tbody>
+</table>
+<p>If an error occurs, the program writes an <code>error.txt</code> file
+to the folder instead.</p>
+<h3 id="report.htm">report.htm</h3>
+<p>This is the main report. It has a table of contents with anchor links
+so you can jump to any section. Sections include run details, a count of
+issues by type, the most common problems, and a full list of violations
+with HTML snippets. At the end there is a glossary and links to public
+accessibility resources.</p>
+<h3 id="report.csv">report.csv</h3>
+<p>Each row is one failing element on the page. Columns include the rule
+name, impact level, a description of the problem, the CSS selector of
+the failing element, and the HTML of that element. All fields are fully
+quoted so the file opens cleanly in Excel, even when HTML attributes
+contain quotes.</p>
+<p>Columns included:</p>
+<p><code>scanTimestampUtc</code>, <code>pageTitle</code>,
+<code>pageUrl</code>, <code>browserVersion</code>,
+<code>axeSource</code>, <code>outcome</code>, <code>ruleId</code>,
+<code>impact</code>, <code>description</code>, <code>help</code>,
+<code>helpUrl</code>, <code>tags</code>, <code>wcagRefs</code>,
+<code>standardsRefs</code>, <code>ruleNodeCount</code>,
+<code>ruleNodeIndex</code>, <code>target</code>, <code>html</code>,
+<code>failureSummary</code></p>
+<h3 id="report.xlsx">report.xlsx</h3>
+<p>An Excel workbook with four sheets:</p>
+<ul>
+<li><strong>Metadata</strong> — URL, page title, browser version, scan
+time, and file names</li>
+<li><strong>Summary</strong> — counts of violations by impact level and
+most common rules</li>
+<li><strong>Results</strong> — same data as <code>report.csv</code>, one
+row per issue</li>
+<li><strong>Glossary</strong> — definitions of terms and a list of steps
+the program follows</li>
+</ul>
+<h3 id="results.json">results.json</h3>
+<p>The complete axe-core output plus metadata about the scan. This file
+includes all four outcome types (violations, incomplete passes, and
+inapplicable rules), not just violations.</p>
+<h3 id="page.html">page.html</h3>
+<p>A snapshot of the page as the browser saw it. External CSS and
+JavaScript files are inlined where the program can retrieve them.</p>
+<h3 id="page.png">page.png</h3>
+<p>A full-page screenshot taken at a 1600 x 1440 viewport.</p>
+<hr />
+<h2 id="notes">Notes</h2>
+<ul>
+<li><code>urlCheck</code> only reports violations. It does not replace
+manual testing.</li>
+<li>If the CDN that hosts axe-core is not reachable, the scan will
+fail.</li>
+<li>The tool works with web URLs and local <code>.html</code>,
+<code>.htm</code>, and <code>.xhtml</code> files.</li>
+</ul>
+<hr />
+<h2 id="developer-build-steps">Developer build steps</h2>
+<h3 id="install-build-tools-and-dependencies">Install build tools and
+dependencies</h3>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>py <span class="at">-3</span>.14 <span class="at">-m</span> pip install -<span class="at">-upgrade</span> pip</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>py <span class="at">-3</span>.14 <span class="at">-m</span> pip install <span class="at">-r</span> requirements.txt</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>py <span class="at">-3</span>.14 <span class="at">-m</span> pip install <span class="st">&quot;pyinstaller&gt;=6.19.0&quot;</span></span></code></pre></div>
+<h3 id="set-up-playwright-for-edge">Set up Playwright for Edge</h3>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>py <span class="at">-3</span>.14 <span class="at">-m</span> playwright install msedge</span></code></pre></div>
+<h3 id="build-the-executable">Build the executable</h3>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>py <span class="at">-3</span>.14 <span class="at">-m</span> PyInstaller -<span class="at">-clean</span> -<span class="at">-noconfirm</span> -<span class="at">-onefile</span> -<span class="at">-name</span> urlCheck urlCheck.py</span></code></pre></div>
+<p>The result is at:</p>
+<pre><code>dist\urlCheck.exe</code></pre>
+<h3 id="automated-build">Automated build</h3>
+<p>Run the included script, which installs dependencies, builds the
+executable, and copies <code>urlCheck.cmd</code> into the
+<code>dist\</code> folder:</p>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>buildUrlCheck.cmd</span></code></pre></div>
+<p>Distribute both files together:</p>
+<pre><code>dist\urlCheck.exe
+dist\urlCheck.cmd</code></pre>
+<p>The target machine needs Microsoft Edge installed but does not need
+Python.</p>
+<hr />
+<h2 id="license">License</h2>
+<p>MIT License. See <code>license.htm</code>.</p>
+</body>
+</html>
