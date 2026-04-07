@@ -1,4 +1,4 @@
-import argparse, csv, datetime, html, io, json, os, pathlib, re, signal, sys, traceback, urllib.error, urllib.parse, urllib.request
+import argparse, csv, ctypes, datetime, html, io, json, os, pathlib, re, signal, sys, traceback, urllib.error, urllib.parse, urllib.request
 from playwright.sync_api import sync_playwright
 
 import openpyxl
@@ -24,6 +24,7 @@ iNetworkIdleTimeoutMs = 8000
 iSuffixDigits = 3
 
 sAccessibilityInsightsUrl = "https://accessibilityinsights.io/docs/web/overview/"
+sAccessibilityYamlName = "page.yaml"
 sBrowserChannel = "msedge"
 sCsvName = "report.csv"
 sErrorReportName = "error.txt"
@@ -31,13 +32,13 @@ sFallbackTitle = "untitled-page"
 sJsonName = "results.json"
 sMsAccessibilityUrl = "https://learn.microsoft.com/accessibility/"
 sProgramName = "urlCheck"
-sProgramVersion = "1.7.0"
+sProgramVersion = "1.9.8"
 sReportName = "report.htm"
 sReportWorkbookName = "report.xlsx"
 sScreenshotName = "page.png"
-sSourceName = "page.html"
+sSourceName = "page.htm"
 sUsage = "Usage: urlCheck [options] <url, domain, local html file, or url-list text file>"
-sUserAgent = "urlCheck/1.7.0 (+Playwright Python + axe-core)"
+sUserAgent = "urlCheck/1.9.8 (+Playwright Python + axe-core)"
 sWcagBaseUrl = "https://www.w3.org/WAI/WCAG22/Understanding/"
 
 
@@ -578,6 +579,7 @@ def buildReportHtml(dResults, dMetadata, lRows):
         f"<li><a href=\"{html.escape(sReportWorkbookName)}\">{html.escape(sReportWorkbookName)}</a> — Excel workbook</li>",
         f"<li><a href=\"{html.escape(sCsvName)}\">{html.escape(sCsvName)}</a> — spreadsheet of violations</li>",
         f"<li><a href=\"{html.escape(sJsonName)}\">{html.escape(sJsonName)}</a> — full raw data</li>",
+        f"<li><a href=\"{html.escape(sAccessibilityYamlName)}\">{html.escape(sAccessibilityYamlName)}</a> — ARIA accessibility tree</li>",
         f"<li><a href=\"{html.escape(sSourceName)}\">{html.escape(sSourceName)}</a> — saved page source</li>",
         f"<li><a href=\"{html.escape(sScreenshotName)}\">{html.escape(sScreenshotName)}</a> — page screenshot</li>",
     ]
@@ -887,6 +889,31 @@ def buildRowDict(dMetadata, sOutcome, dRule, sRuleId, sHelp, sHelpUrl, sTags, sW
     }
 
 
+def cleanPreviousTempDirs():
+    """Remove _MEI* temporary directories in %TEMP% left by previous runs of
+    this program. The current run's own directory (sys._MEIPASS) is skipped.
+    Directories belonging to currently running PyInstaller applications cannot
+    be deleted because their DLLs are locked in memory; shutil.rmtree will
+    raise an exception on the first locked file and the whole directory is left
+    intact. Only fully-exited runs leave unlocked directories, so this is safe
+    to run against all _MEI* siblings regardless of which program created them.
+    Has no effect when running from source (sys._MEIPASS is absent)."""
+    import shutil
+    pathDir = None
+    pathTemp = None
+    sCurrentMei = ""
+
+    sCurrentMei = getattr(sys, "_MEIPASS", "")
+    if not sCurrentMei: return
+    pathTemp = pathlib.Path(sCurrentMei).parent
+    for pathDir in pathTemp.glob("_MEI*"):
+        if pathDir == pathlib.Path(sCurrentMei): continue
+        try:
+            shutil.rmtree(str(pathDir))
+        except Exception:
+            pass
+
+
 def chooseOutputDir(pathBaseDir, sPageTitle):
     iIndex = 0
     pathCandidate = None
@@ -925,11 +952,21 @@ def fetchText(sUrl):
     return sText
 
 
-def getAxeScript(page):
+def getAxeScript(page, sPreFetchedContent=""):
     oError = None
     sAxeScript = ""
     sUrl = ""
 
+    # If we have pre-fetched content, inject it directly — this bypasses CDN
+    # reachability issues and avoids CSP blocks on external script URLs.
+    if sPreFetchedContent:
+        for sUrl in aAxeCdnUrls:
+            try:
+                page.add_script_tag(content=sPreFetchedContent)
+                return sUrl
+            except Exception as oError:
+                break
+    # Fall back to URL injection then content fetch per CDN URL
     for sUrl in aAxeCdnUrls:
         try:
             page.add_script_tag(url=sUrl)
@@ -1175,14 +1212,23 @@ def parseArguments():
     argParser = argparse.ArgumentParser(
         prog=sProgramName,
         description=(
-            "Open a web page or local HTML file in Microsoft Edge, run axe-core, "
-            "and write structured accessibility outputs. "
+            "Check a web page or local HTML file for accessibility problems and save a set of output files. "
             "Pass a text file containing one URL per line to scan multiple pages in sequence."
         ),
         epilog=(
-            f"Single URL:  {sProgramName} https://example.com\n"
-            f"Local file:  {sProgramName} C:\\work\\sample.html\n"
-            f"URL list:    {sProgramName} urls.txt"
+            f"Single URL:   {sProgramName} https://example.com\n"
+            f"Domain only:  {sProgramName} microsoft.com\n"
+            f"Local file:   {sProgramName} C:\\work\\sample.html\n"
+            f"URL list:     {sProgramName} urls.txt\n"
+            f"\n"
+            f"Output files are saved in a folder named after the page title:\n"
+            f"  report.htm   Accessibility report with headings and links\n"
+            f"  report.csv   Violations as a spreadsheet, one row per issue\n"
+            f"  report.xlsx  Excel workbook with summary and full results\n"
+            f"  results.json Full raw scan data including all metadata\n"
+            f"  page.yaml    ARIA accessibility tree of the page\n"
+            f"  page.htm     Saved page source with styles inlined\n"
+            f"  page.png     Full-page screenshot"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -1190,23 +1236,15 @@ def parseArguments():
         "inputValue",
         nargs="?",
         help=(
-            "URL, local HTML file, or path to a text file containing one URL per line. "
-            "If a text file is given, each URL is scanned in sequence and report.html "
-            "is not opened automatically."
+            "URL, domain name, local HTML file, or path to a text file containing one URL per line. "
+            "When a text file is given, each URL is scanned in sequence and the report is not opened automatically."
         ),
-    )
-    argParser.add_argument(
-        "--wait",
-        type=int,
-        default=0,
-        metavar="SECONDS",
-        help="Extra seconds to wait after the page loads before running axe. Useful for JS-heavy pages. Default: 0.",
     )
     argParser.add_argument("-v", "--version", action="version", version=f"%(prog)s {sProgramVersion}")
     return argParser.parse_args()
 
 
-def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, bOpenReport, iExtraWaitMs=0):
+def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, bOpenReport, sAxeContent=""):
     """Run a single-URL scan. Returns the output directory path string, or raises."""
     dMetadata = {}
     dResults = {}
@@ -1237,14 +1275,11 @@ def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, bOpenReport, 
         oPage.wait_for_timeout(500)
         oPage.evaluate("window.scrollTo(0, 0)")
         oPage.wait_for_timeout(500)
-        if iExtraWaitMs > 0:
-            print(f"  Waiting {iExtraWaitMs // 1000}s extra ...")
-            oPage.wait_for_timeout(iExtraWaitMs)
         sPageTitle = str(oPage.title() or sFallbackTitle)
         pathOutputDir = chooseOutputDir(pathBaseDir, sPageTitle)
         print(f"  Output:    {pathOutputDir}")
         print("  Running axe-core ...")
-        sAxeSource = getAxeScript(oPage)
+        sAxeSource = getAxeScript(oPage, sAxeContent)
         ensureSuccess(bool(oPage.evaluate("() => Boolean(window.axe && window.axe.run)")), "axe-core did not load into the page.")
         sResultsJson = oPage.evaluate("async (opts) => JSON.stringify(await window.axe.run(document, opts))", aAxeRunOptions)
         dResults = json.loads(sResultsJson)
@@ -1257,7 +1292,6 @@ def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, bOpenReport, 
             "normalizedUrl": sNormalizedUrl,
             "pageTitle": sPageTitle,
             "pageUrl": str(oPage.url or sNormalizedUrl),
-            "extraWaitMs": iExtraWaitMs,
             "postLoadDelayMs": iDefaultPostLoadDelayMs,
             "programName": sProgramName,
             "programVersion": sProgramVersion,
@@ -1279,6 +1313,12 @@ def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, bOpenReport, 
                 oPage.screenshot(path=str(pathlib.Path(pathOutputDir, sScreenshotName)), full_page=False, timeout=15000)
             except Exception:
                 pass
+        try:
+            locatorBody = oPage.locator("body")
+            sYaml = locatorBody.aria_snapshot()
+            pathlib.Path(pathOutputDir, sAccessibilityYamlName).write_text(sYaml, encoding="utf-8-sig")
+        except Exception:
+            pass
         pathlib.Path(pathOutputDir, sReportName).write_text(buildReportHtml(dResults, dMetadata, lRows), encoding="utf-8")
         writeReportWorkbook(pathlib.Path(pathOutputDir, sReportWorkbookName), dResults, dMetadata, lRows)
         print(buildConsoleSummary(dResults, dMetadata, str(pathOutputDir)))
@@ -1367,6 +1407,7 @@ def writeReportWorkbook(pathWorkbook, dResults, dMetadata, lRows):
         ["axe result types", ", ".join(aAxeRunOptions.get("resultTypes", []))],
         ["Screenshot file", sScreenshotName],
         ["JSON file", sJsonName],
+        ["ARIA tree file", sAccessibilityYamlName],
         ["CSV file", sCsvName],
         ["Source snapshot file", sSourceName],
         ["HTML report file", sReportName],
@@ -1460,6 +1501,15 @@ def main():
     # Playwright suppresses the default SIGINT handler. Restore it so Ctrl+C works.
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
+    # On Windows, PyInstaller sets the DLL search path to the _MEI temporary folder
+    # via SetDllDirectoryW. Child processes (Playwright driver, Edge) inherit this,
+    # acquiring handles into _MEI that prevent the bootloader from deleting it on exit.
+    # Resetting the DLL directory to NULL before launching Playwright prevents this.
+    if sys.platform == "win32":
+        ctypes.windll.kernel32.SetDllDirectoryW(None)
+
+    cleanPreviousTempDirs()
+
     print(f"{sProgramName} {sProgramVersion}")
 
     arguments = parseArguments()
@@ -1474,7 +1524,7 @@ def main():
         try:
             lUrls = getUrlsFromFile(sInput)
         except Exception as oError:
-            print(f"Error reading URL list file: {oError}", file=sys.stderr)
+            print(f"Error reading URL list file: {oError}")
             return 1
         bOpenReport = False
         iUrlTotal = len(lUrls)
@@ -1494,17 +1544,26 @@ def main():
                 f"--window-size={iDefaultViewportWidth},{iDefaultViewportHeight}",
             ]
             browser = browserType.launch(channel=sBrowserChannel, headless=bDefaultHeadless, args=lArgs)
-            context = browser.new_context(ignore_https_errors=bDefaultIgnoreHttpsErrors, user_agent=sUserAgent, viewport={"width": iDefaultViewportWidth, "height": iDefaultViewportHeight})
+            context = browser.new_context(bypass_csp=True, ignore_https_errors=bDefaultIgnoreHttpsErrors, user_agent=sUserAgent, viewport={"width": iDefaultViewportWidth, "height": iDefaultViewportHeight})
+            # Pre-fetch axe-core content once so CSP-restricted sites can still be scanned.
+            sAxeContent = ""
+            for sAxeUrl in aAxeCdnUrls:
+                try:
+                    sAxeContent = fetchText(sAxeUrl)
+                    print(f"  axe-core pre-fetched from {sAxeUrl}")
+                    break
+                except Exception:
+                    continue
             iUrlIndex = 0
             for sUrl in lUrls:
                 iUrlIndex += 1
                 sNormalizedUrl = getNormalizedUrl(sUrl) if isUrlListFile(sInput) else sUrl
                 if iUrlTotal > 1: print(f"\n[{iUrlIndex}/{iUrlTotal}] {sNormalizedUrl}")
                 try:
-                    scanUrl(sUrl if isUrlListFile(sInput) else sInput, sNormalizedUrl, browser, context, pathBaseDir, bOpenReport, arguments.wait * 1000)
+                    scanUrl(sUrl if isUrlListFile(sInput) else sInput, sNormalizedUrl, browser, context, pathBaseDir, bOpenReport, sAxeContent)
                 except Exception as oError:
                     iErrorCount += 1
-                    print(f"  Error scanning {sNormalizedUrl}: {oError}", file=sys.stderr)
+                    print(f"  Error scanning {sNormalizedUrl}: {oError}")
                     pathOutputDir = chooseOutputDir(pathBaseDir, sFallbackTitle)
                     pathlib.Path(pathOutputDir, sErrorReportName).write_text("\n\n".join([str(oError), traceback.format_exc()[:iMaxErrorTextLen]]), encoding="utf-8")
             if iUrlTotal > 1:

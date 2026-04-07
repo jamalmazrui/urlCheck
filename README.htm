@@ -241,33 +241,23 @@
 <p><strong>Author:</strong> Jamal Mazrui<br />
 <strong>License:</strong> MIT</p>
 <p><code>urlCheck</code> is a Windows command-line tool that checks web
-pages for accessibility problems. It opens a page in Microsoft Edge,
-runs the axe-core testing engine, and saves a set of output files in a
-new folder. The folder name comes from the page title.</p>
+pages for accessibility problems. It opens a page in a browser, runs the
+axe-core testing engine, and saves a set of output files in a new folder
+named after the page title.</p>
+<p>The whole urlCheck project may be downloaded in a single zip archive
+from: <a
+href="http://GitHub.com/JamalMazrui/urlCheck/archive/main.zip">http://GitHub.com/JamalMazrui/urlCheck/archive/main.zip</a></p>
 <hr />
 <h2 id="what-you-need">What you need</h2>
 <ul>
-<li>Windows 10 or later with Microsoft Edge installed</li>
-<li>Python 3.14 or later from <a
-href="https://www.python.org/downloads/">python.org</a></li>
-<li>An internet connection during each scan (to load the axe-core
-testing engine)</li>
+<li>Windows 10 or later</li>
+<li>An internet connection during each scan</li>
 </ul>
 <hr />
-<h2 id="setup">Setup</h2>
-<p>Install the required Python packages:</p>
-<div class="sourceCode" id="cb1"><pre
-class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>py <span class="at">-3</span>.14 <span class="at">-m</span> pip install -<span class="at">-upgrade</span> pip</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>py <span class="at">-3</span>.14 <span class="at">-m</span> pip install <span class="at">-r</span> requirements.txt</span></code></pre></div>
-<p>Set up Playwright to work with Edge (one time only):</p>
-<div class="sourceCode" id="cb2"><pre
-class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>py <span class="at">-3</span>.14 <span class="at">-m</span> playwright install msedge</span></code></pre></div>
-<p>No Node.js installation is needed.</p>
-<hr />
 <h2 id="how-to-use-it">How to use it</h2>
-<p>Use <code>urlCheck.cmd</code> instead of <code>urlCheck.exe</code>
-directly. The <code>.cmd</code> wrapper suppresses a harmless internal
-message that can appear when the program closes.</p>
+<p>Use <code>urlCheck.cmd</code> to run the program. The
+<code>.cmd</code> wrapper suppresses a harmless internal message that can
+appear when the program closes.</p>
 <p><strong>Show help:</strong></p>
 <div class="sourceCode" id="cb3"><pre
 class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>urlCheck.cmd <span class="at">-h</span></span></code></pre></div>
@@ -281,25 +271,13 @@ class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb5-1"><a href=
 added automatically):</p>
 <div class="sourceCode" id="cb6"><pre
 class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>urlCheck.cmd microsoft.com</span></code></pre></div>
-<p><strong>Check a JavaScript-heavy page with extra wait
-time:</strong></p>
-<div class="sourceCode" id="cb7"><pre
-class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>urlCheck.cmd microsoft.com -<span class="at">-wait</span> 5</span></code></pre></div>
-<p>Use <code>--wait</code> followed by a number of seconds when a page
-loads content slowly, or builds its layout with JavaScript after the
-initial load. Without extra wait time, the scan may run before all
-content is on the page.</p>
 <p><strong>Check a local HTML file:</strong></p>
 <div class="sourceCode" id="cb8"><pre
 class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>urlCheck.cmd <span class="st">&quot;C:\work\sample.html&quot;</span></span></code></pre></div>
 <p><strong>Check a list of URLs from a text file:</strong></p>
 <div class="sourceCode" id="cb9"><pre
 class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>urlCheck.cmd urls.txt</span></code></pre></div>
-<p>If you are running from source instead of the built
-<code>.exe</code>, use:</p>
-<div class="sourceCode" id="cb10"><pre
-class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>py <span class="at">-3</span>.14 urlCheck.py microsoft.com -<span class="at">-wait</span> 3</span></code></pre></div>
-<p>The program prints its name and version right away. Then it shows
+<p>The program prints its name and version right away, then shows
 progress as it works. After each scan it prints a short summary of what
 it found.</p>
 <hr />
@@ -349,7 +327,11 @@ folder you will find these files:</p>
 <td>The full raw data from axe-core, including all metadata</td>
 </tr>
 <tr>
-<td><code>page.html</code></td>
+<td><code>page.yaml</code></td>
+<td>The ARIA accessibility tree of the page</td>
+</tr>
+<tr>
+<td><code>page.htm</code></td>
 <td>A saved copy of the page source with styles included</td>
 </tr>
 <tr>
@@ -397,7 +379,16 @@ the program follows</li>
 <p>The complete axe-core output plus metadata about the scan. This file
 includes all four outcome types (violations, incomplete passes, and
 inapplicable rules), not just violations.</p>
-<h3 id="page.html">page.html</h3>
+<h3 id="page.yaml">page.yaml</h3>
+<p>The ARIA accessibility tree of the page, captured using the Playwright
+<code>locator.aria_snapshot()</code> API on the page body. The output is
+a YAML file representing the hierarchical structure of accessible
+elements, showing roles, accessible names, ARIA attributes such as
+level, checked, and expanded, and text content. Only nodes visible to
+assistive technologies are included. The file is encoded as UTF-8 with a
+byte-order mark (BOM). If the installed version of Playwright does not
+support this API the file is silently omitted.</p>
+<h3 id="page.htm">page.htm</h3>
 <p>A snapshot of the page as the browser saw it. External CSS and
 JavaScript files are inlined where the program can retrieve them.</p>
 <h3 id="page.png">page.png</h3>
@@ -405,29 +396,35 @@ JavaScript files are inlined where the program can retrieve them.</p>
 <hr />
 <h2 id="notes">Notes</h2>
 <ul>
-<li><code>urlCheck</code> only reports violations. It does not replace
-manual testing.</li>
-<li>If the CDN that hosts axe-core is not reachable, the scan will
-fail.</li>
+<li><code>urlCheck</code> only reports violations automatically. It does
+not replace manual testing.</li>
+<li>If the server that hosts the accessibility testing engine is not
+reachable, the scan will fail.</li>
 <li>The tool works with web URLs and local <code>.html</code>,
 <code>.htm</code>, and <code>.xhtml</code> files.</li>
 </ul>
 <hr />
-<h2 id="developer-build-steps">Developer build steps</h2>
-<h3 id="install-build-tools-and-dependencies">Install build tools and
-dependencies</h3>
+<h2 id="development">Development</h2>
+<p>This section is for developers who want to build
+<code>urlCheck.exe</code> from source.</p>
+<h3 id="prerequisites">Prerequisites</h3>
+<ul>
+<li>Python 3.14 or later from <a
+href="https://www.python.org/downloads/">python.org</a></li>
+<li>The source files from this repository</li>
+</ul>
+<h3 id="install-build-dependencies">Install build dependencies</h3>
 <div class="sourceCode" id="cb12"><pre
 class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>py <span class="at">-3</span>.14 <span class="at">-m</span> pip install -<span class="at">-upgrade</span> pip</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>py <span class="at">-3</span>.14 <span class="at">-m</span> pip install <span class="at">-r</span> requirements.txt</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>py <span class="at">-3</span>.14 <span class="at">-m</span> pip install -<span class="at">-upgrade</span> <span class="at">-r</span> requirements.txt</span>
 <span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>py <span class="at">-3</span>.14 <span class="at">-m</span> pip install <span class="st">&quot;pyinstaller&gt;=6.19.0&quot;</span></span></code></pre></div>
-<h3 id="set-up-playwright-for-edge">Set up Playwright for Edge</h3>
+<h3 id="set-up-the-browser-driver">Set up the browser driver</h3>
 <div class="sourceCode" id="cb13"><pre
 class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>py <span class="at">-3</span>.14 <span class="at">-m</span> playwright install msedge</span></code></pre></div>
 <h3 id="build-the-executable">Build the executable</h3>
 <div class="sourceCode" id="cb14"><pre
 class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>py <span class="at">-3</span>.14 <span class="at">-m</span> PyInstaller -<span class="at">-clean</span> -<span class="at">-noconfirm</span> -<span class="at">-onefile</span> -<span class="at">-name</span> urlCheck urlCheck.py</span></code></pre></div>
-<p>The result is at:</p>
-<pre><code>dist\urlCheck.exe</code></pre>
+<p>The result is at <code>dist\urlCheck.exe</code>.</p>
 <h3 id="automated-build">Automated build</h3>
 <p>Run the included script, which installs dependencies, builds the
 executable, and copies <code>urlCheck.cmd</code> into the
@@ -437,8 +434,10 @@ class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb16-1"><a href
 <p>Distribute both files together:</p>
 <pre><code>dist\urlCheck.exe
 dist\urlCheck.cmd</code></pre>
-<p>The target machine needs Microsoft Edge installed but does not need
-Python.</p>
+<h3 id="running-from-source">Running from source</h3>
+<p>To run without building the executable:</p>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>py <span class="at">-3</span>.14 urlCheck.py microsoft.com</span></code></pre></div>
 <hr />
 <h2 id="license">License</h2>
 <p>MIT License. See <code>license.htm</code>.</p>

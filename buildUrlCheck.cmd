@@ -1,11 +1,11 @@
 @echo off
 setlocal
 
-echo Installing Python dependencies...
+echo Installing Python dependencies (includes Playwright 1.58+ for aria_snapshot support)...
 py -3.14 -m pip install --upgrade pip
 if errorlevel 1 exit /b %errorlevel%
 
-py -3.14 -m pip install -r requirements.txt
+py -3.14 -m pip install --upgrade -r requirements.txt
 if errorlevel 1 exit /b %errorlevel%
 
 py -3.14 -m pip install "pyinstaller>=6.19.0"
