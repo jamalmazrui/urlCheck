@@ -142,10 +142,10 @@ Columns included:
 
 An Excel workbook with four sheets:
 
-- **Metadata** — URL, page title, browser version, scan time, and file names
-- **Summary** — counts of violations by impact level and most common rules
-- **Results** — same data as `report.csv`, one row per issue
-- **Glossary** — definitions of terms and a list of steps the program follows
+- **Metadata** - URL, page title, browser version, scan time, and file names
+- **Summary** - counts of violations by impact level and most common rules
+- **Results** - same data as `report.csv`, one row per issue
+- **Glossary** - definitions of terms and a list of steps the program follows
 
 ### results.json
 
@@ -213,6 +213,10 @@ dist\urlCheck.cmd
 ```
 
 The target machine needs Microsoft Edge installed but does not need Python.
+
+The whole urlCheck project may be downloaded in a single zip archive from the following address:
+
+<http://GitHub.com/JamalMazrui/urlCheck/archive/main.zip>
 
 ---
 
