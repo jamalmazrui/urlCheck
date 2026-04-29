@@ -1,9 +1,15 @@
-import argparse, csv, ctypes, datetime, html, io, json, os, pathlib, re, signal, sys, traceback, urllib.error, urllib.parse, urllib.request
-from playwright.sync_api import sync_playwright
+import argparse, csv, ctypes, datetime, html, io, json, os, pathlib, platform, re, shutil, signal, struct, subprocess, sys, traceback, urllib.error, urllib.parse, urllib.request
 
 import openpyxl
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
+from playwright.sync_api import sync_playwright
+
+# pythonnet (the `clr` module that bridges into the .NET Framework) is imported
+# lazily inside showGuiDialog and showFinalGuiMessage so the CLI path has no
+# GUI cost or hard runtime dependency on it. The .NET Framework 4.8 ships
+# with every supported Windows 10 (since 1903) and Windows 11; no extra
+# runtime install is required.
 
 
 # --- Constants ---
@@ -26,19 +32,22 @@ iSuffixDigits = 3
 sAccessibilityInsightsUrl = "https://accessibilityinsights.io/docs/web/overview/"
 sAccessibilityYamlName = "page.yaml"
 sBrowserChannel = "msedge"
+sConfigDirName = "urlCheck"
+sConfigFileName = "urlCheck.ini"
 sCsvName = "report.csv"
 sErrorReportName = "error.txt"
 sFallbackTitle = "untitled-page"
 sJsonName = "results.json"
+sLogFileName = "urlCheck.log"
 sMsAccessibilityUrl = "https://learn.microsoft.com/accessibility/"
 sProgramName = "urlCheck"
-sProgramVersion = "1.9.8"
+sProgramVersion = "1.10.0"
 sReportName = "report.htm"
 sReportWorkbookName = "report.xlsx"
 sScreenshotName = "page.png"
 sSourceName = "page.htm"
 sUsage = "Usage: urlCheck [options] <url, domain, local html file, or url-list text file>"
-sUserAgent = "urlCheck/1.9.8 (+Playwright Python + axe-core)"
+sUserAgent = "urlCheck/1.10.0 (+Playwright Python + axe-core)"
 sWcagBaseUrl = "https://www.w3.org/WAI/WCAG22/Understanding/"
 
 
@@ -1000,7 +1009,10 @@ def getImpactRows(lRows):
 def getNormalizedUrl(sInput):
     """Convert a user-supplied input to a fully qualified URL or local file URI.
     Accepts bare domains (microsoft.com), IP addresses, paths with or without
-    scheme, and local HTML files. Unrecognised inputs are returned unchanged."""
+    scheme, and local files. Any existing local file is treated as HTML to be
+    loaded in the browser, regardless of its extension; the user is
+    responsible for supplying an HTML-renderable file. Unrecognised inputs
+    are returned unchanged."""
     oPath = None
     sCandidate = ""
     sSuffix = ""
@@ -1010,12 +1022,14 @@ def getNormalizedUrl(sInput):
     sLower = sCandidate.lower()
     # Already has a scheme — pass through as-is
     if "://" in sLower: return sCandidate
-    # Existing local HTML file
-    oPath = pathlib.Path(sCandidate).expanduser().resolve()
-    if oPath.exists() and oPath.is_file() and oPath.suffix.lower() in aAllowedLocalExtensions:
-        return oPath.as_uri()
-    # Existing non-HTML file — treat as URL list; do not URL-ify
-    if oPath.exists() and oPath.is_file(): return sCandidate
+    # Existing local file -- treat as HTML regardless of extension. urlCheck's
+    # contract leaves it to the user to ensure the file is HTML-renderable.
+    try:
+        oPath = pathlib.Path(sCandidate).expanduser().resolve()
+        if oPath.exists() and oPath.is_file():
+            return oPath.as_uri()
+    except Exception:
+        pass
     # Has a recognised local file extension and no path separator — treat as local filename
     sSuffix = pathlib.Path(sCandidate.split("?")[0].split("#")[0]).suffix.lower()
     if sSuffix in aLocalFileExts and "/" not in sCandidate: return sCandidate
@@ -1125,21 +1139,101 @@ def getSummaryData(dResults, lRows):
 
 
 def getUrlsFromFile(sInput):
-    """Read a text file and return a list of non-blank URLs, one per line.
-    Raises FileNotFoundError or PermissionError if the file cannot be read.
-    Each line is stripped; lines that are blank or start with # are ignored."""
+    """Read a plain text file and return a list of non-blank URLs/paths.
+
+    Each line is stripped; lines that are blank or start with # are ignored.
+    The file's contents are sniffed up-front: if the leading bytes look
+    binary (NUL bytes or a high ratio of non-printable bytes), we raise a
+    clear error rather than producing garbage URLs. Lines that don't look
+    URL-like are also rejected with a precise line-number error message.
+
+    Raises ValueError on parse failure with a message suitable for the
+    user. Raises OSError (FileNotFoundError, PermissionError) if the file
+    cannot be opened.
+    """
+    bLikelyBinary = False
+    bytesHead = b""
+    iBlankLines = 0
+    iLineNo = 0
+    iSampleLen = 4096
     lUrls = []
     oPath = None
     sLine = ""
+    sNormalized = ""
 
     oPath = pathlib.Path(sInput).expanduser().resolve()
-    with oPath.open("r", encoding="utf-8", errors="replace") as oFile:
-        for sLine in oFile:
-            sLine = sLine.strip()
-            if not sLine or sLine.startswith("#"): continue
-            lUrls.append(sLine)
-    if not lUrls: raise ValueError(f"No URLs found in file: {sInput}")
+
+    # Sniff the first few KB to catch binary files. NUL bytes are a strong
+    # signal; otherwise any chunk where >30% of the bytes are outside the
+    # printable-ASCII / common-control range is treated as binary.
+    try:
+        with oPath.open("rb") as oRaw:
+            bytesHead = oRaw.read(iSampleLen)
+    except Exception as oError:
+        raise OSError(f"Could not read {sInput}: {oError}")
+    if b"\x00" in bytesHead:
+        bLikelyBinary = True
+    elif bytesHead:
+        iPrintable = sum(1 for b in bytesHead
+            if (32 <= b < 127) or b in (9, 10, 13))
+        if iPrintable / len(bytesHead) < 0.7:
+            bLikelyBinary = True
+    if bLikelyBinary:
+        raise ValueError(
+            f"File does not appear to be plain text: {sInput}\n"
+            "urlCheck expects a plain text file with one URL per line. "
+            "If this is a Word, Excel, PDF, or other binary file, export "
+            "or save it as plain text first.")
+
+    # Now read as text. Use UTF-8 with strict error handling to surface
+    # encoding problems explicitly; UTF-8-with-BOM is also accepted.
+    try:
+        with oPath.open("r", encoding="utf-8-sig", errors="strict") as oFile:
+            iLineNo = 0
+            for sLine in oFile:
+                iLineNo += 1
+                sLine = sLine.strip()
+                if not sLine:
+                    iBlankLines += 1
+                    continue
+                if sLine.startswith("#"): continue
+                # Cheap sanity check: each non-comment line should look
+                # like a URL, a domain, or a local file path.
+                if not _looksLikeUrlOrPath(sLine):
+                    raise ValueError(
+                        f"{sInput}: line {iLineNo} does not look like a "
+                        f"URL, domain, or file path: {sLine!r}\n"
+                        "Each non-blank, non-comment line should be one "
+                        "URL, one domain name, or one local HTML file path.")
+                lUrls.append(sLine)
+    except UnicodeDecodeError as oError:
+        raise ValueError(
+            f"File is not valid UTF-8 text: {sInput}\n"
+            f"Decode error: {oError}\n"
+            "Re-save the file as plain UTF-8 text and try again.")
+    if not lUrls:
+        raise ValueError(f"No URLs found in file: {sInput}")
     return lUrls
+
+
+def _looksLikeUrlOrPath(sLine):
+    """Heuristic: does sLine look like a URL, a bare domain, or a file path?
+
+    Used by getUrlsFromFile to catch obviously-wrong lines (e.g. random
+    English text from a misclassified document). Generous on purpose --
+    we'd rather pass through one bad line and have Playwright reject it
+    with a clear error than refuse a legitimate URL because we got the
+    pattern wrong. Rejects only lines that contain whitespace or that
+    are pure ASCII text with no dot, slash, or colon.
+    """
+    # Lines with embedded whitespace are never valid (URLs and paths
+    # don't contain bare whitespace; if they did, the user should
+    # quote/encode).
+    if any(c.isspace() for c in sLine): return False
+    # A URL has a colon (after the scheme), a path has slashes or a drive
+    # letter, a domain has at least one dot. Anything with at least one of
+    # these structural characters is plausible.
+    return ("://" in sLine) or ("." in sLine) or ("/" in sLine) or ("\\" in sLine)
 
 
 def getWcagFrequencyRows(lRows):
@@ -1196,14 +1290,47 @@ def getWcagScInfo(sRef):
 
 
 def isUrlListFile(sInput):
-    """Return True if sInput resolves to an existing file that is not an
-    allowed HTML extension. Such a file is treated as a URL list."""
-    oPath = None
+    """Return True if sInput is a path to an existing file (any extension).
 
-    oPath = pathlib.Path(sInput).expanduser().resolve()
-    if not oPath.exists() or not oPath.is_file(): return False
-    if oPath.suffix.lower() in aAllowedLocalExtensions: return False
+    The user is responsible for supplying a plain text file. If a file is
+    given that turns out to be binary or non-URL-like, getUrlsFromFile will
+    fail with a clear error.
+    """
+    oPath = None
+    if not sInput: return False
+    try:
+        oPath = pathlib.Path(sInput).expanduser()
+    except Exception:
+        return False
+    try:
+        if not oPath.is_file(): return False
+    except Exception:
+        return False
     return True
+
+
+def classifyInput(sInput):
+    """Classify the source input string.
+
+    Returns one of:
+      ('listfile', sPath)  -- sInput is a path to an existing file (any
+                              extension), to be parsed as plain text with
+                              one URL or local file path per line.
+      ('urls', lUrls)      -- sInput is one or more space-separated URLs/
+                              domains. lUrls is the list of tokens.
+      ('error', sReason)   -- sInput is invalid (currently only the empty
+                              case; bad file contents are surfaced later
+                              by getUrlsFromFile with a precise message).
+    """
+    sStripped = ""
+    sStripped = (sInput or "").strip()
+    if not sStripped:
+        return ("error", "No input provided.")
+    if isUrlListFile(sStripped):
+        return ("listfile", sStripped)
+    # Not a file path. Treat as one or more space-separated URLs/domains.
+    lTokens = sStripped.split()
+    return ("urls", lTokens)
 
 
 def parseArguments():
@@ -1212,16 +1339,21 @@ def parseArguments():
     argParser = argparse.ArgumentParser(
         prog=sProgramName,
         description=(
-            "Check a web page or local HTML file for accessibility problems and save a set of output files. "
-            "Pass a text file containing one URL per line to scan multiple pages in sequence."
+            "Check one or more web pages for accessibility problems and save "
+            "a set of output files in a folder named after each page title. "
+            "Pass URLs as separate arguments, or pass the path to a single "
+            "plain text file that lists URLs, domains, or local file paths -- "
+            "one per line. The list file may have any extension; urlCheck "
+            "verifies it is plain text by inspecting its contents."
         ),
         epilog=(
-            f"Single URL:   {sProgramName} https://example.com\n"
-            f"Domain only:  {sProgramName} microsoft.com\n"
-            f"Local file:   {sProgramName} C:\\work\\sample.html\n"
-            f"URL list:     {sProgramName} urls.txt\n"
+            f"Single URL:    {sProgramName} https://example.com\n"
+            f"Domain only:   {sProgramName} microsoft.com\n"
+            f"Several URLs:  {sProgramName} https://a.com https://b.com https://c.com\n"
+            f"URL list file: {sProgramName} urls.txt\n"
+            f"GUI dialog:    {sProgramName} -g\n"
             f"\n"
-            f"Output files are saved in a folder named after the page title:\n"
+            f"Output files (in a folder named after each page title):\n"
             f"  report.htm   Accessibility report with headings and links\n"
             f"  report.csv   Violations as a spreadsheet, one row per issue\n"
             f"  report.xlsx  Excel workbook with summary and full results\n"
@@ -1234,17 +1366,33 @@ def parseArguments():
     )
     argParser.add_argument(
         "inputValue",
-        nargs="?",
+        nargs="*",
         help=(
-            "URL, domain name, local HTML file, or path to a text file containing one URL per line. "
-            "When a text file is given, each URL is scanned in sequence and the report is not opened automatically."
+            "One or more URLs (or domain names) separated by spaces, or the "
+            "path to a single plain text file that lists URLs, domains, or "
+            "local file paths one per line. The list file may have any "
+            "extension. Files referenced inside the list are loaded as HTML "
+            "in the browser regardless of extension. Blank lines and lines "
+            "starting with # are ignored."
         ),
     )
     argParser.add_argument("-v", "--version", action="version", version=f"%(prog)s {sProgramVersion}")
+    argParser.add_argument("-g", "--gui-mode", dest="bGuiMode", action="store_true",
+        help="Show the parameter dialog. GUI mode is also entered automatically when urlCheck is launched without arguments from a GUI shell (File Explorer, Start menu, desktop hotkey).")
+    argParser.add_argument("-o", "--output-dir", dest="sOutputDir", default="",
+        help="Parent directory under which the per-scan output folder is created. Defaults to the current working directory. Created if it does not exist. The per-scan folder is always uniquely named based on the page title.")
+    argParser.add_argument("--view-output", dest="bViewOutput", action="store_true",
+        help="After all scans complete, open the parent output directory (the -o directory, or the current working directory) in File Explorer.")
+    argParser.add_argument("-u", "--use-configuration", dest="bUseConfig", action="store_true",
+        help="Load saved settings from %%LOCALAPPDATA%%\\urlCheck\\urlCheck.ini at startup, and write them back on OK in GUI mode. Without this flag urlCheck leaves no filesystem footprint of its own.")
+    argParser.add_argument("-l", "--log", dest="bLog", action="store_true",
+        help="Write detailed diagnostics to urlCheck.log in the current working directory (UTF-8 with BOM). Any prior urlCheck.log is deleted at the start of the run, so the file always reflects only the current session.")
+    argParser.add_argument("-i", "--invisible", dest="bInvisible", action="store_true",
+        help="Run Microsoft Edge invisibly (the headless browser mode): no visible browser window during the scan.")
     return argParser.parse_args()
 
 
-def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, bOpenReport, sAxeContent=""):
+def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, sAxeContent=""):
     """Run a single-URL scan. Returns the output directory path string, or raises."""
     dMetadata = {}
     dResults = {}
@@ -1259,7 +1407,7 @@ def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, bOpenReport, 
 
     try:
         oPage = context.new_page()
-        print(f"  Navigating to {sNormalizedUrl} ...")
+        logger.info(f"Navigating to {sNormalizedUrl}")
         oPage.goto(sNormalizedUrl, timeout=iDefaultNavTimeoutMs, wait_until="load")
         # After the load event, wait briefly for network to settle.
         # A short networkidle timeout lets SPA content finish rendering on most sites
@@ -1277,8 +1425,8 @@ def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, bOpenReport, 
         oPage.wait_for_timeout(500)
         sPageTitle = str(oPage.title() or sFallbackTitle)
         pathOutputDir = chooseOutputDir(pathBaseDir, sPageTitle)
-        print(f"  Output:    {pathOutputDir}")
-        print("  Running axe-core ...")
+        logger.info(f"Output directory: {pathOutputDir}")
+        logger.info("Running axe-core")
         sAxeSource = getAxeScript(oPage, sAxeContent)
         ensureSuccess(bool(oPage.evaluate("() => Boolean(window.axe && window.axe.run)")), "axe-core did not load into the page.")
         sResultsJson = oPage.evaluate("async (opts) => JSON.stringify(await window.axe.run(document, opts))", aAxeRunOptions)
@@ -1303,7 +1451,7 @@ def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, bOpenReport, 
         lRows = buildCsvRows(dResults, dMetadata)
         pathlib.Path(pathOutputDir, sJsonName).write_text(json.dumps({"metadata": dMetadata, "results": dResults}, indent=2, ensure_ascii=False), encoding="utf-8")
         writeCsv(pathlib.Path(pathOutputDir, sCsvName), lRows)
-        print("  Capturing page snapshot and screenshot ...")
+        logger.info("Capturing page snapshot and screenshot")
         sSnapshot = getPageSnapshot(oPage, sNormalizedUrl)
         pathlib.Path(pathOutputDir, sSourceName).write_text(sSnapshot, encoding="utf-8")
         try:
@@ -1321,8 +1469,12 @@ def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, bOpenReport, 
             pass
         pathlib.Path(pathOutputDir, sReportName).write_text(buildReportHtml(dResults, dMetadata, lRows), encoding="utf-8")
         writeReportWorkbook(pathlib.Path(pathOutputDir, sReportWorkbookName), dResults, dMetadata, lRows)
-        print(buildConsoleSummary(dResults, dMetadata, str(pathOutputDir)))
-        if bOpenReport: os.startfile(str(pathlib.Path(pathOutputDir, sReportName)))
+        # User-visible: just URL and page title for this scan. Detailed
+        # violation counts go to report.htm/report.csv/report.xlsx and to
+        # the log.
+        print(f"{sNormalizedUrl}")
+        print(f"  Page title: {sPageTitle}")
+        logger.info(buildConsoleSummary(dResults, dMetadata, str(pathOutputDir)))
         return str(pathOutputDir)
     finally:
         try:
@@ -1478,10 +1630,1036 @@ def writeReportWorkbook(pathWorkbook, dResults, dMetadata, lRows):
     return str(pathWorkbook)
 
 
+# --- GUI launch detection (Windows) ---
+
+def _getParentProcessName():
+    """
+    Returns the lowercased base filename of this process's parent (e.g.
+    'cmd.exe', 'explorer.exe'), or '' if it can't be determined. Uses a
+    Toolhelp32 snapshot, which is available on every Windows version this
+    program supports.
+    """
+    if sys.platform != "win32": return ""
+    try:
+        # We use a couple of structures from kernel32. Define them via ctypes
+        # to keep the dependency surface minimal (no pywin32, no psutil).
+        import ctypes.wintypes as wt
+        c_iSnapProcess = 0x00000002
+        c_iMaxPath = 260
+
+        class oProcessEntry32(ctypes.Structure):
+            _fields_ = [
+                ("dwSize", wt.DWORD),
+                ("cntUsage", wt.DWORD),
+                ("th32ProcessID", wt.DWORD),
+                ("th32DefaultHeapID", ctypes.c_void_p),
+                ("th32ModuleID", wt.DWORD),
+                ("cntThreads", wt.DWORD),
+                ("th32ParentProcessID", wt.DWORD),
+                ("pcPriClassBase", ctypes.c_long),
+                ("dwFlags", wt.DWORD),
+                ("szExeFile", ctypes.c_char * c_iMaxPath),
+            ]
+
+        kernel32 = ctypes.windll.kernel32
+        kernel32.CreateToolhelp32Snapshot.restype = wt.HANDLE
+        kernel32.CreateToolhelp32Snapshot.argtypes = [wt.DWORD, wt.DWORD]
+        kernel32.Process32First.argtypes = [wt.HANDLE, ctypes.POINTER(oProcessEntry32)]
+        kernel32.Process32Next.argtypes = [wt.HANDLE, ctypes.POINTER(oProcessEntry32)]
+        kernel32.CloseHandle.argtypes = [wt.HANDLE]
+
+        iMyPid = int(os.getpid())
+        iParentPid = 0
+        sParentExe = ""
+
+        oSnap = kernel32.CreateToolhelp32Snapshot(c_iSnapProcess, 0)
+        if not oSnap or oSnap == wt.HANDLE(-1).value: return ""
+        try:
+            oEntry = oProcessEntry32()
+            oEntry.dwSize = ctypes.sizeof(oProcessEntry32)
+            # Pass 1: find our own entry to learn the parent PID.
+            if not kernel32.Process32First(oSnap, ctypes.byref(oEntry)): return ""
+            while True:
+                if oEntry.th32ProcessID == iMyPid:
+                    iParentPid = int(oEntry.th32ParentProcessID)
+                    break
+                if not kernel32.Process32Next(oSnap, ctypes.byref(oEntry)): break
+            if iParentPid == 0: return ""
+
+            # Pass 2: find the parent entry to learn its exe name. Re-walk
+            # because Process32First/Next is unidirectional.
+            oEntry2 = oProcessEntry32()
+            oEntry2.dwSize = ctypes.sizeof(oProcessEntry32)
+            if not kernel32.Process32First(oSnap, ctypes.byref(oEntry2)): return ""
+            while True:
+                if oEntry2.th32ProcessID == iParentPid:
+                    sParentExe = oEntry2.szExeFile.decode("ascii", errors="replace")
+                    break
+                if not kernel32.Process32Next(oSnap, ctypes.byref(oEntry2)): break
+        finally:
+            kernel32.CloseHandle(oSnap)
+
+        return os.path.basename(sParentExe).lower()
+    except Exception:
+        return ""
+
+
+def isLaunchedFromGui():
+    """
+    Returns True when this process appears to have been launched by a GUI shell
+    rather than from a command-line shell.
+
+    Primary signal: GetConsoleProcessList. The same approach 2htm uses. A
+    console-subsystem program inherits its parent shell's console (count >= 2)
+    when launched from cmd / PowerShell / Windows Terminal / etc., but is the
+    only process on a fresh console (count == 1) when Windows creates a new
+    console for a double-clicked exe, a Start-menu shortcut, the Run dialog,
+    or a desktop hotkey.
+
+    Secondary signal: parent process name. Used only when the count is
+    ambiguous: in particular, count == 0 (truly no console attached, which
+    happens in some service / scheduled-task contexts) or when a third party
+    has briefly attached a process to our console between launch and the
+    moment we make the check (rare but possible -- accessibility tools,
+    AV scanners, JAWS / NVDA event hooks, etc.). When count == 1 the answer
+    is unambiguous regardless of parent.
+
+    Both signals and the resulting decision are written to the log when -l
+    is in effect, so the detection can be diagnosed from the log file.
+    """
+    bResult = False
+    iCount = 0
+    iCountErr = 0
+    sParent = ""
+    sReason = ""
+
+    if sys.platform != "win32":
+        sReason = "non-Windows platform; assume CLI"
+        bResult = False
+    else:
+        try:
+            aiBuf = (ctypes.c_uint * 16)()
+            iCount = int(ctypes.windll.kernel32.GetConsoleProcessList(
+                aiBuf, ctypes.c_uint(16)))
+        except Exception as oError:
+            iCountErr = 1
+            iCount = -1
+            sReason = f"GetConsoleProcessList failed: {oError}"
+        if iCount == 1:
+            bResult = True
+            sReason = "console process count is 1 (fresh console -> GUI launch)"
+        elif iCount >= 2:
+            bResult = False
+            sReason = f"console process count is {iCount} (sharing parent shell -> CLI)"
+        else:
+            # iCount == 0 (no console) or iCount < 0 (call failed). Fall
+            # back to parent-process inspection.
+            sParent = _getParentProcessName()
+            sShells = ("cmd.exe", "powershell.exe", "pwsh.exe",
+                "windowsterminal.exe", "openconsole.exe", "wt.exe",
+                "conemu64.exe", "conemu.exe", "cmder.exe",
+                "bash.exe", "wsl.exe", "git-bash.exe", "mintty.exe")
+            if sParent in sShells:
+                bResult = False
+                sReason = f"console count={iCount}, parent={sParent} -> CLI"
+            elif sParent:
+                bResult = True
+                sReason = f"console count={iCount}, parent={sParent} -> GUI"
+            else:
+                bResult = False
+                sReason = f"console count={iCount}, parent unknown -> assume CLI"
+
+    logger.info(f"isLaunchedFromGui: parent='{sParent}' "
+        f"consoleCount={iCount} -> bIsGui={bResult} ({sReason})")
+    return bResult
+
+
+def hideOwnConsoleWindow():
+    """
+    Hides this process's console window. Only safe when isLaunchedFromGui()
+    returned True; the console was created by Windows for us in that case and
+    no parent shell is sharing it. Non-fatal on failure.
+    """
+    iSwHide = 0
+    if sys.platform != "win32": return
+    try:
+        hwnd = ctypes.windll.kernel32.GetConsoleWindow()
+        if hwnd: ctypes.windll.user32.ShowWindow(hwnd, iSwHide)
+    except Exception:
+        pass
+
+
+def openFolderInExplorer(sPath):
+    """Open the given folder in Windows Explorer. Non-fatal on failure."""
+    try:
+        if sys.platform == "win32":
+            os.startfile(sPath)
+        else:
+            subprocess.Popen(["xdg-open", sPath])
+    except Exception:
+        pass
+
+
+# --- Logger ---
+
+class logger:
+    """
+    Tiny diagnostic logger written to urlCheck.log in CWD when -l / --log is
+    given. UTF-8 with BOM so Notepad opens it correctly. Each session starts
+    with a fresh file -- any prior log is deleted before the new one is
+    opened, so the log only ever contains output from the current run.
+    Open is lazy and silent on failure; a logging error must never sink a
+    scan.
+    """
+    fLog = None
+    bEnabled = False
+
+    @classmethod
+    def open(cls):
+        try:
+            # Delete any prior session's log first so the new file contains
+            # only this session's output. unlink may fail if the file does
+            # not exist (FileNotFoundError) -- that's fine; just continue.
+            try:
+                os.unlink(sLogFileName)
+            except FileNotFoundError:
+                pass
+            except Exception:
+                # If unlink fails for some other reason (e.g., another
+                # process has the file open), fall through to open() in
+                # "w" mode, which will truncate. open() may also fail in
+                # that case, and the outer except will mark logger
+                # disabled -- but that's the right outcome: better to lose
+                # logging than to mix old and new content.
+                pass
+            cls.fLog = open(sLogFileName, "w", encoding="utf-8-sig", newline="\n")
+            cls.bEnabled = True
+            cls.info(f"{sProgramName} {sProgramVersion} log opened (previous urlCheck.log deleted)")
+        except Exception:
+            cls.bEnabled = False
+
+    @classmethod
+    def info(cls, sMsg):
+        if not cls.bEnabled or cls.fLog is None: return
+        try:
+            sStamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            cls.fLog.write(f"[{sStamp}] {sMsg}\n")
+            cls.fLog.flush()
+        except Exception:
+            pass
+
+    @classmethod
+    def close(cls):
+        try:
+            if cls.fLog is not None: cls.fLog.close()
+        except Exception:
+            pass
+        cls.fLog = None
+        cls.bEnabled = False
+
+
+# --- Config manager (opt-in, INI under %LOCALAPPDATA%\urlCheck) ---
+
+class configManager:
+    """
+    Persists user preferences to %LOCALAPPDATA%\\urlCheck\\urlCheck.ini, but
+    only when the user opts in via -u / --use-configuration or via the GUI
+    checkbox. Without opt-in urlCheck leaves no filesystem footprint of its
+    own beyond the per-scan output folders the user explicitly asks for.
+    """
+
+    @staticmethod
+    def getConfigDir():
+        sLocal = os.environ.get("LOCALAPPDATA", "") or os.path.expanduser("~")
+        return os.path.join(sLocal, sConfigDirName)
+
+    @staticmethod
+    def getConfigPath():
+        return os.path.join(configManager.getConfigDir(), sConfigFileName)
+
+    @staticmethod
+    def configExists():
+        try: return os.path.isfile(configManager.getConfigPath())
+        except Exception: return False
+
+    @staticmethod
+    def eraseAll():
+        sDir = configManager.getConfigDir()
+        sPath = configManager.getConfigPath()
+        try:
+            if os.path.isfile(sPath):
+                os.remove(sPath)
+                logger.info(f"Deleted configuration file: {sPath}")
+        except Exception as oError:
+            logger.info(f"Could not delete configuration file {sPath}: {oError}")
+        try:
+            if os.path.isdir(sDir) and not os.listdir(sDir):
+                os.rmdir(sDir)
+                logger.info(f"Removed empty configuration directory: {sDir}")
+        except Exception as oError:
+            logger.info(f"Could not remove configuration directory {sDir}: {oError}")
+
+    @staticmethod
+    def parseFile(sPath):
+        d = {}
+        sLine = ""
+        sLineRaw = ""
+        with open(sPath, "r", encoding="utf-8-sig") as fIni:
+            for sLineRaw in fIni:
+                sLine = sLineRaw.strip()
+                if not sLine: continue
+                if sLine.startswith(";") or sLine.startswith("#"): continue
+                if sLine.startswith("[") and sLine.endswith("]"): continue
+                iEq = sLine.find("=")
+                if iEq <= 0: continue
+                d[sLine[:iEq].strip().lower()] = sLine[iEq + 1:].strip()
+        return d
+
+    @staticmethod
+    def getBool(d, sKey):
+        s = (d.get(sKey, "") or "").strip().lower()
+        return s in ("1", "true", "yes", "on")
+
+    @staticmethod
+    def loadInto(arguments):
+        """
+        Load saved values into the parsed-arguments object. CLI-supplied
+        values always win: only fields the user did NOT specify on the command
+        line are overwritten. The cli-supplied set is reconstructed by
+        comparing against parser defaults.
+        """
+        d = {}
+        sPath = ""
+
+        sPath = configManager.getConfigPath()
+        if not os.path.isfile(sPath): return
+        try:
+            d = configManager.parseFile(sPath)
+        except Exception as oError:
+            print(f"[WARN] Could not read configuration from {sPath}: {oError}")
+            return
+
+        # Source: only adopt the saved value if the CLI provided no positional.
+        if (not getattr(arguments, "inputValue", None)) and d.get("source", ""):
+            arguments.inputValue = d.get("source", "")
+
+        # Output dir: only adopt if the CLI did not pass -o.
+        if not getattr(arguments, "sOutputDir", "") and d.get("output_directory", ""):
+            arguments.sOutputDir = d.get("output_directory", "")
+
+        # Booleans: only adopt if the CLI did not pass the flag (i.e., it's
+        # currently False, the parser default).
+        if not getattr(arguments, "bViewOutput", False):
+            arguments.bViewOutput = configManager.getBool(d, "view_output")
+        if not getattr(arguments, "bInvisible", False):
+            arguments.bInvisible = configManager.getBool(d, "invisible")
+        if not getattr(arguments, "bLog", False):
+            arguments.bLog = configManager.getBool(d, "log_session")
+
+    @staticmethod
+    def save(sSource, sOutputDir, bViewOutput, bInvisible, bLog):
+        sDir = ""
+        sPath = ""
+
+        sDir = configManager.getConfigDir()
+        sPath = configManager.getConfigPath()
+        try:
+            if not os.path.isdir(sDir): os.makedirs(sDir, exist_ok=True)
+            with open(sPath, "w", encoding="utf-8-sig", newline="\n") as fIni:
+                fIni.write("; urlCheck configuration\n")
+                fIni.write("; auto-written when Use configuration was checked at OK time.\n")
+                fIni.write("; Delete this file to reset, or click Default settings in the\n")
+                fIni.write("; GUI, which also deletes the file and the urlCheck folder.\n")
+                fIni.write(f"source={sSource or ''}\n")
+                fIni.write(f"output_directory={sOutputDir or ''}\n")
+                fIni.write(f"view_output={'1' if bViewOutput else '0'}\n")
+                fIni.write(f"invisible={'1' if bInvisible else '0'}\n")
+                fIni.write(f"log_session={'1' if bLog else '0'}\n")
+            logger.info(f"Saved configuration to {sPath}")
+        except Exception as oError:
+            print(f"[WARN] Could not save configuration to {sPath}: {oError}")
+            logger.info(f"Could not save configuration: {oError}")
+
+
+# --- GUI dialog (Python.NET / WinForms) ---
+#
+# Uses pythonnet's `clr` to load the .NET Framework 4.8 System.Windows.Forms
+# assembly that ships with every supported version of Windows 10 and 11. This
+# gives us the *same* widget set 2htm uses (System.Windows.Forms.Form,
+# Label, TextBox, CheckBox, Button, FolderBrowserDialog, OpenFileDialog,
+# MessageBox), so screen-reader behavior in JAWS and NVDA is identical
+# between the two tools: labels announced via Label-to-control association,
+# ampersand access keys, AcceptButton/CancelButton wiring, predictable tab
+# order. No extra runtime to install -- the .NET Framework 4.8 is built
+# into Windows 10 (since 1903) and Windows 11.
+#
+# pythonnet (the `clr` module) is imported lazily, so the CLI path does not
+# require it to be installed at all. PyInstaller bundles pythonnet's tiny
+# loader (clr.pyd, Python.Runtime.dll) when the build script runs; at
+# runtime that loader bridges into the in-box .NET Framework.
+
+def _loadDotNetForms():
+    """
+    Import pythonnet and the System.Windows.Forms / System.Drawing namespaces.
+    Returns a dict of the names this file uses, or None on failure (e.g.
+    pythonnet not installed). Keeps the import-mess in one place so the
+    dialog code below reads cleanly.
+    """
+    try:
+        import clr  # provided by the pythonnet package
+        clr.AddReference("System.Windows.Forms")
+        clr.AddReference("System.Drawing")
+        from System import EventHandler, Environment as DotNetEnvironment
+        from System.Drawing import ContentAlignment, Font, FontFamily, Point, Size, SystemFonts
+        from System.Threading import ApartmentState, Thread
+        from System.Windows.Forms import (
+            AnchorStyles, Application, Button, CheckBox, DialogResult,
+            DockStyle, FolderBrowserDialog, Form, FormBorderStyle,
+            FormStartPosition, Keys, Label, MessageBox, MessageBoxButtons,
+            MessageBoxDefaultButton, MessageBoxIcon, OpenFileDialog, Panel,
+            ScrollBars, TextBox)
+        return {
+            "AnchorStyles": AnchorStyles, "ApartmentState": ApartmentState,
+            "Application": Application,
+            "Button": Button, "CheckBox": CheckBox,
+            "ContentAlignment": ContentAlignment, "DialogResult": DialogResult,
+            "DockStyle": DockStyle, "DotNetEnvironment": DotNetEnvironment,
+            "EventHandler": EventHandler,
+            "FolderBrowserDialog": FolderBrowserDialog,
+            "Font": Font, "FontFamily": FontFamily, "Form": Form,
+            "FormBorderStyle": FormBorderStyle,
+            "FormStartPosition": FormStartPosition,
+            "Keys": Keys, "Label": Label, "MessageBox": MessageBox,
+            "MessageBoxButtons": MessageBoxButtons,
+            "MessageBoxDefaultButton": MessageBoxDefaultButton,
+            "MessageBoxIcon": MessageBoxIcon, "OpenFileDialog": OpenFileDialog,
+            "Panel": Panel, "Point": Point, "ScrollBars": ScrollBars,
+            "Size": Size, "SystemFonts": SystemFonts,
+            "TextBox": TextBox, "Thread": Thread,
+        }
+    except Exception as oError:
+        print(f"[ERROR] GUI mode requires pythonnet (the `clr` module) and the .NET Framework: {oError}")
+        print("        pip install pythonnet")
+        return None
+
+
+def browseForFolderViaShell(sTitle, sInitialPath=""):
+    """
+    Native folder picker via SHBrowseForFolderW + SHGetPathFromIDListW from
+    shell32.dll. Used in place of WinForms' FolderBrowserDialog because the
+    latter deadlocks under pythonnet (issue #657).
+
+    We deliberately use the OLDER ("classic") browse-for-folder dialog by
+    setting only BIF_RETURNONLYFSDIRS in ulFlags. The newer dialog style
+    (BIF_NEWDIALOGSTYLE / BIF_USENEWUI) requires OleInitialize and a
+    single-threaded apartment (COINIT_APARTMENTTHREADED); per the Microsoft
+    documentation, "If COM is initialized through CoInitializeEx with the
+    COINIT_MULTITHREADED flag set, SHBrowseForFolder fails if
+    BIF_NEWDIALOGSTYLE is passed." Pythonnet's COM initialization state can
+    leave the thread in MTA, so the new dialog style hangs. The classic
+    dialog has no such requirement and works reliably.
+
+    The trade-off is cosmetic: the classic dialog has no resize handle, no
+    edit field for typing a path, and no "create new folder" button. It
+    does have a complete file system tree, which is enough to choose an
+    output directory.
+
+    Returns the chosen folder path as a string, or "" if the user cancelled.
+    sTitle is shown above the folder tree. sInitialPath is currently
+    ignored (the older dialog style does not honor it without a callback,
+    and callbacks reintroduce COM dependencies we want to avoid).
+    """
+    import ctypes.wintypes as wt
+    c_iBifReturnOnlyFsDirs = 0x00000001
+    c_iMaxPath = 260
+
+    class oBrowseInfoW(ctypes.Structure):
+        _fields_ = [
+            ("hwndOwner", wt.HWND),
+            ("pidlRoot", ctypes.c_void_p),
+            ("pszDisplayName", wt.LPWSTR),
+            ("lpszTitle", wt.LPCWSTR),
+            ("ulFlags", wt.UINT),
+            ("lpfn", ctypes.c_void_p),
+            ("lParam", wt.LPARAM),
+            ("iImage", ctypes.c_int),
+        ]
+
+    shell32 = ctypes.windll.shell32
+    user32 = ctypes.windll.user32
+    ole32 = ctypes.windll.ole32
+
+    # Display-name buffer required by the API; we discard it and use
+    # SHGetPathFromIDListW for the actual file-system path.
+    bufDisplay = ctypes.create_unicode_buffer(c_iMaxPath)
+
+    bi = oBrowseInfoW()
+    bi.hwndOwner = user32.GetActiveWindow()  # may be NULL; that's OK
+    bi.pidlRoot = None
+    bi.pszDisplayName = ctypes.cast(bufDisplay, wt.LPWSTR)
+    bi.lpszTitle = sTitle
+    bi.ulFlags = c_iBifReturnOnlyFsDirs  # classic dialog only
+    bi.lpfn = None  # no callback
+    bi.lParam = 0
+    bi.iImage = 0
+
+    # Initialize COM as STA. CoInitialize is shorthand for
+    # CoInitializeEx(NULL, COINIT_APARTMENTTHREADED). It returns S_FALSE if
+    # the thread already had a compatible apartment; we treat that as fine.
+    # If the thread was previously in MTA, this call will return RPC_E_CHANGED_MODE
+    # and the classic dialog will still work because it does not require STA.
+    shell32.SHBrowseForFolderW.restype = ctypes.c_void_p
+    shell32.SHBrowseForFolderW.argtypes = [ctypes.POINTER(oBrowseInfoW)]
+    shell32.SHGetPathFromIDListW.restype = wt.BOOL
+    shell32.SHGetPathFromIDListW.argtypes = [ctypes.c_void_p, wt.LPWSTR]
+    ole32.CoTaskMemFree.argtypes = [ctypes.c_void_p]
+    try:
+        ole32.CoInitialize(None)
+    except Exception: pass
+
+    pidl = shell32.SHBrowseForFolderW(ctypes.byref(bi))
+    if not pidl: return ""
+    try:
+        bufPath = ctypes.create_unicode_buffer(c_iMaxPath)
+        if not shell32.SHGetPathFromIDListW(pidl, bufPath):
+            return ""
+        return bufPath.value
+    finally:
+        try: ole32.CoTaskMemFree(pidl)
+        except Exception: pass
+
+
+def showGuiDialog(arguments):
+    """
+    Show the urlCheck parameter dialog. Mutates `arguments` in place with the
+    user's chosen values. Returns True on OK, False on Cancel.
+
+    Layout mirrors 2htm:
+      Row 1: "Source URLs:"                  [textbox]   [Browse source]
+      Row 2: "Output directory:"             [textbox]   [Choose output]
+      Row 3: [x] Invisible mode             [x] View output
+      Row 4: [x] Log session                [x] Use configuration
+      Row 5: [Help] [Default settings]                  [OK] [Cancel]
+    """
+    d = _loadDotNetForms()
+    logger.info(f"showGuiDialog: _loadDotNetForms returned: {'ok' if d is not None else 'NONE (pythonnet missing?)'}")
+    if d is None: return False
+
+    # Pull names out of the namespace dict for readability.
+    Application = d["Application"]
+    Button = d["Button"]
+    CheckBox = d["CheckBox"]
+    ContentAlignment = d["ContentAlignment"]
+    DialogResult = d["DialogResult"]
+    EventHandler = d["EventHandler"]
+    FolderBrowserDialog = d["FolderBrowserDialog"]
+    Form = d["Form"]
+    FormBorderStyle = d["FormBorderStyle"]
+    FormStartPosition = d["FormStartPosition"]
+    Keys = d["Keys"]
+    Label = d["Label"]
+    MessageBox = d["MessageBox"]
+    MessageBoxButtons = d["MessageBoxButtons"]
+    MessageBoxDefaultButton = d["MessageBoxDefaultButton"]
+    MessageBoxIcon = d["MessageBoxIcon"]
+    OpenFileDialog = d["OpenFileDialog"]
+    Point = d["Point"]
+    Size = d["Size"]
+    SystemFonts = d["SystemFonts"]
+    TextBox = d["TextBox"]
+
+    # Log .NET / pythonnet diagnostics so the GUI environment is
+    # self-documenting in the log file.
+    try:
+        oEnv = d["DotNetEnvironment"]
+        logger.info(f".NET runtime: Version={oEnv.Version} "
+            f"OSVersion={oEnv.OSVersion} Is64Bit={oEnv.Is64BitProcess}")
+    except Exception as oError:
+        logger.info(f".NET diagnostics unavailable: {oError}")
+
+    # Set the calling thread to the single-threaded apartment (STA) COM
+    # model. WinForms common dialogs -- OpenFileDialog, FolderBrowserDialog,
+    # and the various shell extensions they delegate to -- require an STA
+    # thread. C# WinForms apps get this for free via [STAThread] on Main();
+    # in pythonnet we have to set it explicitly. If this is omitted, the
+    # main dialog usually opens fine, but clicking Browse source or Choose
+    # output deadlocks the COM marshaler and the program appears to lock up.
+    #
+    # SetApartmentState fails with InvalidOperationException if the thread
+    # has already started COM in MTA mode (e.g. by a prior dialog call in
+    # the same process). The wrap-and-log pattern below makes that case
+    # diagnosable in the log without crashing.
+    try:
+        oCurrent = d["Thread"].CurrentThread
+        sBefore = str(oCurrent.GetApartmentState())
+        oCurrent.SetApartmentState(d["ApartmentState"].STA)
+        sAfter = str(oCurrent.GetApartmentState())
+        logger.info(f"Thread apartment state: {sBefore} -> {sAfter}")
+    except Exception as oError:
+        logger.info(f"SetApartmentState(STA) failed (continuing): {oError}")
+
+    # Enable modern Windows visual styles (Common Controls 6 themed widgets:
+    # rounded buttons, themed scroll bars, etc.) and the GDI+ TextRenderer
+    # for crisper text. Both calls MUST happen before any Form, Button, or
+    # other control is constructed in this AppDomain. WinForms ignores them
+    # otherwise. EnableVisualStyles is also harmless to call repeatedly, so
+    # it is safe even if showGuiDialog is invoked more than once.
+    #
+    # Accessibility note: visual styles are purely cosmetic. The underlying
+    # HWNDs and MSAA / UI Automation properties (control type, name, role,
+    # state) are unchanged, so JAWS and NVDA see the exact same accessibility
+    # tree they would see with the classic theme. If a regression is
+    # observed, comment out these two lines and rebuild.
+    try:
+        d["Application"].EnableVisualStyles()
+        d["Application"].SetCompatibleTextRenderingDefault(False)
+    except Exception: pass
+
+    # Initial values from arguments (which may have been pre-loaded from
+    # saved config and/or the command line).
+    sInitTarget = getattr(arguments, "inputValue", "") or ""
+    sInitOutDir = getattr(arguments, "sOutputDir", "") or ""
+    bInitView = bool(getattr(arguments, "bViewOutput", False))
+    bInitInvisible = bool(getattr(arguments, "bInvisible", False))
+    bInitLog = bool(getattr(arguments, "bLog", False))
+    bInitUseCfg = bool(getattr(arguments, "bUseConfig", False))
+
+    # Layout constants (pixels). Match 2htm's spacing so the two tools
+    # feel like siblings.
+    c_iLeft = 12
+    c_iRight = 12
+    c_iTop = 12
+    c_iGap = 7
+    c_iRowGap = 11
+    c_iLabelWidth = 130
+    c_iButtonWidth = 130
+    c_iButtonHeight = 26
+    c_iTextHeight = 23
+    c_iFormWidth = 600
+
+    iFormW = c_iFormWidth
+    iTextX = c_iLeft + c_iLabelWidth + c_iGap
+    iTextW = iFormW - iTextX - c_iGap - c_iButtonWidth - c_iRight
+    iBtnX = iFormW - c_iRight - c_iButtonWidth
+
+    # Build the form.
+    frm = Form()
+    frm.Text = sProgramName
+    frm.FormBorderStyle = FormBorderStyle.FixedDialog
+    frm.StartPosition = FormStartPosition.CenterScreen
+    frm.MaximizeBox = False
+    frm.MinimizeBox = False
+    frm.ShowInTaskbar = True
+    frm.ClientSize = Size(iFormW, 280)
+    frm.Font = SystemFonts.MessageBoxFont
+
+    # F1 -> Help. KeyPreview lets the form see the keystroke before child
+    # controls consume it. F1 is the standard Windows help shortcut and is
+    # expected by keyboard-driven and screen-reader users.
+    frm.KeyPreview = True
+
+    # --- Row 1: Target ---
+    y = c_iTop
+    lblTarget = Label()
+    lblTarget.Text = "&Source URLs:"
+    lblTarget.AutoSize = False
+    lblTarget.Location = Point(c_iLeft, y + 3)
+    lblTarget.Size = Size(c_iLabelWidth, c_iTextHeight)
+    lblTarget.TextAlign = ContentAlignment.MiddleLeft
+    frm.Controls.Add(lblTarget)
+
+    txtTarget = TextBox()
+    txtTarget.Text = sInitTarget
+    txtTarget.Location = Point(iTextX, y)
+    txtTarget.Size = Size(iTextW, c_iTextHeight)
+    txtTarget.TabIndex = 0
+    frm.Controls.Add(txtTarget)
+
+    btnBrowseTarget = Button()
+    btnBrowseTarget.Text = "&Browse source"
+    btnBrowseTarget.Location = Point(iBtnX, y - 1)
+    btnBrowseTarget.Size = Size(c_iButtonWidth, c_iButtonHeight)
+    btnBrowseTarget.TabIndex = 1
+    btnBrowseTarget.UseVisualStyleBackColor = True
+    frm.Controls.Add(btnBrowseTarget)
+
+    # --- Row 2: Output directory ---
+    y += c_iTextHeight + c_iRowGap
+    lblOut = Label()
+    lblOut.Text = "&Output directory:"
+    lblOut.AutoSize = False
+    lblOut.Location = Point(c_iLeft, y + 3)
+    lblOut.Size = Size(c_iLabelWidth, c_iTextHeight)
+    lblOut.TextAlign = ContentAlignment.MiddleLeft
+    frm.Controls.Add(lblOut)
+
+    txtOut = TextBox()
+    txtOut.Text = sInitOutDir
+    txtOut.Location = Point(iTextX, y)
+    txtOut.Size = Size(iTextW, c_iTextHeight)
+    txtOut.TabIndex = 2
+    frm.Controls.Add(txtOut)
+
+    btnBrowseOut = Button()
+    btnBrowseOut.Text = "&Choose output"
+    btnBrowseOut.Location = Point(iBtnX, y - 1)
+    btnBrowseOut.Size = Size(c_iButtonWidth, c_iButtonHeight)
+    btnBrowseOut.TabIndex = 3
+    btnBrowseOut.UseVisualStyleBackColor = True
+    frm.Controls.Add(btnBrowseOut)
+
+    # --- Row 3: option checkboxes ---
+    y += c_iTextHeight + c_iRowGap * 2
+    iChkW = (iFormW - c_iLeft - c_iRight) // 2
+    chkInvisible = CheckBox()
+    chkInvisible.Text = "&Invisible mode"
+    chkInvisible.Checked = bInitInvisible
+    chkInvisible.Location = Point(c_iLeft, y)
+    chkInvisible.Size = Size(iChkW, c_iTextHeight)
+    chkInvisible.TabIndex = 4
+    frm.Controls.Add(chkInvisible)
+
+    chkView = CheckBox()
+    chkView.Text = "&View output"
+    chkView.Checked = bInitView
+    chkView.Location = Point(c_iLeft + iChkW, y)
+    chkView.Size = Size(iChkW, c_iTextHeight)
+    chkView.TabIndex = 5
+    frm.Controls.Add(chkView)
+
+    # --- Row 4: Log session and Use configuration ---
+    y += c_iTextHeight + c_iRowGap
+    chkLog = CheckBox()
+    chkLog.Text = "&Log session"
+    chkLog.Checked = bInitLog
+    chkLog.Location = Point(c_iLeft, y)
+    chkLog.Size = Size(iChkW, c_iTextHeight)
+    chkLog.TabIndex = 6
+    frm.Controls.Add(chkLog)
+
+    chkUseCfg = CheckBox()
+    chkUseCfg.Text = "&Use configuration"
+    chkUseCfg.Checked = bInitUseCfg
+    chkUseCfg.Location = Point(c_iLeft + iChkW, y)
+    chkUseCfg.Size = Size(iChkW, c_iTextHeight)
+    chkUseCfg.TabIndex = 7
+    frm.Controls.Add(chkUseCfg)
+
+    # --- Bottom row: Help, Defaults on the left; OK, Cancel on the right ---
+    y += c_iTextHeight + c_iRowGap * 2
+    btnHelp = Button()
+    btnHelp.Text = "&Help"
+    btnHelp.Location = Point(c_iLeft, y)
+    btnHelp.Size = Size(c_iButtonWidth, c_iButtonHeight)
+    btnHelp.TabIndex = 8
+    btnHelp.UseVisualStyleBackColor = True
+    frm.Controls.Add(btnHelp)
+
+    btnDefaults = Button()
+    btnDefaults.Text = "&Default settings"
+    btnDefaults.Location = Point(c_iLeft + c_iButtonWidth + c_iGap, y)
+    btnDefaults.Size = Size(c_iButtonWidth, c_iButtonHeight)
+    btnDefaults.TabIndex = 9
+    btnDefaults.UseVisualStyleBackColor = True
+    frm.Controls.Add(btnDefaults)
+
+    btnOk = Button()
+    btnOk.Text = "OK"
+    btnOk.DialogResult = DialogResult.OK
+    btnOk.Location = Point(iFormW - c_iRight - 2 * c_iButtonWidth - c_iGap, y)
+    btnOk.Size = Size(c_iButtonWidth, c_iButtonHeight)
+    btnOk.TabIndex = 10
+    btnOk.UseVisualStyleBackColor = True
+    frm.Controls.Add(btnOk)
+
+    btnCancel = Button()
+    btnCancel.Text = "Cancel"
+    btnCancel.DialogResult = DialogResult.Cancel
+    btnCancel.Location = Point(iBtnX, y)
+    btnCancel.Size = Size(c_iButtonWidth, c_iButtonHeight)
+    btnCancel.TabIndex = 11
+    btnCancel.UseVisualStyleBackColor = True
+    frm.Controls.Add(btnCancel)
+
+    # Wire defaults: Enter -> OK, Esc -> Cancel.
+    frm.AcceptButton = btnOk
+    frm.CancelButton = btnCancel
+
+    # Adjust form height to accommodate the last control plus a margin.
+    frm.ClientSize = Size(iFormW, y + c_iButtonHeight + c_iTop)
+
+    # --- Event handlers (defined as nested functions so they close over the
+    #     control variables above) ---
+
+    def fnShowHelp():
+        sMsg = (
+            f"{sProgramName} {sProgramVersion} checks one or more web pages "
+            f"for accessibility problems and saves a set of output files in "
+            f"a folder named after each page title.\r\n\r\n"
+            f"Source URLs: enter one URL (https://example.com), or a domain "
+            f"(microsoft.com), or several URLs separated by spaces, or the "
+            f"path to a single plain text file that lists URLs, domains, or "
+            f"local file paths one per line. The list file may have any "
+            f"extension; urlCheck verifies it is plain text by inspecting "
+            f"its contents.\r\n\r\n"
+            f"Output directory: parent directory under which the per-scan "
+            f"folders will be created. Blank means the current working "
+            f"directory.\r\n\r\n"
+            f"Options:\r\n"
+            f"  Invisible mode - run Edge with no visible browser window\r\n"
+            f"  View output - open the output directory in Explorer when done\r\n"
+            f"  Log session - write urlCheck.log (replacing any prior log) "
+            f"to the current working directory\r\n"
+            f"  Use configuration - remember these settings for next time, in "
+            f"%LOCALAPPDATA%\\urlCheck\\urlCheck.ini\r\n\r\n"
+            f"Open the full README in your browser?")
+        oResult = MessageBox.Show(sMsg, f"{sProgramName} - Help",
+            MessageBoxButtons.YesNo, MessageBoxIcon.Information,
+            MessageBoxDefaultButton.Button2)
+        if oResult == DialogResult.Yes: launchReadMe()
+
+    def fnOnKeyDown(oSender, oArgs):
+        if oArgs.KeyCode == Keys.F1:
+            oArgs.Handled = True
+            oArgs.SuppressKeyPress = True
+            fnShowHelp()
+
+    def fnPickFile(oSender, oArgs):
+        # Pythonnet has a long-standing deadlock when it invokes the modern
+        # (Vista+) IFileOpenDialog COM-shell file picker -- documented in
+        # pythonnet issues #657 and #1286, both unresolved. The fix is to
+        # set AutoUpgradeEnabled = False, which forces the legacy Win32
+        # GetOpenFileName common dialog (comdlg32.dll). It has the older
+        # Windows look but actually works under pythonnet.
+        sCurrent = (txtTarget.Text or "").strip()
+        logger.info("Browse source clicked; opening OpenFileDialog (legacy)")
+        try:
+            oDlg = OpenFileDialog()
+            oDlg.AutoUpgradeEnabled = False
+            oDlg.Title = "Choose a plain text URL list"
+            oDlg.Filter = ("Plain text files (*.txt;*.lst;*.md)|*.txt;*.lst;*.md|"
+                           "All files (*.*)|*.*")
+            oDlg.FilterIndex = 2  # default to All files; user may have any extension
+            oDlg.CheckFileExists = True
+            oDlg.RestoreDirectory = True
+            try:
+                if sCurrent and os.path.isdir(os.path.dirname(sCurrent)):
+                    oDlg.InitialDirectory = os.path.dirname(sCurrent)
+            except Exception: pass
+            oRes = oDlg.ShowDialog()
+            logger.info(f"OpenFileDialog returned: {oRes}")
+            if oRes == DialogResult.OK:
+                txtTarget.Text = oDlg.FileName
+                logger.info(f"Source set to: {oDlg.FileName}")
+        except Exception as oError:
+            logger.info(f"OpenFileDialog raised: {oError}")
+            MessageBox.Show(f"Browse source failed: {oError}",
+                f"{sProgramName} - Browse error",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning)
+
+    def fnPickFolder(oSender, oArgs):
+        # FolderBrowserDialog has no AutoUpgradeEnabled property, and the
+        # default shell-COM machinery deadlocks under pythonnet exactly like
+        # the modern OpenFileDialog (issue #657). We sidestep it by calling
+        # the older Win32 SHBrowseForFolder API directly via ctypes -- which
+        # bypasses pythonnet entirely for this dialog and uses the simpler
+        # folder picker that doesn't need the same COM-marshaled callbacks.
+        sCurrent = (txtOut.Text or "").strip()
+        sChosen = ""
+        logger.info("Choose output clicked; calling SHBrowseForFolder (ctypes)")
+        try:
+            sChosen = browseForFolderViaShell(
+                "Choose the parent directory under which the per-scan "
+                "output folder will be created.",
+                sCurrent)
+        except Exception as oError:
+            logger.info(f"SHBrowseForFolder raised: {oError}")
+            MessageBox.Show(f"Choose output failed: {oError}",
+                f"{sProgramName} - Browse error",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            return
+        logger.info(f"SHBrowseForFolder returned: {sChosen!r}")
+        if sChosen:
+            txtOut.Text = sChosen
+            logger.info(f"Output dir set to: {sChosen}")
+
+    def fnDefaults(oSender, oArgs):
+        txtTarget.Text = ""
+        txtOut.Text = ""
+        chkInvisible.Checked = False
+        chkView.Checked = False
+        chkLog.Checked = False
+        chkUseCfg.Checked = False
+        configManager.eraseAll()
+
+    def fnHelpClick(oSender, oArgs):
+        fnShowHelp()
+
+    def fnOkClick(oSender, oArgs):
+        sCurrent = (txtTarget.Text or "").strip()
+        if not sCurrent:
+            MessageBox.Show(
+                "Please enter one or more URLs separated by spaces, "
+                "or the path to a plain text file of URLs.",
+                f"{sProgramName} - Missing source",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            txtTarget.Focus()
+            frm.DialogResult = DialogResult.None_
+            return
+        sKind, oDetail = classifyInput(sCurrent)
+        if sKind == "error":
+            MessageBox.Show(str(oDetail),
+                f"{sProgramName} - Invalid source",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            txtTarget.Focus()
+            frm.DialogResult = DialogResult.None_
+            return
+        # sKind is 'urls' or 'listfile' -- both are valid; let the dialog close.
+
+    btnBrowseTarget.Click += EventHandler(fnPickFile)
+    btnBrowseOut.Click += EventHandler(fnPickFolder)
+    btnDefaults.Click += EventHandler(fnDefaults)
+    btnHelp.Click += EventHandler(fnHelpClick)
+    btnOk.Click += EventHandler(fnOkClick)
+    # KeyDown takes a different EventHandler<KeyEventArgs>; pythonnet handles
+    # the conversion when the function signature matches. Pass the function
+    # directly rather than wrapping in EventHandler.
+    frm.KeyDown += fnOnKeyDown
+
+    txtTarget.Select()
+    logger.info("Showing dialog (frm.ShowDialog)")
+    oResult = frm.ShowDialog()
+    logger.info(f"Dialog returned: {oResult}")
+    if oResult != DialogResult.OK:
+        frm.Dispose()
+        return False
+
+    # Hand values back into the arguments namespace.
+    arguments.inputValue = (txtTarget.Text or "").strip()
+    arguments.sOutputDir = (txtOut.Text or "").strip()
+    arguments.bInvisible = bool(chkInvisible.Checked)
+    arguments.bViewOutput = bool(chkView.Checked)
+    arguments.bLog = bool(chkLog.Checked)
+    arguments.bUseConfig = bool(chkUseCfg.Checked)
+    frm.Dispose()
+    return True
+
+
+def launchReadMe():
+    """
+    Opens README.htm next to urlCheck.exe in the user's default browser.
+    Falls back to README.md, then to a polite notice if neither is present.
+    """
+    sExeDir = ""
+    sHtm = ""
+    sMd = ""
+    sTarget = ""
+
+    sExeDir = os.path.dirname(sys.executable if getattr(sys, "frozen", False) else os.path.abspath(__file__))
+    sHtm = os.path.join(sExeDir, "README.htm")
+    sMd = os.path.join(sExeDir, "README.md")
+    if os.path.isfile(sHtm): sTarget = sHtm
+    elif os.path.isfile(sMd): sTarget = sMd
+    if not sTarget:
+        try:
+            d = _loadDotNetForms()
+            if d is not None:
+                d["MessageBox"].Show(
+                    "Documentation (README.htm or README.md) was not found in:\r\n\r\n" + sExeDir,
+                    f"{sProgramName} - Documentation not found",
+                    d["MessageBoxButtons"].OK, d["MessageBoxIcon"].Warning)
+                return
+        except Exception:
+            pass
+        print(f"[WARN] No README.htm or README.md in {sExeDir}")
+        return
+    try: os.startfile(sTarget)
+    except Exception as oError: print(f"[WARN] Could not open {sTarget}: {oError}")
+
+
+def showFinalGuiMessage(sText, sTitle):
+    """
+    Shows a captured-stdout message after a GUI-mode scan completes. Short
+    text uses the native MessageBox; long text uses a scrollable read-only
+    multi-line TextBox in a small Form. Mirrors 2htm's showFinalMessage.
+    """
+    bLong = False
+    d = None
+
+    d = _loadDotNetForms()
+    if d is None:
+        print(sText)
+        return
+    bLong = len(sText) > 800 or sText.count("\n") > 15
+    if not bLong:
+        d["MessageBox"].Show(sText or "Done. No output.", sTitle,
+            d["MessageBoxButtons"].OK, d["MessageBoxIcon"].Information)
+        return
+
+    # Long output: scrollable read-only TextBox in a resizable form.
+    AnchorStyles = d["AnchorStyles"]
+    Button = d["Button"]
+    DialogResult = d["DialogResult"]
+    DockStyle = d["DockStyle"]
+    Font = d["Font"]
+    FontFamily = d["FontFamily"]
+    Form = d["Form"]
+    FormBorderStyle = d["FormBorderStyle"]
+    FormStartPosition = d["FormStartPosition"]
+    Panel = d["Panel"]
+    Point = d["Point"]
+    ScrollBars = d["ScrollBars"]
+    Size = d["Size"]
+    SystemFonts = d["SystemFonts"]
+    TextBox = d["TextBox"]
+
+    frm = Form()
+    frm.Text = sTitle
+    frm.StartPosition = FormStartPosition.CenterScreen
+    frm.ClientSize = Size(700, 480)
+    frm.FormBorderStyle = FormBorderStyle.Sizable
+    frm.MinimizeBox = False
+    frm.MaximizeBox = True
+    frm.ShowInTaskbar = False
+    frm.Font = SystemFonts.MessageBoxFont
+
+    txt = TextBox()
+    txt.Multiline = True
+    txt.ReadOnly = True
+    txt.ScrollBars = ScrollBars.Vertical
+    txt.WordWrap = False
+    txt.Text = sText
+    txt.Dock = DockStyle.Fill
+    try: txt.Font = Font(FontFamily.GenericMonospace, 9.0)
+    except Exception: pass
+    frm.Controls.Add(txt)
+
+    pnl = Panel()
+    pnl.Height = 40
+    pnl.Dock = DockStyle.Bottom
+    frm.Controls.Add(pnl)
+
+    btn = Button()
+    btn.Text = "OK"
+    btn.DialogResult = DialogResult.OK
+    btn.Size = Size(100, 26)
+    btn.Anchor = AnchorStyles.Top | AnchorStyles.Right
+    btn.Location = Point(pnl.ClientSize.Width - btn.Width - 12, 7)
+    pnl.Controls.Add(btn)
+    frm.AcceptButton = btn
+    frm.CancelButton = btn
+
+    frm.ShowDialog()
+    frm.Dispose()
+
+
 # --- Entry point ---
 
 def main():
-    bOpenReport = True
+    bAutoLaunchedGui = False
+    bGuiMode = False
+    bMultiUrl = False
+    bOwnConsole = False
     iErrorCount = 0
     iUrlIndex = 0
     iUrlTotal = 0
@@ -1494,6 +2672,9 @@ def main():
     browserType = None
     context = None
     lArgs = []
+    oCapture = None
+    oOriginalErr = sys.stderr
+    oOriginalOut = sys.stdout
     pathBaseDir = pathlib.Path.cwd()
     pathOutputDir = None
     playwrightCtx = None
@@ -1510,29 +2691,175 @@ def main():
 
     cleanPreviousTempDirs()
 
-    print(f"{sProgramName} {sProgramVersion}")
-
     arguments = parseArguments()
+
+    # nargs="*" returns a list. Collapse to a single space-joined string so
+    # the rest of main() can treat the field uniformly with the GUI dialog's
+    # text-field semantics (one URL, several space-separated URLs, or a path
+    # to a URL list file). Empty list -> empty string -> "no input given."
+    if isinstance(arguments.inputValue, list):
+        arguments.inputValue = " ".join(arguments.inputValue).strip()
+
+    # Open the log file early so the GUI-detection diagnostics can be
+    # captured in it. The log is only opened when -l / --log was given on
+    # the command line; saved-configuration log preference is honored later
+    # in the run, after configuration loading. To debug the auto-detection
+    # specifically, run with -l from cmd.exe and again from the desktop
+    # shortcut (after editing it to include -l), then compare the two logs.
+    if arguments.bLog: logger.open()
+    logger.info(f"{sProgramName} {sProgramVersion} starting")
+    logger.info(f"Python: {sys.version.split(chr(10))[0]}")
+    logger.info(f"Architecture: {struct.calcsize('P') * 8}-bit "
+        f"({platform.machine()}); platform={platform.platform()}")
+    logger.info(f"Frozen exe: {bool(getattr(sys, 'frozen', False))}; "
+        f"executable={sys.executable}")
+    if getattr(sys, 'frozen', False):
+        # When PyInstaller-bundled, _MEIPASS exposes the temp extraction
+        # directory and we can record the bundle's pid for cross-reference.
+        logger.info(f"Bundle: _MEIPASS={getattr(sys, '_MEIPASS', '')}; "
+            f"pid={os.getpid()}")
+    logger.info(f"Working directory: {os.getcwd()}")
+    logger.info(f"argv: {sys.argv}")
+
+    # Auto-detect GUI launch via GetConsoleProcessList (primary) with parent-
+    # process name as fallback (see isLaunchedFromGui). When invoked with no
+    # arguments from a GUI shell -- File Explorer double-click, Start-menu
+    # shortcut, desktop hotkey, Run dialog, etc. -- we fall through to GUI
+    # mode and hide the otherwise-visible blank console. When invoked from
+    # cmd.exe / PowerShell with no arguments we keep CLI behavior and print
+    # usage. The -g flag forces GUI mode unconditionally regardless of how
+    # the program was launched.
+    bOwnConsole = isLaunchedFromGui()
+    logger.info(f"bOwnConsole={bOwnConsole}, "
+        f"explicit -g={bool(getattr(arguments, 'bGuiMode', False))}, "
+        f"inputValue={arguments.inputValue!r}")
+    if not getattr(arguments, "bGuiMode", False):
+        if not arguments.inputValue and bOwnConsole:
+            arguments.bGuiMode = True
+            bAutoLaunchedGui = True
+            hideOwnConsoleWindow()
+    bGuiMode = bool(getattr(arguments, "bGuiMode", False))
+    logger.info(f"bGuiMode={bGuiMode}, bAutoLaunchedGui={bAutoLaunchedGui}")
+
+    # Configuration file: opt-in for CLI (-u required), implicit for GUI mode
+    # when an existing config file is present. This matches 2htm's asymmetry.
+    if bGuiMode and not arguments.bUseConfig and configManager.configExists():
+        arguments.bUseConfig = True
+    if arguments.bUseConfig:
+        configManager.loadInto(arguments)
+        # Honor saved log preference even if -l wasn't passed.
+        if arguments.bLog and not logger.bEnabled: logger.open()
+
+    # In GUI mode, present the dialog before any other work. The user's
+    # choices replace whatever came from CLI and config.
+    if bGuiMode:
+        if not showGuiDialog(arguments):
+            logger.info("User cancelled the dialog")
+            logger.close()
+            return 0
+        # The user may have toggled Log session in the dialog.
+        if arguments.bLog and not logger.bEnabled: logger.open()
+        # If the user left Use configuration checked, persist their values.
+        if arguments.bUseConfig:
+            configManager.save(
+                arguments.inputValue or "",
+                arguments.sOutputDir or "",
+                arguments.bViewOutput,
+                arguments.bInvisible,
+                arguments.bLog)
+        logger.info(f"After dialog: input={arguments.inputValue!r} "
+            f"outputDir={arguments.sOutputDir!r} "
+            f"invisible={arguments.bInvisible} "
+            f"viewOutput={arguments.bViewOutput} "
+            f"log={arguments.bLog} useConfig={arguments.bUseConfig}")
+
     if not arguments.inputValue:
+        print(f"{sProgramName} {sProgramVersion}")
         print(sUsage)
         return 1
 
-    sInput = str(arguments.inputValue)
-
-    # Determine whether sInput is a URL list file or a single URL / local HTML file.
-    if isUrlListFile(sInput):
+    # Resolve the base output directory. Default = CWD.
+    if arguments.sOutputDir:
         try:
-            lUrls = getUrlsFromFile(sInput)
+            pathBaseDir = pathlib.Path(arguments.sOutputDir).expanduser()
+            pathBaseDir.mkdir(parents=True, exist_ok=True)
         except Exception as oError:
-            print(f"Error reading URL list file: {oError}")
+            sErr = f"[ERROR] Output directory '{arguments.sOutputDir}' could not be created: {oError}"
+            print(sErr)
+            if bGuiMode: showFinalGuiMessage(sErr, f"{sProgramName} - Error")
             return 1
-        bOpenReport = False
-        iUrlTotal = len(lUrls)
-        print(f"URL list: {sInput} ({iUrlTotal} URL(s))")
     else:
-        sNormalizedUrl = getNormalizedUrl(sInput)
-        lUrls = [sNormalizedUrl]
-        iUrlTotal = 1
+        pathBaseDir = pathlib.Path.cwd()
+
+    logger.info(f"Output base: {pathBaseDir}")
+    logger.info(f"Target: {arguments.inputValue}")
+
+    # In GUI mode, capture stdout/stderr so we can present the run summary in
+    # a final dialog rather than scrolling past in a console the user can't
+    # see. The CLI path leaves stdout/stderr alone.
+    if bGuiMode:
+        oCapture = io.StringIO()
+        sys.stdout = oCapture
+        sys.stderr = oCapture
+
+    sInput = str(arguments.inputValue).strip()
+
+    # Three-case input dispatch:
+    #
+    #   (1) sInput is a path to an existing file that is NOT an allowed HTML
+    #       extension -> treat as a URL list file (one URL per line).
+    #
+    #   (2) sInput contains internal whitespace and case (1) did not match
+    #       -> treat as a list of URLs separated by spaces. This is what
+    #       lets the GUI Source URLs field accept "https://a.com https://b.com".
+    #
+    #   (3) Otherwise -> single URL / domain / local HTML file path.
+    #
+    # All three cases produce the same lUrls list, after which the per-URL
+    # scan loop below treats every entry uniformly. A multi-URL run (lUrls
+    # with more than one element) suppresses the auto-launch of report.htm
+    # the same way a URL list file does.
+    # Three-case input dispatch using classifyInput():
+    #
+    #   ('listfile', sPath)  -> read URLs from sPath (.txt only). The list
+    #                           file's lines may be URLs, domains, or local
+    #                           HTML file paths.
+    #   ('urls', lTokens)    -> sInput is one or more space-separated URLs/
+    #                           domains. Local HTML file paths are NOT valid
+    #                           on direct input and have already been
+    #                           rejected by classifyInput.
+    #   ('error', sReason)   -> bail with a clear message.
+    bMultiUrl = False
+    sKind, oDetail = classifyInput(sInput)
+    if sKind == "error":
+        print(f"[ERROR] {oDetail}")
+        logger.info(f"Input error: {oDetail}")
+        if bGuiMode:
+            sys.stdout = oOriginalOut
+            sys.stderr = oOriginalErr
+            showFinalGuiMessage(oCapture.getvalue(), f"{sProgramName} - Error")
+        logger.close()
+        return 1
+    if sKind == "listfile":
+        try:
+            lUrls = getUrlsFromFile(oDetail)
+        except Exception as oError:
+            print(f"[ERROR] Could not read URL list file: {oError}")
+            if bGuiMode:
+                sys.stdout = oOriginalOut
+                sys.stderr = oOriginalErr
+                showFinalGuiMessage(oCapture.getvalue(), f"{sProgramName} - Error")
+            logger.close()
+            return 1
+        bMultiUrl = True
+        iUrlTotal = len(lUrls)
+        logger.info(f"URL list: {oDetail} ({iUrlTotal} URL(s))")
+    else:
+        # sKind == "urls"
+        lUrls = [getNormalizedUrl(sToken) for sToken in oDetail if sToken]
+        iUrlTotal = len(lUrls)
+        bMultiUrl = iUrlTotal > 1
+        if bMultiUrl: logger.info(f"URL set: {iUrlTotal} URL(s) from the source field")
 
     try:
         with sync_playwright() as playwrightCtx:
@@ -1543,32 +2870,47 @@ def main():
                 "--no-first-run",
                 f"--window-size={iDefaultViewportWidth},{iDefaultViewportHeight}",
             ]
-            browser = browserType.launch(channel=sBrowserChannel, headless=bDefaultHeadless, args=lArgs)
+            # Playwright still calls this "headless"; we expose it to the
+            # user as "Invisible" because that wording is clearer and not
+            # tied to the implementation. The mapping is a 1:1 boolean.
+            browser = browserType.launch(channel=sBrowserChannel, headless=bool(arguments.bInvisible), args=lArgs)
             context = browser.new_context(bypass_csp=True, ignore_https_errors=bDefaultIgnoreHttpsErrors, user_agent=sUserAgent, viewport={"width": iDefaultViewportWidth, "height": iDefaultViewportHeight})
             # Pre-fetch axe-core content once so CSP-restricted sites can still be scanned.
             sAxeContent = ""
             for sAxeUrl in aAxeCdnUrls:
                 try:
                     sAxeContent = fetchText(sAxeUrl)
-                    print(f"  axe-core pre-fetched from {sAxeUrl}")
+                    logger.info(f"axe-core pre-fetched from {sAxeUrl}")
                     break
                 except Exception:
                     continue
             iUrlIndex = 0
             for sUrl in lUrls:
                 iUrlIndex += 1
-                sNormalizedUrl = getNormalizedUrl(sUrl) if isUrlListFile(sInput) else sUrl
-                if iUrlTotal > 1: print(f"\n[{iUrlIndex}/{iUrlTotal}] {sNormalizedUrl}")
+                # lUrls is already a list of normalized targets regardless of
+                # which dispatch case produced it; we pass each entry through
+                # scanUrl unchanged. (We re-run getNormalizedUrl idempotently
+                # for the listfile case where lines were read raw from the
+                # file without prior normalization.)
+                sNormalizedUrl = getNormalizedUrl(sUrl) if sKind == "listfile" else sUrl
+                if iUrlTotal > 1: logger.info(f"[{iUrlIndex}/{iUrlTotal}] {sNormalizedUrl}")
                 try:
-                    scanUrl(sUrl if isUrlListFile(sInput) else sInput, sNormalizedUrl, browser, context, pathBaseDir, bOpenReport, sAxeContent)
+                    scanUrl(
+                        sUrl, sNormalizedUrl, browser, context, pathBaseDir,
+                        sAxeContent)
                 except Exception as oError:
                     iErrorCount += 1
-                    print(f"  Error scanning {sNormalizedUrl}: {oError}")
+                    print(f"Error scanning {sNormalizedUrl}: {oError}")
+                    logger.info(f"Error scanning {sNormalizedUrl}: {oError}")
                     pathOutputDir = chooseOutputDir(pathBaseDir, sFallbackTitle)
                     pathlib.Path(pathOutputDir, sErrorReportName).write_text("\n\n".join([str(oError), traceback.format_exc()[:iMaxErrorTextLen]]), encoding="utf-8")
             if iUrlTotal > 1:
-                print(f"\nDone. {iUrlTotal - iErrorCount} of {iUrlTotal} URLs scanned successfully.")
-                if iErrorCount > 0: print(f"  {iErrorCount} error(s). See error.txt in the relevant output directories.")
+                logger.info(f"Done. {iUrlTotal - iErrorCount} of {iUrlTotal} URLs scanned successfully.")
+                if iErrorCount > 0: logger.info(f"{iErrorCount} error(s). See error.txt in the relevant output directories.")
+            # Open the parent output directory once at the end of the run, if
+            # requested. This shows the user all per-page subdirectories at
+            # once rather than focusing on any single page's folder.
+            if arguments.bViewOutput: openFolderInExplorer(str(pathBaseDir))
     finally:
         try:
             if context is not None: context.close()
@@ -1578,6 +2920,17 @@ def main():
             if browser is not None: browser.close()
         except Exception:
             pass
+
+        # Restore stdout/stderr and surface captured output in a GUI dialog.
+        if bGuiMode and oCapture is not None:
+            sys.stdout = oOriginalOut
+            sys.stderr = oOriginalErr
+            sCaptured = oCapture.getvalue()
+            sTitle = f"{sProgramName} - Results" if iErrorCount == 0 else f"{sProgramName} - Completed with errors"
+            showFinalGuiMessage(sCaptured if sCaptured else "Done. No output.", sTitle)
+
+        logger.info(f"Done. {iUrlTotal - iErrorCount} of {iUrlTotal} scanned. {iErrorCount} error(s).")
+        logger.close()
 
     return 0 if iErrorCount == 0 else 1
 

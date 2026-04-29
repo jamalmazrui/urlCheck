@@ -238,206 +238,387 @@
 </head>
 <body>
 <h1 id="urlcheck">urlCheck</h1>
-<p><strong>Author:</strong> Jamal Mazrui<br />
-<strong>License:</strong> MIT</p>
-<p><code>urlCheck</code> is a Windows command-line tool that checks web
-pages for accessibility problems. It opens a page in a browser, runs the
-axe-core testing engine, and saves a set of output files in a new folder
-named after the page title.</p>
-<p>The whole urlCheck project may be downloaded in a single zip archive
-from: <a
-href="http://GitHub.com/JamalMazrui/urlCheck/archive/main.zip">http://GitHub.com/JamalMazrui/urlCheck/archive/main.zip</a></p>
+<p><strong>Author:</strong> Jamal Mazrui <strong>License:</strong>
+MIT</p>
+<p><code>urlCheck</code> is a Windows tool that checks web pages for
+accessibility problems. It opens each page in Microsoft Edge, runs the
+<a href="https://github.com/dequelabs/axe-core">axe-core</a> testing
+engine, and saves a set of output files in a new folder named after the
+page title.</p>
+<p>You can use it from the command line or from a small parameter
+dialog. The dialog is designed to be friendly to screen readers.</p>
+<p>The whole urlCheck project may be downloaded as a single zip archive
+from:</p>
+<p><a href="https://github.com/JamalMazrui/urlCheck/archive/main.zip"
+class="uri">https://github.com/JamalMazrui/urlCheck/archive/main.zip</a></p>
 <hr />
 <h2 id="what-you-need">What you need</h2>
 <ul>
-<li>Windows 10 or later</li>
+<li>Windows 10 or later (64-bit)</li>
+<li>Microsoft Edge (any modern version; already present on Windows
+10/11)</li>
 <li>An internet connection during each scan</li>
 </ul>
+<p>You do <strong>not</strong> need to install Python or .NET
+separately. The installer ships everything urlCheck needs, and the .NET
+Framework 4.8 used by the parameter dialog ships in-box with Windows 10
+(since version 1903) and Windows 11.</p>
 <hr />
-<h2 id="how-to-use-it">How to use it</h2>
-<p>Use <code>urlCheck.cmd</code> to run the program. The
-<code>.cmd</code> wrapper suppresses a harmless internal message that can
-appear when the program closes.</p>
-<p><strong>Show help:</strong></p>
+<h2 id="installing">Installing</h2>
+<p>Run <code>urlCheck_setup.exe</code> (the setup wizard) and follow the
+prompts. By default urlCheck installs to
+<code>C:\Program Files\urlCheck</code>, adds a Start-menu shortcut, and
+adds a desktop shortcut whose hotkey is <strong>Alt+Ctrl+U</strong>.
+Pressing Alt+Ctrl+U from anywhere in Windows opens the urlCheck
+dialog.</p>
+<p>The installer never adds a right-click verb or any other Explorer
+integration. It does not change file associations.</p>
+<hr />
+<h2 id="running-urlcheck">Running urlCheck</h2>
+<p>There are two ways to run it.</p>
+<h3 id="from-the-dialog-easiest">From the dialog (easiest)</h3>
+<p>Launch urlCheck from any of these:</p>
+<ul>
+<li>The desktop shortcut (or its <strong>Alt+Ctrl+U</strong>
+hotkey)</li>
+<li>The Start-menu shortcut</li>
+<li>Double-clicking <code>urlCheck.exe</code> in File Explorer</li>
+<li>A Run dialog (<code>Win+R</code>) typing <code>urlCheck</code></li>
+</ul>
+<p>The parameter dialog appears. Fill in the fields you want and press
+OK to start the scan. Press F1 inside the dialog for in-context
+help.</p>
+<p>The dialog has these controls. Each label has an underlined letter
+that you can press with <strong>Alt</strong> to jump straight to that
+control (the underlined letter is shown in brackets below):</p>
+<ul>
+<li><strong>Source URLs</strong> [S] — what to scan. Enter one URL, or a
+domain name like <code>microsoft.com</code>, or several URLs separated
+by spaces, or the path to a plain text file that lists URLs (and/or
+local file paths) one per line. The Browse source [B] button opens a
+file picker.</li>
+<li><strong>Output directory</strong> [O] — where the per-scan folders
+go. Blank means the current working directory. The Choose output [C]
+button opens a folder picker.</li>
+<li><strong>Invisible mode</strong> [I] — run Edge with no visible
+browser window. Off by default.</li>
+<li><strong>View output</strong> [V] — when all scans complete, open the
+output directory in File Explorer.</li>
+<li><strong>Log session</strong> [L] — write a fresh
+<code>urlCheck.log</code> file in the current working directory. Useful
+for diagnostics; replaces any prior log.</li>
+<li><strong>Use configuration</strong> [U] — load these field values
+from a saved configuration file at startup, and save them back when you
+press OK. The configuration lives at
+<code>%LOCALAPPDATA%\urlCheck\urlCheck.ini</code>. Without this
+checkbox, urlCheck leaves no settings on disk.</li>
+<li><strong>Help</strong> [H] — show this help summary and offer to open
+the full README in your browser. F1 also shows Help.</li>
+<li><strong>Default settings</strong> [D] — clear all fields, uncheck
+all boxes, and delete the saved configuration if any.</li>
+<li><strong>OK</strong> / <strong>Cancel</strong> — start the scan, or
+cancel without scanning. Enter is OK; Esc is Cancel.</li>
+</ul>
+<p>When all scans complete, a final results dialog summarizes which URLs
+were processed and what their page titles were.</p>
+<h3 id="from-the-command-line">From the command line</h3>
+<p><code>urlCheck.cmd</code> is a tiny wrapper script that suppresses a
+harmless internal warning. Use it instead of <code>urlCheck.exe</code>
+directly.</p>
+<p>Show help:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>urlCheck <span class="at">-h</span></span></code></pre></div>
+<p>Show version:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>urlCheck <span class="at">-v</span></span></code></pre></div>
+<p>Check a single page:</p>
 <div class="sourceCode" id="cb3"><pre
-class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>urlCheck.cmd <span class="at">-h</span></span></code></pre></div>
-<p><strong>Show version:</strong></p>
+class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>urlCheck https:/<span class="at">/example</span>.com</span></code></pre></div>
+<p>Check a page by domain (<code>https://</code> is added
+automatically):</p>
 <div class="sourceCode" id="cb4"><pre
-class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>urlCheck.cmd <span class="at">-v</span></span></code></pre></div>
-<p><strong>Check a web page:</strong></p>
+class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>urlCheck microsoft.com</span></code></pre></div>
+<p>Check several pages in one run:</p>
 <div class="sourceCode" id="cb5"><pre
-class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>urlCheck.cmd https:/<span class="at">/example</span>.com</span></code></pre></div>
-<p><strong>Check a page using just the domain name</strong> (https:// is
-added automatically):</p>
+class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>urlCheck https:/<span class="at">/a</span>.example.com https:/<span class="at">/b</span>.example.com microsoft.com</span></code></pre></div>
+<p>Check a list of URLs from a file:</p>
 <div class="sourceCode" id="cb6"><pre
-class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>urlCheck.cmd microsoft.com</span></code></pre></div>
-<p><strong>Check a local HTML file:</strong></p>
-<div class="sourceCode" id="cb8"><pre
-class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>urlCheck.cmd <span class="st">&quot;C:\work\sample.html&quot;</span></span></code></pre></div>
-<p><strong>Check a list of URLs from a text file:</strong></p>
-<div class="sourceCode" id="cb9"><pre
-class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>urlCheck.cmd urls.txt</span></code></pre></div>
-<p>The program prints its name and version right away, then shows
-progress as it works. After each scan it prints a short summary of what
-it found.</p>
+class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>urlCheck urls.txt</span></code></pre></div>
+<p>The dialog can also be launched from the command line with
+<code>-g</code>:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>urlCheck <span class="at">-g</span></span></code></pre></div>
+<p>When invoked without arguments from a GUI shell (Explorer
+double-click, Start-menu shortcut, desktop hotkey), urlCheck shows the
+dialog automatically. When invoked without arguments from a console
+shell (cmd.exe, PowerShell, Windows Terminal), it prints help and exits.
+The <code>-g</code> flag forces GUI mode regardless.</p>
 <hr />
 <h2 id="scanning-a-list-of-urls">Scanning a list of URLs</h2>
-<p>If you give <code>urlCheck</code> a text file, it treats each line as
-a URL to check. Blank lines and lines that start with <code>#</code> are
-skipped.</p>
-<p>Each URL gets its own output folder. The program does not open
-<code>report.htm</code> automatically when running a list.</p>
-<p><strong>Example <code>urls.txt</code>:</strong></p>
+<p>If the source is a path to an existing file, urlCheck treats each
+non-blank, non-comment line as one target. The file may have any
+extension; urlCheck looks at its contents to confirm it is plain text.
+Inside the file:</p>
+<ul>
+<li>A line that looks like a URL (<code>https://...</code>) or a domain
+(<code>example.com</code>) is fetched in Edge.</li>
+<li>A line that is a path to a local file is loaded as HTML in Edge
+regardless of the file’s extension. The user is responsible for choosing
+files that are HTML-renderable.</li>
+<li>Blank lines are ignored.</li>
+<li>Lines starting with <code>#</code> are treated as comments and
+ignored.</li>
+</ul>
+<p>Example list file <code>urls.txt</code>:</p>
 <pre><code># Pages to check - April 2026
 https://example.com
 https://example.org/about
-https://example.net/contact</code></pre>
-<p>At the end, the program tells you how many pages were checked and how
-many had errors.</p>
+microsoft.com
+C:\work\demo.html
+D:\drafts\newsletter.htm</code></pre>
+<p>Each target gets its own output folder. The accessibility report is
+<strong>not</strong> opened automatically after each scan; the user
+opens the files when ready.</p>
 <hr />
 <h2 id="output-files">Output files</h2>
-<p>Each scan creates a folder named after the page title. Inside that
-folder you will find these files:</p>
-<table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
-<thead>
-<tr>
-<th>File</th>
-<th>What it contains</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>report.htm</code></td>
-<td>A readable accessibility report with headings and links</td>
-</tr>
-<tr>
-<td><code>report.csv</code></td>
-<td>A spreadsheet-ready list of violations, one row per issue</td>
-</tr>
-<tr>
-<td><code>report.xlsx</code></td>
-<td>An Excel workbook with multiple sheets of results</td>
-</tr>
-<tr>
-<td><code>results.json</code></td>
-<td>The full raw data from axe-core, including all metadata</td>
-</tr>
-<tr>
-<td><code>page.yaml</code></td>
-<td>The ARIA accessibility tree of the page</td>
-</tr>
-<tr>
-<td><code>page.htm</code></td>
-<td>A saved copy of the page source with styles included</td>
-</tr>
-<tr>
-<td><code>page.png</code></td>
-<td>A full-page screenshot</td>
-</tr>
-</tbody>
-</table>
-<p>If an error occurs, the program writes an <code>error.txt</code> file
-to the folder instead.</p>
+<p>Each scan creates a new folder named after the page title (sanitized
+for the file system) under the output directory. If you don’t choose an
+output directory, urlCheck uses the current working directory. From a
+console (cmd.exe, PowerShell), that is wherever you ran the command.
+From the installed shortcuts (Start menu, desktop, Alt+Ctrl+U hotkey),
+it is your Documents folder (<code>%USERPROFILE%\Documents</code>).</p>
+<p>Inside each per-scan folder:</p>
 <h3 id="report.htm">report.htm</h3>
-<p>This is the main report. It has a table of contents with anchor links
-so you can jump to any section. Sections include run details, a count of
-issues by type, the most common problems, and a full list of violations
-with HTML snippets. At the end there is a glossary and links to public
-accessibility resources.</p>
+<p>The main accessibility report, in HTML, with headings and links. This
+is the file most users will read first. It groups violations by rule,
+shows the failing element’s HTML and CSS selector, and links to the
+axe-core documentation for each rule.</p>
 <h3 id="report.csv">report.csv</h3>
-<p>Each row is one failing element on the page. Columns include the rule
-name, impact level, a description of the problem, the CSS selector of
-the failing element, and the HTML of that element. All fields are fully
-quoted so the file opens cleanly in Excel, even when HTML attributes
-contain quotes.</p>
-<p>Columns included:</p>
-<p><code>scanTimestampUtc</code>, <code>pageTitle</code>,
-<code>pageUrl</code>, <code>browserVersion</code>,
-<code>axeSource</code>, <code>outcome</code>, <code>ruleId</code>,
-<code>impact</code>, <code>description</code>, <code>help</code>,
-<code>helpUrl</code>, <code>tags</code>, <code>wcagRefs</code>,
-<code>standardsRefs</code>, <code>ruleNodeCount</code>,
-<code>ruleNodeIndex</code>, <code>target</code>, <code>html</code>,
-<code>failureSummary</code></p>
+<p>A spreadsheet of violations, one row per failing element. All fields
+are quoted so the file opens cleanly in Excel even when HTML attributes
+contain quotes. Columns include the timestamp, page title, page URL,
+browser version, axe-core source, outcome, rule id, impact, description,
+help text, help URL, tags, WCAG references, standards references, target
+selector, HTML snippet, and failure summary.</p>
 <h3 id="report.xlsx">report.xlsx</h3>
 <p>An Excel workbook with four sheets:</p>
 <ul>
 <li><strong>Metadata</strong> — URL, page title, browser version, scan
-time, and file names</li>
+time, file names</li>
 <li><strong>Summary</strong> — counts of violations by impact level and
 most common rules</li>
-<li><strong>Results</strong> — same data as <code>report.csv</code>, one
-row per issue</li>
-<li><strong>Glossary</strong> — definitions of terms and a list of steps
-the program follows</li>
+<li><strong>Results</strong> — the same data as <code>report.csv</code>,
+one row per issue</li>
+<li><strong>Glossary</strong> — definitions of terms used in the
+report</li>
 </ul>
 <h3 id="results.json">results.json</h3>
-<p>The complete axe-core output plus metadata about the scan. This file
-includes all four outcome types (violations, incomplete passes, and
-inapplicable rules), not just violations.</p>
+<p>The complete raw output from the scan, plus metadata. Includes all
+four outcome types: violations, incomplete results that need manual
+review, passes, and inapplicable rules.</p>
 <h3 id="page.yaml">page.yaml</h3>
-<p>The ARIA accessibility tree of the page, captured using the Playwright
-<code>locator.aria_snapshot()</code> API on the page body. The output is
-a YAML file representing the hierarchical structure of accessible
-elements, showing roles, accessible names, ARIA attributes such as
-level, checked, and expanded, and text content. Only nodes visible to
-assistive technologies are included. The file is encoded as UTF-8 with a
-byte-order mark (BOM). If the installed version of Playwright does not
-support this API the file is silently omitted.</p>
+<p>The ARIA accessibility tree of the page, in YAML form. Shows the
+hierarchical structure of accessible elements with their roles,
+accessible names, ARIA attributes (level, checked, expanded, etc.), and
+text content. Only nodes visible to assistive technologies are included.
+UTF-8 with a byte-order mark.</p>
 <h3 id="page.htm">page.htm</h3>
-<p>A snapshot of the page as the browser saw it. External CSS and
-JavaScript files are inlined where the program can retrieve them.</p>
+<p>A snapshot of the page as the browser saw it after rendering.
+External CSS and JavaScript files are inlined where the program could
+retrieve them.</p>
 <h3 id="page.png">page.png</h3>
 <p>A full-page screenshot taken at a 1600 x 1440 viewport.</p>
 <hr />
+<h2 id="configuration-file">Configuration file</h2>
+<p>When <strong>Use configuration</strong> is checked in the dialog (or
+<code>-u</code> is on the command line), urlCheck reads and writes a
+small INI file at:</p>
+<pre><code>%LOCALAPPDATA%\urlCheck\urlCheck.ini</code></pre>
+<p>It stores the source value, the output directory, and the option
+checkboxes. Without <strong>Use configuration</strong>, urlCheck leaves
+nothing on disk between runs. <strong>Default settings</strong> in the
+dialog deletes this file.</p>
+<hr />
+<h2 id="log-file">Log file</h2>
+<p>When <strong>Log session</strong> is checked (or <code>-l</code> is
+on the command line), urlCheck writes a fresh <code>urlCheck.log</code>
+to the current working directory. Any prior log is deleted at the start
+of the run, so the file always reflects only the current session.</p>
+<p>The current working directory depends on how urlCheck was launched.
+From a console (cmd.exe, PowerShell), it is whatever directory the
+console is in. From the installed shortcuts (Start menu, desktop,
+Alt+Ctrl+U hotkey), it is your Documents folder
+(<code>%USERPROFILE%\Documents</code>). The shortcuts deliberately point
+at Documents rather than the install directory so that output and the
+log file land somewhere writable.</p>
+<p>The log captures: program version, Python version, architecture (32
+or 64-bit), platform, frozen-exe status, working directory, command-line
+arguments, GUI auto-detection inputs and decision, .NET runtime info (in
+GUI mode), thread apartment state changes, dialog ShowDialog enter/exit,
+file and folder picker enter/exit, axe-core fetch results, per-URL
+navigation, output directory paths, and per-scan summary lines.</p>
+<p>The log is UTF-8 with a byte-order mark, so Notepad opens it
+correctly.</p>
+<hr />
 <h2 id="notes">Notes</h2>
 <ul>
-<li><code>urlCheck</code> only reports violations automatically. It does
-not replace manual testing.</li>
-<li>If the server that hosts the accessibility testing engine is not
-reachable, the scan will fail.</li>
-<li>The tool works with web URLs and local <code>.html</code>,
-<code>.htm</code>, and <code>.xhtml</code> files.</li>
+<li>urlCheck only reports automatically-detectable violations. It does
+not replace manual testing or screen-reader testing.</li>
+<li>urlCheck pre-fetches axe-core once per run from
+<code>cdn.jsdelivr.net</code>, falling back to <code>unpkg.com</code> if
+the first is unreachable. If both CDNs are unreachable, the scan will
+fail.</li>
+<li>Local files inside a URL list are loaded as HTML regardless of
+extension. urlCheck does not validate file contents before loading; if a
+file is not HTML, Edge may render it unexpectedly. The user is
+responsible for choosing HTML-renderable files.</li>
+<li>urlCheck never opens output files automatically. After a scan, the
+user can open <code>report.htm</code> (or any other output file) by
+visiting the per-scan folder. Use <strong>View output</strong> (or
+<code>--view-output</code>) to have the parent output directory opened
+in Explorer at the end of a run.</li>
 </ul>
 <hr />
 <h2 id="development">Development</h2>
 <p>This section is for developers who want to build
-<code>urlCheck.exe</code> from source.</p>
+<code>urlCheck.exe</code> from source or modify it.</p>
+<h3 id="source-layout">Source layout</h3>
+<p>The whole program is one Python file: <code>urlCheck.py</code>. It
+uses <a href="https://playwright.dev/python/">Playwright</a> to drive
+Microsoft Edge, <a
+href="https://github.com/dequelabs/axe-core">axe-core</a> for the
+accessibility scan, <a
+href="https://openpyxl.readthedocs.io/">openpyxl</a> for the Excel
+workbook, and <a href="https://pythonnet.github.io/">pythonnet</a> for
+the WinForms parameter dialog. The build is packaged with <a
+href="https://pyinstaller.org/">PyInstaller</a> into a single
+self-contained 64-bit exe. The installer is built with <a
+href="https://jrsoftware.org/isinfo.php">Inno Setup</a> from
+<code>urlCheck.iss</code>.</p>
 <h3 id="prerequisites">Prerequisites</h3>
 <ul>
-<li>Python 3.14 or later from <a
-href="https://www.python.org/downloads/">python.org</a></li>
-<li>The source files from this repository</li>
+<li>Python 3.13 (recommended; pythonnet’s officially supported maximum
+at time of writing). If you use a newer Python that pythonnet does not
+yet have wheels for, the build will fail at the
+<code>pip install pythonnet</code> step.</li>
+<li>Inno Setup 6.x to compile the installer from
+<code>urlCheck.iss</code>.</li>
+<li>An internet connection during the first build (to install Python
+packages and the Edge Playwright driver).</li>
 </ul>
-<h3 id="install-build-dependencies">Install build dependencies</h3>
-<div class="sourceCode" id="cb12"><pre
-class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>py <span class="at">-3</span>.14 <span class="at">-m</span> pip install -<span class="at">-upgrade</span> pip</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>py <span class="at">-3</span>.14 <span class="at">-m</span> pip install -<span class="at">-upgrade</span> <span class="at">-r</span> requirements.txt</span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>py <span class="at">-3</span>.14 <span class="at">-m</span> pip install <span class="st">&quot;pyinstaller&gt;=6.19.0&quot;</span></span></code></pre></div>
-<h3 id="set-up-the-browser-driver">Set up the browser driver</h3>
-<div class="sourceCode" id="cb13"><pre
-class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>py <span class="at">-3</span>.14 <span class="at">-m</span> playwright install msedge</span></code></pre></div>
-<h3 id="build-the-executable">Build the executable</h3>
-<div class="sourceCode" id="cb14"><pre
-class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>py <span class="at">-3</span>.14 <span class="at">-m</span> PyInstaller -<span class="at">-clean</span> -<span class="at">-noconfirm</span> -<span class="at">-onefile</span> -<span class="at">-name</span> urlCheck urlCheck.py</span></code></pre></div>
-<p>The result is at <code>dist\urlCheck.exe</code>.</p>
-<h3 id="automated-build">Automated build</h3>
-<p>Run the included script, which installs dependencies, builds the
-executable, and copies <code>urlCheck.cmd</code> into the
-<code>dist\</code> folder:</p>
-<div class="sourceCode" id="cb16"><pre
-class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>buildUrlCheck.cmd</span></code></pre></div>
-<p>Distribute both files together:</p>
-<pre><code>dist\urlCheck.exe
-dist\urlCheck.cmd</code></pre>
+<h3 id="coding-style">Coding style</h3>
+<p>The source uses what the author calls “Camel Type”: Hungarian prefix
+notation for variables (<code>b</code> for boolean, <code>i</code> for
+integer, <code>s</code> for string, <code>l</code> for list,
+<code>d</code> for dict, <code>o</code> for other object types, etc.),
+lower camelCase for everything, single-line <code>if-then</code>
+statements where appropriate, and constants prefixed with
+<code>c_</code>. Function-level variable definitions appear at the top
+of each function in alphabetical order, one type per line. The style is
+tuned for screen-reader productivity (predictable token shapes that read
+well aloud).</p>
+<h3 id="building-the-executable">Building the executable</h3>
+<p>Run the included script. It checks for Python 3.13, installs the
+required packages, downloads the Playwright Edge driver, and runs
+PyInstaller:</p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>buildUrlCheck.cmd</span></code></pre></div>
+<p>The result is <code>dist\urlCheck.exe</code> plus the wrapper script
+<code>dist\urlCheck.cmd</code> and the icon
+<code>dist\urlCheck.ico</code>.</p>
+<p>To build manually:</p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>py <span class="at">-3</span>.13 <span class="at">-m</span> pip install -<span class="at">-upgrade</span> pip</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>py <span class="at">-3</span>.13 <span class="at">-m</span> pip install -<span class="at">-upgrade</span> <span class="at">-r</span> requirements.txt</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>py <span class="at">-3</span>.13 <span class="at">-m</span> pip install <span class="st">&quot;pyinstaller&gt;=6.19.0&quot;</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>py <span class="at">-3</span>.13 <span class="at">-m</span> playwright install msedge</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>py <span class="at">-3</span>.13 <span class="at">-m</span> PyInstaller -<span class="at">-clean</span> -<span class="at">-noconfirm</span> -<span class="at">-onefile</span> -<span class="at">-console</span> ^</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>    --name urlCheck -<span class="at">-icon</span>=urlCheck.ico ^</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>    --collect-all pythonnet ^</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>    --hidden-import playwright.sync_api ^</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>    urlCheck.py</span></code></pre></div>
+<p>The <code>--collect-all pythonnet</code> flag is required for the
+WinForms dialog to load inside the frozen exe; without it, pythonnet’s
+<code>Python.Runtime.dll</code> bridge is missing at runtime.</p>
+<h3 id="building-the-installer">Building the installer</h3>
+<p>After <code>buildUrlCheck.cmd</code> produces
+<code>dist\urlCheck.exe</code>, copy the rest of the source tree into
+<code>dist\</code> so that Inno Setup can find them:</p>
+<pre><code>dist\urlCheck.exe        (built; the icon is embedded inside it)
+dist\urlCheck.cmd        (copied by buildUrlCheck.cmd)
+dist\urlCheck.ico        (copied by buildUrlCheck.cmd; needed only at
+                          installer compile time for the setup wizard&#39;s
+                          own icon, not shipped with the installed program)
+dist\README.htm          (you provide; rendered from README.md)
+dist\README.md           (you provide)
+dist\license.htm         (you provide)
+dist\announce.htm        (you provide; release notes)
+dist\announce.md         (you provide)
+dist\urlCheck.py         (you provide; the source)
+dist\buildUrlCheck.cmd   (you provide)
+dist\urlCheck.iss        (you provide)
+dist\requirements.txt    (you provide)</code></pre>
+<p>Open <code>urlCheck.iss</code> in Inno Setup and click Compile. The
+result is <code>dist\urlCheck_setup.exe</code>.</p>
+<p>The runtime distribution from the installer’s perspective is minimal:
+<code>urlCheck.exe</code> (with embedded icon) plus
+<code>urlCheck.cmd</code>. Everything else in the install directory
+(README, license, source, etc.) is documentation and reference
+material.</p>
+<p>The installer:</p>
+<ul>
+<li>Installs to <code>C:\Program Files\urlCheck</code> by default</li>
+<li>Adds a desktop shortcut whose hotkey is Alt+Ctrl+U</li>
+<li>Adds a Start-menu group with shortcuts to urlCheck, the README, and
+the uninstaller</li>
+<li>Adds no right-click Explorer verbs and no file associations</li>
+<li>Is 64-bit only</li>
+</ul>
 <h3 id="running-from-source">Running from source</h3>
-<p>To run without building the executable:</p>
-<div class="sourceCode" id="cb17"><pre
-class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>py <span class="at">-3</span>.14 urlCheck.py microsoft.com</span></code></pre></div>
+<p>To run urlCheck without building the executable:</p>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>py <span class="at">-3</span>.13 urlCheck.py microsoft.com</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>py <span class="at">-3</span>.13 urlCheck.py <span class="at">-g</span></span></code></pre></div>
+<p>You will see a small bootloader warning at exit when running from
+source (a known issue with how PyInstaller handles
+<code>MSVCP140.dll</code>). The frozen <code>urlCheck.exe</code> plus
+<code>urlCheck.cmd</code> wrapper hides this warning; running from
+source you can ignore it.</p>
+<h3 id="notes-on-architecture">Notes on architecture</h3>
+<ul>
+<li>urlCheck is built as a 64-bit console-subsystem executable.
+Microsoft Edge on Windows 10/11 is 64-bit, so architecture parity avoids
+subtle issues; pythonnet’s wheels are best-tested for 64-bit
+Python.</li>
+<li>Console-subsystem means the exe gets a console when launched from
+Explorer. urlCheck detects GUI launches and hides its console window in
+that case via <code>ShowWindow(SW_HIDE)</code>. The detection uses
+<code>GetConsoleProcessList</code> (the same approach 2htm uses) with
+parent-process inspection as a fallback if the count is ambiguous.</li>
+<li>The WinForms dialog runs on the calling thread set to the
+single-threaded apartment (STA) state. This is required for common
+dialogs (<code>OpenFileDialog</code>, the underlying COM-shell
+dialogs).</li>
+<li>The <code>OpenFileDialog</code> (Browse source) sets
+<code>AutoUpgradeEnabled = False</code> to use the legacy Win32
+GetOpenFileName common dialog rather than the modern Vista-era
+<code>IFileOpenDialog</code>. The modern dialog deadlocks under
+pythonnet (issues #657 and #1286 in the pythonnet repo, both unresolved
+at time of writing).</li>
+<li>The Choose output button bypasses WinForms entirely and calls
+<code>SHBrowseForFolderW</code> from <code>shell32.dll</code> directly
+via <code>ctypes</code>. It uses the classic dialog style (no
+<code>BIF_NEWDIALOGSTYLE</code>) because the new dialog style requires
+<code>OleInitialize</code> and a guaranteed STA apartment, which
+pythonnet doesn’t reliably provide.</li>
+</ul>
+<h3 id="uninstalling">Uninstalling</h3>
+<p>Use Apps &amp; Features in Windows Settings, or run the uninstaller
+from the urlCheck Start-menu group. The uninstaller removes the program
+files. It does not touch
+<code>%LOCALAPPDATA%\urlCheck\urlCheck.ini</code> or any
+<code>urlCheck.log</code> files in working directories — delete those
+manually if you want a fully clean removal.</p>
 <hr />
 <h2 id="license">License</h2>
 <p>MIT License. See <code>license.htm</code>.</p>
