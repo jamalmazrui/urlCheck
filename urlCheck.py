@@ -24,10 +24,18 @@ iDefaultNavTimeoutMs = 60000
 iDefaultPostLoadDelayMs = 1500
 iDefaultViewportHeight = 1440
 iDefaultViewportWidth = 1600
-iMaxErrorTextLen = 12000
+iLayoutButtonHeight = 26
+iLayoutButtonWidth = 130
+iLayoutFormWidth = 600
+iLayoutGap = 7
+iLayoutLabelWidth = 130
+iLayoutLeft = 12
+iLayoutRight = 12
+iLayoutRowGap = 11
+iLayoutTextHeight = 23
+iLayoutTop = 12
 iMaxTitleLen = 80
 iNetworkIdleTimeoutMs = 8000
-iSuffixDigits = 3
 
 sAccessibilityInsightsUrl = "https://accessibilityinsights.io/docs/web/overview/"
 sAccessibilityYamlName = "page.yaml"
@@ -35,7 +43,6 @@ sBrowserChannel = "msedge"
 sConfigDirName = "urlCheck"
 sConfigFileName = "urlCheck.ini"
 sCsvName = "report.csv"
-sErrorReportName = "error.txt"
 sFallbackTitle = "untitled-page"
 sJsonName = "results.json"
 sLogFileName = "urlCheck.log"
@@ -923,25 +930,42 @@ def cleanPreviousTempDirs():
             pass
 
 
-def chooseOutputDir(pathBaseDir, sPageTitle):
-    iIndex = 0
+def chooseOutputDir(pathBaseDir, sPageTitle, bForce=False):
+    """Decide the per-page output folder.
+
+    Returns the Path of the folder to write into, OR None if the folder
+    already exists and bForce is False (caller should skip this URL).
+
+    When the folder does not exist, it is created.
+    When the folder exists and bForce is True, its contents are deleted
+    so the run starts from a clean slate; the folder itself is reused.
+    """
     pathCandidate = None
     sBaseName = ""
-    sName = ""
 
     sBaseName = getSafeTitle(sPageTitle)
     pathCandidate = pathBaseDir / sBaseName
     if not pathCandidate.exists():
         pathCandidate.mkdir(parents=True, exist_ok=False)
         return pathCandidate
-    iIndex = 1
-    while True:
-        sName = f"{sBaseName}-{iIndex:0{iSuffixDigits}d}"
-        pathCandidate = pathBaseDir / sName
-        if not pathCandidate.exists():
-            pathCandidate.mkdir(parents=True, exist_ok=False)
-            return pathCandidate
-        iIndex += 1
+    if bForce:
+        # Existing folder, --force is on: empty its contents and reuse
+        # the folder. Delete files and subdirectories defensively; if
+        # any single entry can't be removed (e.g. a file is open in
+        # another process), log it and continue -- the new run will
+        # overwrite what it can.
+        for child in pathCandidate.iterdir():
+            try:
+                if child.is_dir() and not child.is_symlink():
+                    shutil.rmtree(child)
+                else:
+                    child.unlink()
+            except Exception as ex:
+                logger.info(f"Could not remove {child} while emptying "
+                    f"{pathCandidate} for --force: {ex}")
+        return pathCandidate
+    # Existing folder, no --force: caller should skip.
+    return None
 
 
 def ensureSuccess(bCondition, sMessage):
@@ -951,18 +975,18 @@ def ensureSuccess(bCondition, sMessage):
 
 def fetchText(sUrl):
     dHeaders = {}
-    oRequest = None
-    oResponse = None
+    request = None
+    response = None
     sText = ""
 
     dHeaders = {"User-Agent": sUserAgent}
-    oRequest = urllib.request.Request(sUrl, headers=dHeaders)
-    with urllib.request.urlopen(oRequest, timeout=iCdnTimeoutSec) as oResponse: sText = oResponse.read().decode("utf-8")
+    request = urllib.request.Request(sUrl, headers=dHeaders)
+    with urllib.request.urlopen(request, timeout=iCdnTimeoutSec) as response: sText = response.read().decode("utf-8")
     return sText
 
 
 def getAxeScript(page, sPreFetchedContent=""):
-    oError = None
+    ex = None
     sAxeScript = ""
     sUrl = ""
 
@@ -973,21 +997,21 @@ def getAxeScript(page, sPreFetchedContent=""):
             try:
                 page.add_script_tag(content=sPreFetchedContent)
                 return sUrl
-            except Exception as oError:
+            except Exception as ex:
                 break
     # Fall back to URL injection then content fetch per CDN URL
     for sUrl in aAxeCdnUrls:
         try:
             page.add_script_tag(url=sUrl)
             return sUrl
-        except Exception as oError:
+        except Exception as ex:
             continue
     for sUrl in aAxeCdnUrls:
         try:
             sAxeScript = fetchText(sUrl)
             page.add_script_tag(content=sAxeScript)
             return sUrl
-        except Exception as oError:
+        except Exception as ex:
             continue
     raise RuntimeError("Unable to load axe-core from the configured CDN URLs.")
 
@@ -1013,7 +1037,7 @@ def getNormalizedUrl(sInput):
     loaded in the browser, regardless of its extension; the user is
     responsible for supplying an HTML-renderable file. Unrecognised inputs
     are returned unchanged."""
-    oPath = None
+    path = None
     sCandidate = ""
     sSuffix = ""
     sLower = ""
@@ -1025,9 +1049,9 @@ def getNormalizedUrl(sInput):
     # Existing local file -- treat as HTML regardless of extension. urlCheck's
     # contract leaves it to the user to ensure the file is HTML-renderable.
     try:
-        oPath = pathlib.Path(sCandidate).expanduser().resolve()
-        if oPath.exists() and oPath.is_file():
-            return oPath.as_uri()
+        path = pathlib.Path(sCandidate).expanduser().resolve()
+        if path.exists() and path.is_file():
+            return path.as_uri()
     except Exception:
         pass
     # Has a recognised local file extension and no path separator — treat as local filename
@@ -1115,6 +1139,108 @@ def getSafeTitle(sTitle):
     return sName
 
 
+def getInitialBrowseDir(sFieldText):
+    """Return a directory to use as the initial location of a file or folder
+    picker.
+
+    The strategy follows Microsoft's guidance: start at the user's most
+    recent / current choice when one exists, otherwise fall back to the
+    user's Documents folder.
+
+    sFieldText is the current text of the source-input or output-directory
+    field. The function:
+
+      - returns Documents if sFieldText is empty or looks like a URL or
+        domain (urlCheck source field can contain those, which are not
+        filesystem paths)
+      - looks at the first space-separated token if sFieldText has many
+      - returns sFieldText itself if it points to an existing directory
+      - returns the parent of sFieldText if it points to an existing file
+      - returns the parent of sFieldText if only the parent exists
+      - falls back to Documents otherwise
+
+    Returns a string. Always returns a non-empty path that the OS knows.
+    """
+    sCandidate = ""
+    sFirstToken = ""
+    sParent = ""
+
+    sFieldText = (sFieldText or "").strip()
+    if not sFieldText:
+        return getDocumentsDir()
+    # Source field may contain space-separated tokens. Inspect the first.
+    sFirstToken = sFieldText.split()[0] if sFieldText.split() else ""
+    if not sFirstToken:
+        return getDocumentsDir()
+    # Strip surrounding quotes a user may have typed.
+    if len(sFirstToken) >= 2 and sFirstToken[0] == '"' and sFirstToken[-1] == '"':
+        sFirstToken = sFirstToken[1:-1]
+    # URL or domain -- not a filesystem location. Use Documents.
+    if re.match(r"^[a-z][a-z0-9+.-]*://", sFirstToken, re.IGNORECASE):
+        return getDocumentsDir()
+    if re.match(r"^[a-z0-9-]+(\.[a-z0-9-]+)+$", sFirstToken, re.IGNORECASE) and "/" not in sFirstToken and "\\" not in sFirstToken:
+        # Bare-domain heuristic: contains a dot, no slashes. Treat as URL.
+        return getDocumentsDir()
+    # Try as a path. If it has wildcards, strip the basename and inspect
+    # the parent directory.
+    sCandidate = sFirstToken
+    try:
+        if any(c in sCandidate for c in "*?["):
+            sCandidate = os.path.dirname(sCandidate)
+        if sCandidate and os.path.isdir(sCandidate):
+            return os.path.abspath(sCandidate)
+        if sCandidate and os.path.isfile(sCandidate):
+            return os.path.dirname(os.path.abspath(sCandidate))
+        sParent = os.path.dirname(sCandidate) if sCandidate else ""
+        if sParent and os.path.isdir(sParent):
+            return os.path.abspath(sParent)
+    except Exception:
+        pass
+    return getDocumentsDir()
+
+
+def getDocumentsDir():
+    """Return the user's Documents folder path as a string.
+
+    On Windows, this resolves to the per-user Documents folder via
+    Environment.SpecialFolder.MyDocuments (the SHGetKnownFolderPath
+    KNOWNFOLDERID_Documents). On other platforms (developer machines
+    only, urlCheck is Windows-only at runtime), falls back to the
+    user's home directory.
+
+    Always returns a non-empty string. If the Documents folder cannot be
+    resolved for any reason, returns the home directory.
+    """
+    sPath = ""
+    try:
+        # The standard pythonic way: os.path.expanduser handles Windows
+        # via the USERPROFILE environment variable, then we append
+        # "Documents". But the more correct way on Windows is to query
+        # the shell folder, since the user may have redirected
+        # Documents to OneDrive or another non-default location.
+        # We try SHGetFolderPathW first; if that fails, fall back to
+        # %USERPROFILE%\Documents.
+        if sys.platform == "win32":
+            try:
+                bufPath = ctypes.create_unicode_buffer(260)
+                # CSIDL_PERSONAL = 0x0005 (Documents). Flags = 0 (current
+                # location, not default). HResult 0 (S_OK) on success.
+                iCsidlPersonal = 0x0005
+                iHr = ctypes.windll.shell32.SHGetFolderPathW(
+                    None, iCsidlPersonal, None, 0, bufPath)
+                if iHr == 0 and bufPath.value and os.path.isdir(bufPath.value):
+                    return bufPath.value
+            except Exception:
+                pass
+        # Cross-platform fallback.
+        sPath = os.path.join(os.path.expanduser("~"), "Documents")
+        if os.path.isdir(sPath):
+            return sPath
+        return os.path.expanduser("~")
+    except Exception:
+        return os.path.expanduser("~")
+
+
 def getStandardsRefs(dRule):
     lRefs = []
     sTag = ""
@@ -1157,20 +1283,20 @@ def getUrlsFromFile(sInput):
     iLineNo = 0
     iSampleLen = 4096
     lUrls = []
-    oPath = None
+    path = None
     sLine = ""
     sNormalized = ""
 
-    oPath = pathlib.Path(sInput).expanduser().resolve()
+    path = pathlib.Path(sInput).expanduser().resolve()
 
     # Sniff the first few KB to catch binary files. NUL bytes are a strong
     # signal; otherwise any chunk where >30% of the bytes are outside the
     # printable-ASCII / common-control range is treated as binary.
     try:
-        with oPath.open("rb") as oRaw:
-            bytesHead = oRaw.read(iSampleLen)
-    except Exception as oError:
-        raise OSError(f"Could not read {sInput}: {oError}")
+        with path.open("rb") as fileRaw:
+            bytesHead = fileRaw.read(iSampleLen)
+    except Exception as ex:
+        raise OSError(f"Could not read {sInput}: {ex}")
     if b"\x00" in bytesHead:
         bLikelyBinary = True
     elif bytesHead:
@@ -1188,9 +1314,9 @@ def getUrlsFromFile(sInput):
     # Now read as text. Use UTF-8 with strict error handling to surface
     # encoding problems explicitly; UTF-8-with-BOM is also accepted.
     try:
-        with oPath.open("r", encoding="utf-8-sig", errors="strict") as oFile:
+        with path.open("r", encoding="utf-8-sig", errors="strict") as file:
             iLineNo = 0
-            for sLine in oFile:
+            for sLine in file:
                 iLineNo += 1
                 sLine = sLine.strip()
                 if not sLine:
@@ -1206,10 +1332,10 @@ def getUrlsFromFile(sInput):
                         "Each non-blank, non-comment line should be one "
                         "URL, one domain name, or one local HTML file path.")
                 lUrls.append(sLine)
-    except UnicodeDecodeError as oError:
+    except UnicodeDecodeError as ex:
         raise ValueError(
             f"File is not valid UTF-8 text: {sInput}\n"
-            f"Decode error: {oError}\n"
+            f"Decode error: {ex}\n"
             "Re-save the file as plain UTF-8 text and try again.")
     if not lUrls:
         raise ValueError(f"No URLs found in file: {sInput}")
@@ -1296,14 +1422,14 @@ def isUrlListFile(sInput):
     given that turns out to be binary or non-URL-like, getUrlsFromFile will
     fail with a clear error.
     """
-    oPath = None
+    path = None
     if not sInput: return False
     try:
-        oPath = pathlib.Path(sInput).expanduser()
+        path = pathlib.Path(sInput).expanduser()
     except Exception:
         return False
     try:
-        if not oPath.is_file(): return False
+        if not path.is_file(): return False
     except Exception:
         return False
     return True
@@ -1365,7 +1491,7 @@ def parseArguments():
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     argParser.add_argument(
-        "inputValue",
+        "sSource",
         nargs="*",
         help=(
             "One or more URLs (or domain names) separated by spaces, or the "
@@ -1387,18 +1513,29 @@ def parseArguments():
         help="Load saved settings from %%LOCALAPPDATA%%\\urlCheck\\urlCheck.ini at startup, and write them back on OK in GUI mode. Without this flag urlCheck leaves no filesystem footprint of its own.")
     argParser.add_argument("-l", "--log", dest="bLog", action="store_true",
         help="Write detailed diagnostics to urlCheck.log in the current working directory (UTF-8 with BOM). Any prior urlCheck.log is deleted at the start of the run, so the file always reflects only the current session.")
+    argParser.add_argument("-f", "--force", dest="bForce", action="store_true",
+        help="Reuse an existing per-page output folder by emptying its contents and writing a fresh set of files. Without this flag urlCheck skips a URL whose per-page output folder already exists, so previous scans are preserved.")
     argParser.add_argument("-i", "--invisible", dest="bInvisible", action="store_true",
         help="Run Microsoft Edge invisibly (the headless browser mode): no visible browser window during the scan.")
     return argParser.parse_args()
 
 
-def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, sAxeContent=""):
-    """Run a single-URL scan. Returns the output directory path string, or raises."""
+def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, sAxeContent="", bForce=False):
+    """Run a single-URL scan.
+
+    Returns:
+      - the output directory path string on a successful scan
+      - the sentinel string "skipped" if the per-page folder already
+        exists and bForce is False (caller decided not to overwrite
+        previous results)
+
+    Raises on real errors (navigation failure, axe failure, etc.).
+    """
     dMetadata = {}
     dResults = {}
     lArgs = []
     lRows = []
-    oPage = None
+    page = None
     pathOutputDir = None
     sAxeSource = ""
     sPageTitle = ""
@@ -1406,30 +1543,42 @@ def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, sAxeContent="
     sSnapshot = ""
 
     try:
-        oPage = context.new_page()
+        page = context.new_page()
         logger.info(f"Navigating to {sNormalizedUrl}")
-        oPage.goto(sNormalizedUrl, timeout=iDefaultNavTimeoutMs, wait_until="load")
+        page.goto(sNormalizedUrl, timeout=iDefaultNavTimeoutMs, wait_until="load")
         # After the load event, wait briefly for network to settle.
         # A short networkidle timeout lets SPA content finish rendering on most sites
         # while sites with persistent connections (e.g. WebSocket-heavy SPAs) simply
         # time out and continue after iNetworkIdleTimeoutMs milliseconds.
         try:
-            oPage.wait_for_load_state("networkidle", timeout=iNetworkIdleTimeoutMs)
+            page.wait_for_load_state("networkidle", timeout=iNetworkIdleTimeoutMs)
         except Exception:
             pass
-        oPage.wait_for_timeout(iDefaultPostLoadDelayMs)
+        page.wait_for_timeout(iDefaultPostLoadDelayMs)
         # Scroll to bottom and back to trigger lazy-loaded content, then wait briefly
-        oPage.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-        oPage.wait_for_timeout(500)
-        oPage.evaluate("window.scrollTo(0, 0)")
-        oPage.wait_for_timeout(500)
-        sPageTitle = str(oPage.title() or sFallbackTitle)
-        pathOutputDir = chooseOutputDir(pathBaseDir, sPageTitle)
+        page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+        page.wait_for_timeout(500)
+        page.evaluate("window.scrollTo(0, 0)")
+        page.wait_for_timeout(500)
+        sPageTitle = str(page.title() or sFallbackTitle)
+        # Decide the output folder. If chooseOutputDir returns None,
+        # the per-page folder already exists and --force is not set,
+        # so we skip this URL. Skip happens BEFORE the expensive
+        # axe-core run, screenshot, snapshot, and report-writing.
+        pathOutputDir = chooseOutputDir(pathBaseDir, sPageTitle, bForce=bForce)
+        if pathOutputDir is None:
+            sExistingDir = str(pathBaseDir / getSafeTitle(sPageTitle))
+            print(f"{sNormalizedUrl}")
+            print(f"  Skipping ({pathlib.Path(sExistingDir).name} exists, "
+                f"use -f to overwrite)")
+            logger.info(f"Skipped (output folder exists, no --force): "
+                f"{sNormalizedUrl} -> {sExistingDir}")
+            return "skipped"
         logger.info(f"Output directory: {pathOutputDir}")
         logger.info("Running axe-core")
-        sAxeSource = getAxeScript(oPage, sAxeContent)
-        ensureSuccess(bool(oPage.evaluate("() => Boolean(window.axe && window.axe.run)")), "axe-core did not load into the page.")
-        sResultsJson = oPage.evaluate("async (opts) => JSON.stringify(await window.axe.run(document, opts))", aAxeRunOptions)
+        sAxeSource = getAxeScript(page, sAxeContent)
+        ensureSuccess(bool(page.evaluate("() => Boolean(window.axe && window.axe.run)")), "axe-core did not load into the page.")
+        sResultsJson = page.evaluate("async (opts) => JSON.stringify(await window.axe.run(document, opts))", aAxeRunOptions)
         dResults = json.loads(sResultsJson)
         dMetadata = {
             "axeSource": sAxeSource,
@@ -1439,12 +1588,12 @@ def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, sAxeContent="
             "navTimeoutMs": iDefaultNavTimeoutMs,
             "normalizedUrl": sNormalizedUrl,
             "pageTitle": sPageTitle,
-            "pageUrl": str(oPage.url or sNormalizedUrl),
+            "pageUrl": str(page.url or sNormalizedUrl),
             "postLoadDelayMs": iDefaultPostLoadDelayMs,
             "programName": sProgramName,
             "programVersion": sProgramVersion,
             "scanTimestampUtc": datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat(),
-            "userAgent": str(oPage.evaluate("() => navigator.userAgent")),
+            "userAgent": str(page.evaluate("() => navigator.userAgent")),
             "viewportHeight": iDefaultViewportHeight,
             "viewportWidth": iDefaultViewportWidth,
         }
@@ -1452,17 +1601,17 @@ def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, sAxeContent="
         pathlib.Path(pathOutputDir, sJsonName).write_text(json.dumps({"metadata": dMetadata, "results": dResults}, indent=2, ensure_ascii=False), encoding="utf-8")
         writeCsv(pathlib.Path(pathOutputDir, sCsvName), lRows)
         logger.info("Capturing page snapshot and screenshot")
-        sSnapshot = getPageSnapshot(oPage, sNormalizedUrl)
+        sSnapshot = getPageSnapshot(page, sNormalizedUrl)
         pathlib.Path(pathOutputDir, sSourceName).write_text(sSnapshot, encoding="utf-8")
         try:
-            oPage.screenshot(path=str(pathlib.Path(pathOutputDir, sScreenshotName)), full_page=bDefaultFullPage, timeout=30000)
+            page.screenshot(path=str(pathlib.Path(pathOutputDir, sScreenshotName)), full_page=bDefaultFullPage, timeout=30000)
         except Exception:
             try:
-                oPage.screenshot(path=str(pathlib.Path(pathOutputDir, sScreenshotName)), full_page=False, timeout=15000)
+                page.screenshot(path=str(pathlib.Path(pathOutputDir, sScreenshotName)), full_page=False, timeout=15000)
             except Exception:
                 pass
         try:
-            locatorBody = oPage.locator("body")
+            locatorBody = page.locator("body")
             sYaml = locatorBody.aria_snapshot()
             pathlib.Path(pathOutputDir, sAccessibilityYamlName).write_text(sYaml, encoding="utf-8-sig")
         except Exception:
@@ -1478,7 +1627,7 @@ def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, sAxeContent="
         return str(pathOutputDir)
     finally:
         try:
-            if oPage is not None: oPage.close()
+            if page is not None: page.close()
         except Exception:
             pass
 
@@ -1510,10 +1659,10 @@ def writeCsv(pathCsv, lRows):
         "tags", "wcagRefs", "standardsRefs",
         "instanceCount", "instanceIndex", "path", "snippet", "failureSummary",
     ]
-    oCsvFile = None
+    fileCsv = None
 
-    with pathCsv.open("w", newline="", encoding="utf-8") as oCsvFile:
-        csvWriter = csv.DictWriter(oCsvFile, fieldnames=lFieldNames, quoting=csv.QUOTE_ALL, extrasaction="ignore")
+    with pathCsv.open("w", newline="", encoding="utf-8") as fileCsv:
+        csvWriter = csv.DictWriter(fileCsv, fieldnames=lFieldNames, quoting=csv.QUOTE_ALL, extrasaction="ignore")
         csvWriter.writeheader()
         for dRow in lRows:
             dOut = dict(dRow)
@@ -1644,10 +1793,10 @@ def _getParentProcessName():
         # We use a couple of structures from kernel32. Define them via ctypes
         # to keep the dependency surface minimal (no pywin32, no psutil).
         import ctypes.wintypes as wt
-        c_iSnapProcess = 0x00000002
-        c_iMaxPath = 260
+        iSnapProcess = 0x00000002
+        iMaxPath = 260
 
-        class oProcessEntry32(ctypes.Structure):
+        class ProcessEntry32(ctypes.Structure):
             _fields_ = [
                 ("dwSize", wt.DWORD),
                 ("cntUsage", wt.DWORD),
@@ -1658,46 +1807,46 @@ def _getParentProcessName():
                 ("th32ParentProcessID", wt.DWORD),
                 ("pcPriClassBase", ctypes.c_long),
                 ("dwFlags", wt.DWORD),
-                ("szExeFile", ctypes.c_char * c_iMaxPath),
+                ("szExeFile", ctypes.c_char * iMaxPath),
             ]
 
         kernel32 = ctypes.windll.kernel32
         kernel32.CreateToolhelp32Snapshot.restype = wt.HANDLE
         kernel32.CreateToolhelp32Snapshot.argtypes = [wt.DWORD, wt.DWORD]
-        kernel32.Process32First.argtypes = [wt.HANDLE, ctypes.POINTER(oProcessEntry32)]
-        kernel32.Process32Next.argtypes = [wt.HANDLE, ctypes.POINTER(oProcessEntry32)]
+        kernel32.Process32First.argtypes = [wt.HANDLE, ctypes.POINTER(ProcessEntry32)]
+        kernel32.Process32Next.argtypes = [wt.HANDLE, ctypes.POINTER(ProcessEntry32)]
         kernel32.CloseHandle.argtypes = [wt.HANDLE]
 
         iMyPid = int(os.getpid())
         iParentPid = 0
         sParentExe = ""
 
-        oSnap = kernel32.CreateToolhelp32Snapshot(c_iSnapProcess, 0)
-        if not oSnap or oSnap == wt.HANDLE(-1).value: return ""
+        hSnap = kernel32.CreateToolhelp32Snapshot(iSnapProcess, 0)
+        if not hSnap or hSnap == wt.HANDLE(-1).value: return ""
         try:
-            oEntry = oProcessEntry32()
-            oEntry.dwSize = ctypes.sizeof(oProcessEntry32)
+            processEntry = ProcessEntry32()
+            processEntry.dwSize = ctypes.sizeof(ProcessEntry32)
             # Pass 1: find our own entry to learn the parent PID.
-            if not kernel32.Process32First(oSnap, ctypes.byref(oEntry)): return ""
+            if not kernel32.Process32First(hSnap, ctypes.byref(processEntry)): return ""
             while True:
-                if oEntry.th32ProcessID == iMyPid:
-                    iParentPid = int(oEntry.th32ParentProcessID)
+                if processEntry.th32ProcessID == iMyPid:
+                    iParentPid = int(processEntry.th32ParentProcessID)
                     break
-                if not kernel32.Process32Next(oSnap, ctypes.byref(oEntry)): break
+                if not kernel32.Process32Next(hSnap, ctypes.byref(processEntry)): break
             if iParentPid == 0: return ""
 
             # Pass 2: find the parent entry to learn its exe name. Re-walk
             # because Process32First/Next is unidirectional.
-            oEntry2 = oProcessEntry32()
-            oEntry2.dwSize = ctypes.sizeof(oProcessEntry32)
-            if not kernel32.Process32First(oSnap, ctypes.byref(oEntry2)): return ""
+            oEntry2 = ProcessEntry32()
+            oEntry2.dwSize = ctypes.sizeof(ProcessEntry32)
+            if not kernel32.Process32First(hSnap, ctypes.byref(oEntry2)): return ""
             while True:
                 if oEntry2.th32ProcessID == iParentPid:
                     sParentExe = oEntry2.szExeFile.decode("ascii", errors="replace")
                     break
-                if not kernel32.Process32Next(oSnap, ctypes.byref(oEntry2)): break
+                if not kernel32.Process32Next(hSnap, ctypes.byref(oEntry2)): break
         finally:
-            kernel32.CloseHandle(oSnap)
+            kernel32.CloseHandle(hSnap)
 
         return os.path.basename(sParentExe).lower()
     except Exception:
@@ -1741,10 +1890,10 @@ def isLaunchedFromGui():
             aiBuf = (ctypes.c_uint * 16)()
             iCount = int(ctypes.windll.kernel32.GetConsoleProcessList(
                 aiBuf, ctypes.c_uint(16)))
-        except Exception as oError:
+        except Exception as ex:
             iCountErr = 1
             iCount = -1
-            sReason = f"GetConsoleProcessList failed: {oError}"
+            sReason = f"GetConsoleProcessList failed: {ex}"
         if iCount == 1:
             bResult = True
             sReason = "console process count is 1 (fresh console -> GUI launch)"
@@ -1839,14 +1988,28 @@ class logger:
             cls.bEnabled = False
 
     @classmethod
-    def info(cls, sMsg):
+    def write(cls, sLevel, sMsg):
+        # Internal level-tagged writer. Public level methods (info,
+        # warn, error, debug) all funnel through here so the format
+        # is uniform and a level filter could be added later in one
+        # place. Silent no-op when the logger is disabled, which is
+        # the case unless the user passed -l / --log.
         if not cls.bEnabled or cls.fLog is None: return
         try:
             sStamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            cls.fLog.write(f"[{sStamp}] {sMsg}\n")
+            cls.fLog.write(f"[{sStamp}] [{sLevel}] {sMsg}\n")
             cls.fLog.flush()
         except Exception:
             pass
+
+    @classmethod
+    def info(cls, sMsg):  cls.write("INFO",  sMsg)
+    @classmethod
+    def warn(cls, sMsg):  cls.write("WARN",  sMsg)
+    @classmethod
+    def error(cls, sMsg): cls.write("ERROR", sMsg)
+    @classmethod
+    def debug(cls, sMsg): cls.write("DEBUG", sMsg)
 
     @classmethod
     def close(cls):
@@ -1890,14 +2053,14 @@ class configManager:
             if os.path.isfile(sPath):
                 os.remove(sPath)
                 logger.info(f"Deleted configuration file: {sPath}")
-        except Exception as oError:
-            logger.info(f"Could not delete configuration file {sPath}: {oError}")
+        except Exception as ex:
+            logger.info(f"Could not delete configuration file {sPath}: {ex}")
         try:
             if os.path.isdir(sDir) and not os.listdir(sDir):
                 os.rmdir(sDir)
                 logger.info(f"Removed empty configuration directory: {sDir}")
-        except Exception as oError:
-            logger.info(f"Could not remove configuration directory {sDir}: {oError}")
+        except Exception as ex:
+            logger.info(f"Could not remove configuration directory {sDir}: {ex}")
 
     @staticmethod
     def parseFile(sPath):
@@ -1935,13 +2098,13 @@ class configManager:
         if not os.path.isfile(sPath): return
         try:
             d = configManager.parseFile(sPath)
-        except Exception as oError:
-            print(f"[WARN] Could not read configuration from {sPath}: {oError}")
+        except Exception as ex:
+            print(f"[WARN] Could not read configuration from {sPath}: {ex}")
             return
 
         # Source: only adopt the saved value if the CLI provided no positional.
-        if (not getattr(arguments, "inputValue", None)) and d.get("source", ""):
-            arguments.inputValue = d.get("source", "")
+        if (not getattr(arguments, "sSource", None)) and d.get("source", ""):
+            arguments.sSource = d.get("source", "")
 
         # Output dir: only adopt if the CLI did not pass -o.
         if not getattr(arguments, "sOutputDir", "") and d.get("output_directory", ""):
@@ -1953,11 +2116,13 @@ class configManager:
             arguments.bViewOutput = configManager.getBool(d, "view_output")
         if not getattr(arguments, "bInvisible", False):
             arguments.bInvisible = configManager.getBool(d, "invisible")
+        if not getattr(arguments, "bForce", False):
+            arguments.bForce = configManager.getBool(d, "force_replacements")
         if not getattr(arguments, "bLog", False):
             arguments.bLog = configManager.getBool(d, "log_session")
 
     @staticmethod
-    def save(sSource, sOutputDir, bViewOutput, bInvisible, bLog):
+    def save(sSource, sOutputDir, bViewOutput, bInvisible, bForce, bLog):
         sDir = ""
         sPath = ""
 
@@ -1974,11 +2139,12 @@ class configManager:
                 fIni.write(f"output_directory={sOutputDir or ''}\n")
                 fIni.write(f"view_output={'1' if bViewOutput else '0'}\n")
                 fIni.write(f"invisible={'1' if bInvisible else '0'}\n")
+                fIni.write(f"force_replacements={'1' if bForce else '0'}\n")
                 fIni.write(f"log_session={'1' if bLog else '0'}\n")
             logger.info(f"Saved configuration to {sPath}")
-        except Exception as oError:
-            print(f"[WARN] Could not save configuration to {sPath}: {oError}")
-            logger.info(f"Could not save configuration: {oError}")
+        except Exception as ex:
+            print(f"[WARN] Could not save configuration to {sPath}: {ex}")
+            logger.info(f"Could not save configuration: {ex}")
 
 
 # --- GUI dialog (Python.NET / WinForms) ---
@@ -2037,8 +2203,8 @@ def _loadDotNetForms():
             "Size": Size, "SystemFonts": SystemFonts,
             "TextBox": TextBox, "Thread": Thread,
         }
-    except Exception as oError:
-        print(f"[ERROR] GUI mode requires pythonnet (the `clr` module) and the .NET Framework: {oError}")
+    except Exception as ex:
+        print(f"[ERROR] GUI mode requires pythonnet (the `clr` module) and the .NET Framework: {ex}")
         print("        pip install pythonnet")
         return None
 
@@ -2064,16 +2230,22 @@ def browseForFolderViaShell(sTitle, sInitialPath=""):
     does have a complete file system tree, which is enough to choose an
     output directory.
 
+    sInitialPath: if non-empty and an existing directory, the dialog opens
+    with that folder pre-selected and expanded in the tree. We honor this
+    by registering a small BFFCALLBACK that posts BFFM_SETSELECTION on
+    BFFM_INITIALIZED. The callback is a plain Win32 function pointer and
+    introduces no COM dependencies.
+
     Returns the chosen folder path as a string, or "" if the user cancelled.
-    sTitle is shown above the folder tree. sInitialPath is currently
-    ignored (the older dialog style does not honor it without a callback,
-    and callbacks reintroduce COM dependencies we want to avoid).
+    sTitle is shown above the folder tree.
     """
     import ctypes.wintypes as wt
-    c_iBifReturnOnlyFsDirs = 0x00000001
-    c_iMaxPath = 260
+    iBifReturnOnlyFsDirs = 0x00000001
+    iBffmInitialized = 1
+    iBffmSetSelection = 0x400 + 103  # WM_USER + 103 == BFFM_SETSELECTIONW
+    iMaxPath = 260
 
-    class oBrowseInfoW(ctypes.Structure):
+    class BrowseInfoW(ctypes.Structure):
         _fields_ = [
             ("hwndOwner", wt.HWND),
             ("pidlRoot", ctypes.c_void_p),
@@ -2091,15 +2263,56 @@ def browseForFolderViaShell(sTitle, sInitialPath=""):
 
     # Display-name buffer required by the API; we discard it and use
     # SHGetPathFromIDListW for the actual file-system path.
-    bufDisplay = ctypes.create_unicode_buffer(c_iMaxPath)
+    bufDisplay = ctypes.create_unicode_buffer(iMaxPath)
 
-    bi = oBrowseInfoW()
+    # Build the BFFCALLBACK that selects the initial path when the dialog
+    # finishes initializing. SendMessage with BFFM_SETSELECTIONW takes a
+    # wide-string path in lParam (and TRUE in wParam to indicate it's a
+    # path string, not a PIDL).
+    user32.SendMessageW.restype = ctypes.c_long
+    user32.SendMessageW.argtypes = [wt.HWND, ctypes.c_uint, ctypes.c_void_p, ctypes.c_void_p]
+
+    # Validate and normalize the seed path. If it's empty or doesn't exist,
+    # we don't install a callback at all -- the dialog opens at its default
+    # (a file-system root view).
+    sNormalizedInitial = ""
+    if sInitialPath:
+        try:
+            pathSeed = pathlib.Path(sInitialPath).expanduser().resolve()
+            if pathSeed.is_dir():
+                sNormalizedInitial = str(pathSeed)
+        except Exception:
+            sNormalizedInitial = ""
+
+    pCallback = None
+    callbackProto = None
+    if sNormalizedInitial:
+        # Keep the path string alive for the lifetime of the dialog by
+        # closing over it in the callback. Without this, ctypes would
+        # garbage-collect the wide-string before the dialog reads it.
+        sCallbackPath = sNormalizedInitial
+        # BFFCALLBACK signature: int CALLBACK Fn(HWND, UINT, LPARAM, LPARAM).
+        # We use ctypes.WINFUNCTYPE for the stdcall convention.
+        callbackProto = ctypes.WINFUNCTYPE(
+            ctypes.c_int, wt.HWND, ctypes.c_uint, wt.LPARAM, wt.LPARAM)
+        def fnBrowseCallback(hwnd, iMsg, lParam, lpData):
+            if iMsg == iBffmInitialized:
+                try:
+                    user32.SendMessageW(hwnd, iBffmSetSelection,
+                        ctypes.c_void_p(1),  # TRUE: lParam is a string path
+                        ctypes.c_wchar_p(sCallbackPath))
+                except Exception:
+                    pass
+            return 0
+        pCallback = callbackProto(fnBrowseCallback)
+
+    bi = BrowseInfoW()
     bi.hwndOwner = user32.GetActiveWindow()  # may be NULL; that's OK
     bi.pidlRoot = None
     bi.pszDisplayName = ctypes.cast(bufDisplay, wt.LPWSTR)
     bi.lpszTitle = sTitle
-    bi.ulFlags = c_iBifReturnOnlyFsDirs  # classic dialog only
-    bi.lpfn = None  # no callback
+    bi.ulFlags = iBifReturnOnlyFsDirs  # classic dialog only
+    bi.lpfn = ctypes.cast(pCallback, ctypes.c_void_p) if pCallback else None
     bi.lParam = 0
     bi.iImage = 0
 
@@ -2109,7 +2322,7 @@ def browseForFolderViaShell(sTitle, sInitialPath=""):
     # If the thread was previously in MTA, this call will return RPC_E_CHANGED_MODE
     # and the classic dialog will still work because it does not require STA.
     shell32.SHBrowseForFolderW.restype = ctypes.c_void_p
-    shell32.SHBrowseForFolderW.argtypes = [ctypes.POINTER(oBrowseInfoW)]
+    shell32.SHBrowseForFolderW.argtypes = [ctypes.POINTER(BrowseInfoW)]
     shell32.SHGetPathFromIDListW.restype = wt.BOOL
     shell32.SHGetPathFromIDListW.argtypes = [ctypes.c_void_p, wt.LPWSTR]
     ole32.CoTaskMemFree.argtypes = [ctypes.c_void_p]
@@ -2118,9 +2331,13 @@ def browseForFolderViaShell(sTitle, sInitialPath=""):
     except Exception: pass
 
     pidl = shell32.SHBrowseForFolderW(ctypes.byref(bi))
+    # Keep callbackProto and pCallback alive until SHBrowseForFolderW returns.
+    # This line is a no-op at runtime but documents the lifetime requirement
+    # so a future reader doesn't accidentally drop the reference.
+    _ = (pCallback, callbackProto)
     if not pidl: return ""
     try:
-        bufPath = ctypes.create_unicode_buffer(c_iMaxPath)
+        bufPath = ctypes.create_unicode_buffer(iMaxPath)
         if not shell32.SHGetPathFromIDListW(pidl, bufPath):
             return ""
         return bufPath.value
@@ -2171,11 +2388,11 @@ def showGuiDialog(arguments):
     # Log .NET / pythonnet diagnostics so the GUI environment is
     # self-documenting in the log file.
     try:
-        oEnv = d["DotNetEnvironment"]
-        logger.info(f".NET runtime: Version={oEnv.Version} "
-            f"OSVersion={oEnv.OSVersion} Is64Bit={oEnv.Is64BitProcess}")
-    except Exception as oError:
-        logger.info(f".NET diagnostics unavailable: {oError}")
+        environment = d["DotNetEnvironment"]
+        logger.info(f".NET runtime: Version={environment.Version} "
+            f"OSVersion={environment.OSVersion} Is64Bit={environment.Is64BitProcess}")
+    except Exception as ex:
+        logger.info(f".NET diagnostics unavailable: {ex}")
 
     # Set the calling thread to the single-threaded apartment (STA) COM
     # model. WinForms common dialogs -- OpenFileDialog, FolderBrowserDialog,
@@ -2190,13 +2407,13 @@ def showGuiDialog(arguments):
     # the same process). The wrap-and-log pattern below makes that case
     # diagnosable in the log without crashing.
     try:
-        oCurrent = d["Thread"].CurrentThread
-        sBefore = str(oCurrent.GetApartmentState())
-        oCurrent.SetApartmentState(d["ApartmentState"].STA)
-        sAfter = str(oCurrent.GetApartmentState())
+        thread = d["Thread"].CurrentThread
+        sBefore = str(thread.GetApartmentState())
+        thread.SetApartmentState(d["ApartmentState"].STA)
+        sAfter = str(thread.GetApartmentState())
         logger.info(f"Thread apartment state: {sBefore} -> {sAfter}")
-    except Exception as oError:
-        logger.info(f"SetApartmentState(STA) failed (continuing): {oError}")
+    except Exception as ex:
+        logger.info(f"SetApartmentState(STA) failed (continuing): {ex}")
 
     # Enable modern Windows visual styles (Common Controls 6 themed widgets:
     # rounded buttons, themed scroll bars, etc.) and the GDI+ TextRenderer
@@ -2217,30 +2434,21 @@ def showGuiDialog(arguments):
 
     # Initial values from arguments (which may have been pre-loaded from
     # saved config and/or the command line).
-    sInitTarget = getattr(arguments, "inputValue", "") or ""
+    sInitTarget = getattr(arguments, "sSource", "") or ""
     sInitOutDir = getattr(arguments, "sOutputDir", "") or ""
     bInitView = bool(getattr(arguments, "bViewOutput", False))
     bInitInvisible = bool(getattr(arguments, "bInvisible", False))
+    bInitForce = bool(getattr(arguments, "bForce", False))
     bInitLog = bool(getattr(arguments, "bLog", False))
     bInitUseCfg = bool(getattr(arguments, "bUseConfig", False))
 
-    # Layout constants (pixels). Match 2htm's spacing so the two tools
-    # feel like siblings.
-    c_iLeft = 12
-    c_iRight = 12
-    c_iTop = 12
-    c_iGap = 7
-    c_iRowGap = 11
-    c_iLabelWidth = 130
-    c_iButtonWidth = 130
-    c_iButtonHeight = 26
-    c_iTextHeight = 23
-    c_iFormWidth = 600
-
-    iFormW = c_iFormWidth
-    iTextX = c_iLeft + c_iLabelWidth + c_iGap
-    iTextW = iFormW - iTextX - c_iGap - c_iButtonWidth - c_iRight
-    iBtnX = iFormW - c_iRight - c_iButtonWidth
+    # Layout constants live at module scope as iLayout* (see top of file).
+    # Match extCheck and 2htm exactly so the three dialogs feel like
+    # siblings.
+    iFormW = iLayoutFormWidth
+    iTextX = iLayoutLeft + iLayoutLabelWidth + iLayoutGap
+    iTextW = iFormW - iTextX - iLayoutGap - iLayoutButtonWidth - iLayoutRight
+    iBtnX = iFormW - iLayoutRight - iLayoutButtonWidth
 
     # Build the form.
     frm = Form()
@@ -2259,116 +2467,129 @@ def showGuiDialog(arguments):
     frm.KeyPreview = True
 
     # --- Row 1: Target ---
-    y = c_iTop
+    y = iLayoutTop
     lblTarget = Label()
-    lblTarget.Text = "&Source URLs:"
+    lblTarget.Text = "&Source files:"
     lblTarget.AutoSize = False
-    lblTarget.Location = Point(c_iLeft, y + 3)
-    lblTarget.Size = Size(c_iLabelWidth, c_iTextHeight)
+    lblTarget.Location = Point(iLayoutLeft, y + 3)
+    lblTarget.Size = Size(iLayoutLabelWidth, iLayoutTextHeight)
     lblTarget.TextAlign = ContentAlignment.MiddleLeft
     frm.Controls.Add(lblTarget)
 
     txtTarget = TextBox()
     txtTarget.Text = sInitTarget
     txtTarget.Location = Point(iTextX, y)
-    txtTarget.Size = Size(iTextW, c_iTextHeight)
+    txtTarget.Size = Size(iTextW, iLayoutTextHeight)
     txtTarget.TabIndex = 0
     frm.Controls.Add(txtTarget)
 
     btnBrowseTarget = Button()
-    btnBrowseTarget.Text = "&Browse source"
+    btnBrowseTarget.Text = "&Browse source..."
     btnBrowseTarget.Location = Point(iBtnX, y - 1)
-    btnBrowseTarget.Size = Size(c_iButtonWidth, c_iButtonHeight)
+    btnBrowseTarget.Size = Size(iLayoutButtonWidth, iLayoutButtonHeight)
     btnBrowseTarget.TabIndex = 1
     btnBrowseTarget.UseVisualStyleBackColor = True
     frm.Controls.Add(btnBrowseTarget)
 
     # --- Row 2: Output directory ---
-    y += c_iTextHeight + c_iRowGap
+    y += iLayoutTextHeight + iLayoutRowGap
     lblOut = Label()
     lblOut.Text = "&Output directory:"
     lblOut.AutoSize = False
-    lblOut.Location = Point(c_iLeft, y + 3)
-    lblOut.Size = Size(c_iLabelWidth, c_iTextHeight)
+    lblOut.Location = Point(iLayoutLeft, y + 3)
+    lblOut.Size = Size(iLayoutLabelWidth, iLayoutTextHeight)
     lblOut.TextAlign = ContentAlignment.MiddleLeft
     frm.Controls.Add(lblOut)
 
     txtOut = TextBox()
     txtOut.Text = sInitOutDir
     txtOut.Location = Point(iTextX, y)
-    txtOut.Size = Size(iTextW, c_iTextHeight)
+    txtOut.Size = Size(iTextW, iLayoutTextHeight)
     txtOut.TabIndex = 2
     frm.Controls.Add(txtOut)
 
     btnBrowseOut = Button()
-    btnBrowseOut.Text = "&Choose output"
+    btnBrowseOut.Text = "&Choose output..."
     btnBrowseOut.Location = Point(iBtnX, y - 1)
-    btnBrowseOut.Size = Size(c_iButtonWidth, c_iButtonHeight)
+    btnBrowseOut.Size = Size(iLayoutButtonWidth, iLayoutButtonHeight)
     btnBrowseOut.TabIndex = 3
     btnBrowseOut.UseVisualStyleBackColor = True
     frm.Controls.Add(btnBrowseOut)
 
-    # --- Row 3: option checkboxes ---
-    y += c_iTextHeight + c_iRowGap * 2
-    iChkW = (iFormW - c_iLeft - c_iRight) // 2
+    # --- Row 3: program-specific option row (urlCheck has Invisible) ---
+    # The program-specific option appears alone above the common
+    # option grid so the layout reads consistently with 2htm and
+    # extCheck: program-specific first, common options after.
+    y += iLayoutTextHeight + iLayoutRowGap * 2
+    iChkW = (iFormW - iLayoutLeft - iLayoutRight) // 2
     chkInvisible = CheckBox()
     chkInvisible.Text = "&Invisible mode"
     chkInvisible.Checked = bInitInvisible
-    chkInvisible.Location = Point(c_iLeft, y)
-    chkInvisible.Size = Size(iChkW, c_iTextHeight)
+    chkInvisible.Location = Point(iLayoutLeft, y)
+    chkInvisible.Size = Size(iChkW, iLayoutTextHeight)
     chkInvisible.TabIndex = 4
     frm.Controls.Add(chkInvisible)
+
+    # --- Row 4: Force replacements + View output (common 2x2 grid, top row) ---
+    y += iLayoutTextHeight + iLayoutRowGap
+    chkForce = CheckBox()
+    chkForce.Text = "&Force replacements"
+    chkForce.Checked = bInitForce
+    chkForce.Location = Point(iLayoutLeft, y)
+    chkForce.Size = Size(iChkW, iLayoutTextHeight)
+    chkForce.TabIndex = 5
+    frm.Controls.Add(chkForce)
 
     chkView = CheckBox()
     chkView.Text = "&View output"
     chkView.Checked = bInitView
-    chkView.Location = Point(c_iLeft + iChkW, y)
-    chkView.Size = Size(iChkW, c_iTextHeight)
-    chkView.TabIndex = 5
+    chkView.Location = Point(iLayoutLeft + iChkW, y)
+    chkView.Size = Size(iChkW, iLayoutTextHeight)
+    chkView.TabIndex = 6
     frm.Controls.Add(chkView)
 
-    # --- Row 4: Log session and Use configuration ---
-    y += c_iTextHeight + c_iRowGap
+    # --- Row 5: Log session + Use configuration (common 2x2 grid, bottom row) ---
+    y += iLayoutTextHeight + iLayoutRowGap
     chkLog = CheckBox()
     chkLog.Text = "&Log session"
     chkLog.Checked = bInitLog
-    chkLog.Location = Point(c_iLeft, y)
-    chkLog.Size = Size(iChkW, c_iTextHeight)
-    chkLog.TabIndex = 6
+    chkLog.Location = Point(iLayoutLeft, y)
+    chkLog.Size = Size(iChkW, iLayoutTextHeight)
+    chkLog.TabIndex = 7
     frm.Controls.Add(chkLog)
 
     chkUseCfg = CheckBox()
     chkUseCfg.Text = "&Use configuration"
     chkUseCfg.Checked = bInitUseCfg
-    chkUseCfg.Location = Point(c_iLeft + iChkW, y)
-    chkUseCfg.Size = Size(iChkW, c_iTextHeight)
-    chkUseCfg.TabIndex = 7
+    chkUseCfg.Location = Point(iLayoutLeft + iChkW, y)
+    chkUseCfg.Size = Size(iChkW, iLayoutTextHeight)
+    chkUseCfg.TabIndex = 8
     frm.Controls.Add(chkUseCfg)
 
     # --- Bottom row: Help, Defaults on the left; OK, Cancel on the right ---
-    y += c_iTextHeight + c_iRowGap * 2
+    y += iLayoutTextHeight + iLayoutRowGap * 2
     btnHelp = Button()
     btnHelp.Text = "&Help"
-    btnHelp.Location = Point(c_iLeft, y)
-    btnHelp.Size = Size(c_iButtonWidth, c_iButtonHeight)
-    btnHelp.TabIndex = 8
+    btnHelp.Location = Point(iLayoutLeft, y)
+    btnHelp.Size = Size(iLayoutButtonWidth, iLayoutButtonHeight)
+    btnHelp.TabIndex = 9
     btnHelp.UseVisualStyleBackColor = True
     frm.Controls.Add(btnHelp)
 
     btnDefaults = Button()
     btnDefaults.Text = "&Default settings"
-    btnDefaults.Location = Point(c_iLeft + c_iButtonWidth + c_iGap, y)
-    btnDefaults.Size = Size(c_iButtonWidth, c_iButtonHeight)
-    btnDefaults.TabIndex = 9
+    btnDefaults.Location = Point(iLayoutLeft + iLayoutButtonWidth + iLayoutGap, y)
+    btnDefaults.Size = Size(iLayoutButtonWidth, iLayoutButtonHeight)
+    btnDefaults.TabIndex = 10
     btnDefaults.UseVisualStyleBackColor = True
     frm.Controls.Add(btnDefaults)
 
     btnOk = Button()
     btnOk.Text = "OK"
     btnOk.DialogResult = DialogResult.OK
-    btnOk.Location = Point(iFormW - c_iRight - 2 * c_iButtonWidth - c_iGap, y)
-    btnOk.Size = Size(c_iButtonWidth, c_iButtonHeight)
-    btnOk.TabIndex = 10
+    btnOk.Location = Point(iFormW - iLayoutRight - 2 * iLayoutButtonWidth - iLayoutGap, y)
+    btnOk.Size = Size(iLayoutButtonWidth, iLayoutButtonHeight)
+    btnOk.TabIndex = 11
     btnOk.UseVisualStyleBackColor = True
     frm.Controls.Add(btnOk)
 
@@ -2376,8 +2597,8 @@ def showGuiDialog(arguments):
     btnCancel.Text = "Cancel"
     btnCancel.DialogResult = DialogResult.Cancel
     btnCancel.Location = Point(iBtnX, y)
-    btnCancel.Size = Size(c_iButtonWidth, c_iButtonHeight)
-    btnCancel.TabIndex = 11
+    btnCancel.Size = Size(iLayoutButtonWidth, iLayoutButtonHeight)
+    btnCancel.TabIndex = 12
     btnCancel.UseVisualStyleBackColor = True
     frm.Controls.Add(btnCancel)
 
@@ -2386,7 +2607,7 @@ def showGuiDialog(arguments):
     frm.CancelButton = btnCancel
 
     # Adjust form height to accommodate the last control plus a margin.
-    frm.ClientSize = Size(iFormW, y + c_iButtonHeight + c_iTop)
+    frm.ClientSize = Size(iFormW, y + iLayoutButtonHeight + iLayoutTop)
 
     # --- Event handlers (defined as nested functions so they close over the
     #     control variables above) ---
@@ -2396,35 +2617,40 @@ def showGuiDialog(arguments):
             f"{sProgramName} {sProgramVersion} checks one or more web pages "
             f"for accessibility problems and saves a set of output files in "
             f"a folder named after each page title.\r\n\r\n"
-            f"Source URLs: enter one URL (https://example.com), or a domain "
-            f"(microsoft.com), or several URLs separated by spaces, or the "
-            f"path to a single plain text file that lists URLs, domains, or "
-            f"local file paths one per line. The list file may have any "
+            f"Source files: enter one URL (https://example.com), or a domain "
+            f"(microsoft.com), or several of either separated by spaces, or "
+            f"the path to a single plain text file that lists URLs, domains, "
+            f"or local file paths one per line. The list file may have any "
             f"extension; urlCheck verifies it is plain text by inspecting "
             f"its contents.\r\n\r\n"
             f"Output directory: parent directory under which the per-scan "
-            f"folders will be created. Blank means the current working "
+            f"folders are written. Blank means the current working "
             f"directory.\r\n\r\n"
             f"Options:\r\n"
             f"  Invisible mode - run Edge with no visible browser window\r\n"
-            f"  View output - open the output directory in Explorer when done\r\n"
+            f"  Force replacements - reuse an existing per-page output "
+            f"folder (emptying its contents and writing a fresh set of "
+            f"files) instead of skipping the URL\r\n"
+            f"  View output - open the parent output directory in File "
+            f"Explorer when all scans are done\r\n"
             f"  Log session - write urlCheck.log (replacing any prior log) "
-            f"to the current working directory\r\n"
-            f"  Use configuration - remember these settings for next time, in "
-            f"%LOCALAPPDATA%\\urlCheck\\urlCheck.ini\r\n\r\n"
+            f"in the current working directory\r\n"
+            f"  Use configuration - remember these settings for next time "
+            f"in %LOCALAPPDATA%\\urlCheck\\urlCheck.ini\r\n\r\n"
+            f"Press Cancel to exit without scanning.\r\n\r\n"
             f"Open the full README in your browser?")
-        oResult = MessageBox.Show(sMsg, f"{sProgramName} - Help",
+        dialogResult = MessageBox.Show(sMsg, f"{sProgramName} - Help",
             MessageBoxButtons.YesNo, MessageBoxIcon.Information,
             MessageBoxDefaultButton.Button2)
-        if oResult == DialogResult.Yes: launchReadMe()
+        if dialogResult == DialogResult.Yes: launchReadMe()
 
-    def fnOnKeyDown(oSender, oArgs):
-        if oArgs.KeyCode == Keys.F1:
-            oArgs.Handled = True
-            oArgs.SuppressKeyPress = True
+    def fnOnKeyDown(sender, args):
+        if args.KeyCode == Keys.F1:
+            args.Handled = True
+            args.SuppressKeyPress = True
             fnShowHelp()
 
-    def fnPickFile(oSender, oArgs):
+    def fnPickFile(sender, args):
         # Pythonnet has a long-standing deadlock when it invokes the modern
         # (Vista+) IFileOpenDialog COM-shell file picker -- documented in
         # pythonnet issues #657 and #1286, both unresolved. The fix is to
@@ -2432,32 +2658,32 @@ def showGuiDialog(arguments):
         # GetOpenFileName common dialog (comdlg32.dll). It has the older
         # Windows look but actually works under pythonnet.
         sCurrent = (txtTarget.Text or "").strip()
-        logger.info("Browse source clicked; opening OpenFileDialog (legacy)")
+        sInitial = getInitialBrowseDir(sCurrent)
+        logger.info(f"Browse source clicked; opening OpenFileDialog (legacy) at {sInitial!r}")
         try:
-            oDlg = OpenFileDialog()
-            oDlg.AutoUpgradeEnabled = False
-            oDlg.Title = "Choose a plain text URL list"
-            oDlg.Filter = ("Plain text files (*.txt;*.lst;*.md)|*.txt;*.lst;*.md|"
+            dialog = OpenFileDialog()
+            dialog.AutoUpgradeEnabled = False
+            dialog.Title = "Choose a plain text URL list"
+            dialog.Filter = ("Plain text files (*.txt;*.lst;*.md)|*.txt;*.lst;*.md|"
                            "All files (*.*)|*.*")
-            oDlg.FilterIndex = 2  # default to All files; user may have any extension
-            oDlg.CheckFileExists = True
-            oDlg.RestoreDirectory = True
+            dialog.FilterIndex = 2  # default to All files; user may have any extension
+            dialog.CheckFileExists = True
+            dialog.RestoreDirectory = True
             try:
-                if sCurrent and os.path.isdir(os.path.dirname(sCurrent)):
-                    oDlg.InitialDirectory = os.path.dirname(sCurrent)
+                dialog.InitialDirectory = sInitial
             except Exception: pass
-            oRes = oDlg.ShowDialog()
-            logger.info(f"OpenFileDialog returned: {oRes}")
-            if oRes == DialogResult.OK:
-                txtTarget.Text = oDlg.FileName
-                logger.info(f"Source set to: {oDlg.FileName}")
-        except Exception as oError:
-            logger.info(f"OpenFileDialog raised: {oError}")
-            MessageBox.Show(f"Browse source failed: {oError}",
+            dialogResult = dialog.ShowDialog()
+            logger.info(f"OpenFileDialog returned: {dialogResult}")
+            if dialogResult == DialogResult.OK:
+                txtTarget.Text = dialog.FileName
+                logger.info(f"Source set to: {dialog.FileName}")
+        except Exception as ex:
+            logger.info(f"OpenFileDialog raised: {ex}")
+            MessageBox.Show(f"Browse source failed: {ex}",
                 f"{sProgramName} - Browse error",
                 MessageBoxButtons.OK, MessageBoxIcon.Warning)
 
-    def fnPickFolder(oSender, oArgs):
+    def fnPickFolder(sender, args):
         # FolderBrowserDialog has no AutoUpgradeEnabled property, and the
         # default shell-COM machinery deadlocks under pythonnet exactly like
         # the modern OpenFileDialog (issue #657). We sidestep it by calling
@@ -2465,16 +2691,17 @@ def showGuiDialog(arguments):
         # bypasses pythonnet entirely for this dialog and uses the simpler
         # folder picker that doesn't need the same COM-marshaled callbacks.
         sCurrent = (txtOut.Text or "").strip()
+        sInitial = getInitialBrowseDir(sCurrent)
         sChosen = ""
-        logger.info("Choose output clicked; calling SHBrowseForFolder (ctypes)")
+        logger.info(f"Choose output clicked; calling SHBrowseForFolder at {sInitial!r}")
         try:
             sChosen = browseForFolderViaShell(
                 "Choose the parent directory under which the per-scan "
                 "output folder will be created.",
-                sCurrent)
-        except Exception as oError:
-            logger.info(f"SHBrowseForFolder raised: {oError}")
-            MessageBox.Show(f"Choose output failed: {oError}",
+                sInitial)
+        except Exception as ex:
+            logger.info(f"SHBrowseForFolder raised: {ex}")
+            MessageBox.Show(f"Choose output failed: {ex}",
                 f"{sProgramName} - Browse error",
                 MessageBoxButtons.OK, MessageBoxIcon.Warning)
             return
@@ -2483,19 +2710,20 @@ def showGuiDialog(arguments):
             txtOut.Text = sChosen
             logger.info(f"Output dir set to: {sChosen}")
 
-    def fnDefaults(oSender, oArgs):
+    def fnDefaults(sender, args):
         txtTarget.Text = ""
         txtOut.Text = ""
         chkInvisible.Checked = False
+        chkForce.Checked = False
         chkView.Checked = False
         chkLog.Checked = False
         chkUseCfg.Checked = False
         configManager.eraseAll()
 
-    def fnHelpClick(oSender, oArgs):
+    def fnHelpClick(sender, args):
         fnShowHelp()
 
-    def fnOkClick(oSender, oArgs):
+    def fnOkClick(sender, args):
         sCurrent = (txtTarget.Text or "").strip()
         if not sCurrent:
             MessageBox.Show(
@@ -2506,9 +2734,9 @@ def showGuiDialog(arguments):
             txtTarget.Focus()
             frm.DialogResult = DialogResult.None_
             return
-        sKind, oDetail = classifyInput(sCurrent)
+        sKind, vDetail = classifyInput(sCurrent)
         if sKind == "error":
-            MessageBox.Show(str(oDetail),
+            MessageBox.Show(str(vDetail),
                 f"{sProgramName} - Invalid source",
                 MessageBoxButtons.OK, MessageBoxIcon.Warning)
             txtTarget.Focus()
@@ -2528,16 +2756,17 @@ def showGuiDialog(arguments):
 
     txtTarget.Select()
     logger.info("Showing dialog (frm.ShowDialog)")
-    oResult = frm.ShowDialog()
-    logger.info(f"Dialog returned: {oResult}")
-    if oResult != DialogResult.OK:
+    dialogResult = frm.ShowDialog()
+    logger.info(f"Dialog returned: {dialogResult}")
+    if dialogResult != DialogResult.OK:
         frm.Dispose()
         return False
 
     # Hand values back into the arguments namespace.
-    arguments.inputValue = (txtTarget.Text or "").strip()
+    arguments.sSource = (txtTarget.Text or "").strip()
     arguments.sOutputDir = (txtOut.Text or "").strip()
     arguments.bInvisible = bool(chkInvisible.Checked)
+    arguments.bForce = bool(chkForce.Checked)
     arguments.bViewOutput = bool(chkView.Checked)
     arguments.bLog = bool(chkLog.Checked)
     arguments.bUseConfig = bool(chkUseCfg.Checked)
@@ -2574,7 +2803,7 @@ def launchReadMe():
         print(f"[WARN] No README.htm or README.md in {sExeDir}")
         return
     try: os.startfile(sTarget)
-    except Exception as oError: print(f"[WARN] Could not open {sTarget}: {oError}")
+    except Exception as ex: print(f"[WARN] Could not open {sTarget}: {ex}")
 
 
 def showFinalGuiMessage(sText, sTitle):
@@ -2661,6 +2890,7 @@ def main():
     bMultiUrl = False
     bOwnConsole = False
     iErrorCount = 0
+    iSkippedCount = 0
     iUrlIndex = 0
     iUrlTotal = 0
     lUrls = []
@@ -2672,9 +2902,9 @@ def main():
     browserType = None
     context = None
     lArgs = []
-    oCapture = None
-    oOriginalErr = sys.stderr
-    oOriginalOut = sys.stdout
+    capture = None
+    streamOriginalErr = sys.stderr
+    streamOriginalOut = sys.stdout
     pathBaseDir = pathlib.Path.cwd()
     pathOutputDir = None
     playwrightCtx = None
@@ -2697,8 +2927,8 @@ def main():
     # the rest of main() can treat the field uniformly with the GUI dialog's
     # text-field semantics (one URL, several space-separated URLs, or a path
     # to a URL list file). Empty list -> empty string -> "no input given."
-    if isinstance(arguments.inputValue, list):
-        arguments.inputValue = " ".join(arguments.inputValue).strip()
+    if isinstance(arguments.sSource, list):
+        arguments.sSource = " ".join(arguments.sSource).strip()
 
     # Open the log file early so the GUI-detection diagnostics can be
     # captured in it. The log is only opened when -l / --log was given on
@@ -2732,9 +2962,9 @@ def main():
     bOwnConsole = isLaunchedFromGui()
     logger.info(f"bOwnConsole={bOwnConsole}, "
         f"explicit -g={bool(getattr(arguments, 'bGuiMode', False))}, "
-        f"inputValue={arguments.inputValue!r}")
+        f"sSource={arguments.sSource!r}")
     if not getattr(arguments, "bGuiMode", False):
-        if not arguments.inputValue and bOwnConsole:
+        if not arguments.sSource and bOwnConsole:
             arguments.bGuiMode = True
             bAutoLaunchedGui = True
             hideOwnConsoleWindow()
@@ -2762,18 +2992,20 @@ def main():
         # If the user left Use configuration checked, persist their values.
         if arguments.bUseConfig:
             configManager.save(
-                arguments.inputValue or "",
+                arguments.sSource or "",
                 arguments.sOutputDir or "",
                 arguments.bViewOutput,
                 arguments.bInvisible,
+                arguments.bForce,
                 arguments.bLog)
-        logger.info(f"After dialog: input={arguments.inputValue!r} "
+        logger.info(f"After dialog: input={arguments.sSource!r} "
             f"outputDir={arguments.sOutputDir!r} "
             f"invisible={arguments.bInvisible} "
+            f"force={arguments.bForce} "
             f"viewOutput={arguments.bViewOutput} "
             f"log={arguments.bLog} useConfig={arguments.bUseConfig}")
 
-    if not arguments.inputValue:
+    if not arguments.sSource:
         print(f"{sProgramName} {sProgramVersion}")
         print(sUsage)
         return 1
@@ -2783,8 +3015,8 @@ def main():
         try:
             pathBaseDir = pathlib.Path(arguments.sOutputDir).expanduser()
             pathBaseDir.mkdir(parents=True, exist_ok=True)
-        except Exception as oError:
-            sErr = f"[ERROR] Output directory '{arguments.sOutputDir}' could not be created: {oError}"
+        except Exception as ex:
+            sErr = f"[ERROR] Output directory '{arguments.sOutputDir}' could not be created: {ex}"
             print(sErr)
             if bGuiMode: showFinalGuiMessage(sErr, f"{sProgramName} - Error")
             return 1
@@ -2792,17 +3024,17 @@ def main():
         pathBaseDir = pathlib.Path.cwd()
 
     logger.info(f"Output base: {pathBaseDir}")
-    logger.info(f"Target: {arguments.inputValue}")
+    logger.info(f"Target: {arguments.sSource}")
 
     # In GUI mode, capture stdout/stderr so we can present the run summary in
     # a final dialog rather than scrolling past in a console the user can't
     # see. The CLI path leaves stdout/stderr alone.
     if bGuiMode:
-        oCapture = io.StringIO()
-        sys.stdout = oCapture
-        sys.stderr = oCapture
+        capture = io.StringIO()
+        sys.stdout = capture
+        sys.stderr = capture
 
-    sInput = str(arguments.inputValue).strip()
+    sInput = str(arguments.sSource).strip()
 
     # Three-case input dispatch:
     #
@@ -2830,33 +3062,33 @@ def main():
     #                           rejected by classifyInput.
     #   ('error', sReason)   -> bail with a clear message.
     bMultiUrl = False
-    sKind, oDetail = classifyInput(sInput)
+    sKind, vDetail = classifyInput(sInput)
     if sKind == "error":
-        print(f"[ERROR] {oDetail}")
-        logger.info(f"Input error: {oDetail}")
+        print(f"[ERROR] {vDetail}")
+        logger.info(f"Input error: {vDetail}")
         if bGuiMode:
-            sys.stdout = oOriginalOut
-            sys.stderr = oOriginalErr
-            showFinalGuiMessage(oCapture.getvalue(), f"{sProgramName} - Error")
+            sys.stdout = streamOriginalOut
+            sys.stderr = streamOriginalErr
+            showFinalGuiMessage(capture.getvalue(), f"{sProgramName} - Error")
         logger.close()
         return 1
     if sKind == "listfile":
         try:
-            lUrls = getUrlsFromFile(oDetail)
-        except Exception as oError:
-            print(f"[ERROR] Could not read URL list file: {oError}")
+            lUrls = getUrlsFromFile(vDetail)
+        except Exception as ex:
+            print(f"[ERROR] Could not read URL list file: {ex}")
             if bGuiMode:
-                sys.stdout = oOriginalOut
-                sys.stderr = oOriginalErr
-                showFinalGuiMessage(oCapture.getvalue(), f"{sProgramName} - Error")
+                sys.stdout = streamOriginalOut
+                sys.stderr = streamOriginalErr
+                showFinalGuiMessage(capture.getvalue(), f"{sProgramName} - Error")
             logger.close()
             return 1
         bMultiUrl = True
         iUrlTotal = len(lUrls)
-        logger.info(f"URL list: {oDetail} ({iUrlTotal} URL(s))")
+        logger.info(f"URL list: {vDetail} ({iUrlTotal} URL(s))")
     else:
         # sKind == "urls"
-        lUrls = [getNormalizedUrl(sToken) for sToken in oDetail if sToken]
+        lUrls = [getNormalizedUrl(sToken) for sToken in vDetail if sToken]
         iUrlTotal = len(lUrls)
         bMultiUrl = iUrlTotal > 1
         if bMultiUrl: logger.info(f"URL set: {iUrlTotal} URL(s) from the source field")
@@ -2873,7 +3105,32 @@ def main():
             # Playwright still calls this "headless"; we expose it to the
             # user as "Invisible" because that wording is clearer and not
             # tied to the implementation. The mapping is a 1:1 boolean.
-            browser = browserType.launch(channel=sBrowserChannel, headless=bool(arguments.bInvisible), args=lArgs)
+            #
+            # urlCheck drives the system-installed Microsoft Edge through
+            # channel="msedge"; we never download a Playwright-bundled
+            # Chromium. On modern Windows 10/11, Edge ships in-box, so
+            # this almost always succeeds. If the user has somehow removed
+            # Edge or is on an unusual configuration where Playwright
+            # cannot find it, surface a friendly message rather than a
+            # raw Python traceback.
+            try:
+                browser = browserType.launch(channel=sBrowserChannel, headless=bool(arguments.bInvisible), args=lArgs)
+            except Exception as ex:
+                sErr = (
+                    f"Could not launch Microsoft Edge: {ex}\n\n"
+                    "urlCheck requires Microsoft Edge, which ships with "
+                    "Windows 10 and 11 by default. If Edge has been "
+                    "removed or is unavailable, install or repair it "
+                    "from https://www.microsoft.com/edge and try again."
+                )
+                print(f"[ERROR] {sErr}")
+                logger.info(f"Browser launch failed: {ex}")
+                if bGuiMode:
+                    sys.stdout = streamOriginalOut
+                    sys.stderr = streamOriginalErr
+                    showFinalGuiMessage(capture.getvalue(), f"{sProgramName} - Edge not available")
+                logger.close()
+                return 1
             context = browser.new_context(bypass_csp=True, ignore_https_errors=bDefaultIgnoreHttpsErrors, user_agent=sUserAgent, viewport={"width": iDefaultViewportWidth, "height": iDefaultViewportHeight})
             # Pre-fetch axe-core content once so CSP-restricted sites can still be scanned.
             sAxeContent = ""
@@ -2895,18 +3152,34 @@ def main():
                 sNormalizedUrl = getNormalizedUrl(sUrl) if sKind == "listfile" else sUrl
                 if iUrlTotal > 1: logger.info(f"[{iUrlIndex}/{iUrlTotal}] {sNormalizedUrl}")
                 try:
-                    scanUrl(
+                    vResult = scanUrl(
                         sUrl, sNormalizedUrl, browser, context, pathBaseDir,
-                        sAxeContent)
-                except Exception as oError:
+                        sAxeContent, bForce=bool(arguments.bForce))
+                    if vResult == "skipped":
+                        iSkippedCount += 1
+                except Exception as ex:
                     iErrorCount += 1
-                    print(f"Error scanning {sNormalizedUrl}: {oError}")
-                    logger.info(f"Error scanning {sNormalizedUrl}: {oError}")
-                    pathOutputDir = chooseOutputDir(pathBaseDir, sFallbackTitle)
-                    pathlib.Path(pathOutputDir, sErrorReportName).write_text("\n\n".join([str(oError), traceback.format_exc()[:iMaxErrorTextLen]]), encoding="utf-8")
+                    # Surface the error to the console (always, since
+                    # console output is the user's expected view of run
+                    # results) and to the log (only if -l is on; the
+                    # logger silently no-ops otherwise). We never create
+                    # an error file on disk that the user did not
+                    # explicitly request.
+                    print(f"Error scanning {sNormalizedUrl}: {ex}")
+                    logger.info(f"Error scanning {sNormalizedUrl}: {ex}")
+                    logger.info(f"Traceback:\n{traceback.format_exc()}")
             if iUrlTotal > 1:
-                logger.info(f"Done. {iUrlTotal - iErrorCount} of {iUrlTotal} URLs scanned successfully.")
-                if iErrorCount > 0: logger.info(f"{iErrorCount} error(s). See error.txt in the relevant output directories.")
+                iSucceeded = iUrlTotal - iErrorCount - iSkippedCount
+                sSummary = f"Done. {iSucceeded} of {iUrlTotal} URLs scanned successfully"
+                if iSkippedCount > 0: sSummary += f", {iSkippedCount} skipped"
+                if iErrorCount > 0: sSummary += f", {iErrorCount} error(s)"
+                sSummary += "."
+                logger.info(sSummary)
+                print(sSummary)
+                if iErrorCount > 0 and arguments.bLog:
+                    logger.info("Error details (per-URL traceback) above in this log.")
+                elif iErrorCount > 0:
+                    print("Re-run with -l to log full error tracebacks to urlCheck.log.")
             # Open the parent output directory once at the end of the run, if
             # requested. This shows the user all per-page subdirectories at
             # once rather than focusing on any single page's folder.
@@ -2922,10 +3195,10 @@ def main():
             pass
 
         # Restore stdout/stderr and surface captured output in a GUI dialog.
-        if bGuiMode and oCapture is not None:
-            sys.stdout = oOriginalOut
-            sys.stderr = oOriginalErr
-            sCaptured = oCapture.getvalue()
+        if bGuiMode and capture is not None:
+            sys.stdout = streamOriginalOut
+            sys.stderr = streamOriginalErr
+            sCaptured = capture.getvalue()
             sTitle = f"{sProgramName} - Results" if iErrorCount == 0 else f"{sProgramName} - Completed with errors"
             showFinalGuiMessage(sCaptured if sCaptured else "Done. No output.", sTitle)
 

@@ -1,4 +1,4 @@
-﻿# Camel Type: Python Coding Guidelines
+# Camel Type: Python Coding Guidelines
 
 Camel Type is a coding style optimized for screen reader productivity and systematic readability. The following rules apply to Python 3.
 
@@ -20,13 +20,20 @@ Use Hungarian prefix notation to indicate type. Prefix rules:
 - `d` — dictionary
 - `v` — variant (unknown or mixed type)
 
-For **Python object instances** (class instances, library objects), use the **lowercase class name** as the prefix. If there is only one instance of that class in scope, the class name prefix is the entire variable name — no additional suffix is added.
+For **Python object instances** (class instances, library objects), use the **lowercase class name** as the prefix, OR a common abbreviation if one is universally understood (e.g., `pd` for pandas, `np` for numpy, `bs` for BeautifulSoup, `ex` for Exception, `df` for DataFrame).
+
+If there is only one instance of that class in scope, the class name prefix is the entire variable name — no additional suffix is added.
 
 Examples:
 - One `Path` instance: `path`
 - One `requests.Session` instance: `session`
-- One `BeautifulSoup` instance: `beautifulSoup`
-- A caught exception: `error`
+- One `BeautifulSoup` instance: `bs`
+- One `pandas.DataFrame`: `df`
+- A caught exception: `ex` (universal abbreviation; if multiple `Exception` variables coexist, use `exParse`, `exNetwork`, etc.)
+
+The `o` prefix is **reserved for COM objects only** (e.g., `oWord`, `oExcel`, `oWorkbook`, `oRange`). Do not use `o` as a generic "other object" prefix; use the class-name prefix instead.
+
+This convention extends naturally: a `pathlib.Path` is `path` or `pathInput`; a `urllib.request.Request` is `request`; a `playwright.sync_api.Page` is `page`; an `io.StringIO` for output capture is `capture` (the role) — but if multiple StringIO objects coexist, distinguish them with the class-name prefix: `stringIoOut`, `stringIoErr`.
 
 ---
 
@@ -161,12 +168,54 @@ lEngines = ["axe", "ibm", "alfa"]
 
 ## 14. Error Handling
 
-Use `try`/`except` with a named exception variable. Catch specific exception types where possible rather than a bare `except`.
+Use `try`/`except` with a named exception variable. Catch specific exception types where possible rather than a bare `except`. Use `ex` as the conventional abbreviation for caught exceptions (it is universally understood and avoids shadowing Python's builtin `Exception` class name).
 
 ```python
 try:
     result = riskyOperation()
-except ValueError as error:
-    print(f"Validation error: {error}")
+except ValueError as ex:
+    print(f"Validation error: {ex}")
     sys.exit(1)
 ```
+
+If the same `try` block has multiple `except` handlers and you want to keep them distinguishable in nested or multi-catch contexts, use a role suffix: `exParse`, `exNetwork`. But for the common single-handler case, plain `ex` is correct.
+
+---
+
+## 15. Cross-Program Naming Conventions
+
+When the same concept appears across multiple programs in a related project (e.g., a family of companion tools that share a common command-line and GUI layout), use the **same identifier name** in each program for that concept. Consistency of naming across programs makes it easy for a reader who knows one program to understand another.
+
+The following shared names are conventional in the author's project family:
+
+| Concept | Identifier |
+|---|---|
+| Program's display name | `sProgramName` |
+| Program's version string | `sProgramVersion` |
+| Config directory name | `sConfigDirName` |
+| Config file name | `sConfigFileName` |
+| Log file name | `sLogFileName` |
+| Source-input variable (the user's source files / URLs / etc.) | `sSource` |
+| Output directory variable | `sOutputDir` |
+| GUI layout: left margin | `iLayoutLeft` |
+| GUI layout: right margin | `iLayoutRight` |
+| GUI layout: top margin | `iLayoutTop` |
+| GUI layout: gap between adjacent controls | `iLayoutGap` |
+| GUI layout: gap between rows | `iLayoutRowGap` |
+| GUI layout: width of leading labels | `iLayoutLabelWidth` |
+| GUI layout: width of buttons | `iLayoutButtonWidth` |
+| GUI layout: height of buttons | `iLayoutButtonHeight` |
+| GUI layout: height of text fields and rows | `iLayoutTextHeight` |
+| GUI layout: form (dialog) width | `iLayoutFormWidth` |
+
+The following shared classes are conventional in the project family (using lowerCamelCase for class names per Camel Type):
+
+| Class | Purpose |
+|---|---|
+| `program` | The top-level program class (entry point, argument parsing, dispatch) |
+| `logger` | Diagnostic logger with `open`, `close`, `info`, `warn`, `error`, `debug` methods |
+| `configManager` | Loads and saves a per-program INI under `%LOCALAPPDATA%\<program>\` |
+| `guiDialog` | The parameter dialog with `show` / `run` methods |
+| `comHelper` | COM lifecycle helper (creating apps, releasing references, retrying ops). Used only when the program drives Office or other COM servers. |
+
+For the `logger` class, all six methods (`open`, `close`, `info`, `warn`, `error`, `debug`) should be present even if the program currently calls only some of them. This keeps the surface uniform across the family so future code (or a developer moving between programs) can use any level method without having to check whether it exists.

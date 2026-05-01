@@ -1,14 +1,11 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
 <head>
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <title>announce</title>
+  <title>urlCheck Announce</title>
   <style>
-    /* Default styles provided by pandoc.
-    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
-    */
     html {
       color: #1a1a1a;
       background-color: #fdfdfd;
@@ -63,10 +60,6 @@
     img {
       max-width: 100%;
     }
-    svg {
-      height: auto;
-      max-width: 100%;
-    }
     h1, h2, h3, h4, h5, h6 {
       margin-top: 1.4em;
     }
@@ -91,7 +84,6 @@
       color: #606060;
     }
     code {
-      white-space: pre-wrap;
       font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
       font-size: 85%;
       margin: 0;
@@ -111,8 +103,8 @@
      overflow: visible;
     }
     hr {
+      background-color: #1a1a1a;
       border: none;
-      border-top: 1px solid #1a1a1a;
       height: 1px;
       margin: 1em 0;
     }
@@ -155,6 +147,7 @@
     #TOC a:not(:hover) {
       text-decoration: none;
     }
+    code{white-space: pre-wrap;}
     span.smallcaps{font-variant: small-caps;}
     div.columns{display: flex; gap: min(4vw, 1.5em);}
     div.column{flex: auto; overflow-x: auto;}
@@ -170,40 +163,136 @@
     }
     .display.math{display: block; text-align: center; margin: 0.5rem auto;}
   </style>
+  <style>
+  body { font-family: Arial, Helvetica, sans-serif; max-width: 50em; margin: 1em auto; padding: 0 1em; line-height: 1.5; color: #222; }
+  h1 { font-size: 1.5em; border-bottom: 1px solid #ccc; padding-bottom: 0.2em; }
+  h2 { font-size: 1.25em; margin-top: 1.5em; }
+  h3 { font-size: 1.1em; margin-top: 1.3em; }
+  p { margin: 0.7em 0; }
+  code { font-family: Consolas, "Courier New", monospace; background: #f4f4f4; padding: 1px 4px; border-radius: 3px; }
+  pre { background: #f4f4f4; padding: 0.6em 1em; border-radius: 4px; overflow-x: auto; line-height: 1.35; }
+  pre code { background: transparent; padding: 0; }
+  ul, ol { margin: 0.5em 0; padding-left: 1.6em; }
+  li { margin: 0.25em 0; }
+  table { border-collapse: collapse; margin: 1em 0; }
+  th, td { border: 1px solid #bbb; padding: 0.3em 0.7em; text-align: left; }
+  th { background: #efefef; }
+  blockquote { border-left: 4px solid #bbb; margin: 1em 0; padding: 0.2em 1em; color: #555; }
+  a { color: #0645ad; }
+  a:visited { color: #0b0080; }
+  hr { border: 0; border-top: 1px solid #ccc; margin: 2em 0; }
+  </style>
 </head>
 <body>
-<h1
-id="batch-checks-of-accessibility-for-public-web-pages-and-popular-file-formats">Batch
-Checks of Accessibility for Public Web Pages and Popular File
-Formats</h1>
-<p>I am pleased to share two free, open-source accessibility testing
-tools I have just released on GitHub. Each is a single, self-contained
-executable that runs from any folder on a Windows computer — no
-installation required, and no dependencies to manage.</p>
-<h2 id="extcheck-check-office-and-markdown-files">extCheck — Check
-Office and Markdown Files</h2>
-<p>https://github.com/jamalmazrui/extCheck</p>
-<p>extCheck checks Microsoft Word, Excel, PowerPoint, and Pandoc
-Markdown files against 73 accessibility rules drawn from the Microsoft
-Office Accessibility Checker and the axe-core WCAG 2.2 rule set. Results
-appear in the console and in a CSV report, with each issue described
-along with remediation guidance.</p>
-<h2 id="urlcheck-check-web-pages">urlCheck — Check Web Pages</h2>
-<p>https://github.com/jamalmazrui/urlCheck</p>
-<p>urlCheck opens a web page in Microsoft Edge, runs the axe-core
-engine, and saves an HTML report, a CSV file, an Excel workbook, and a
-JSON results file — all in a named folder. It works with public URLs,
-local HTML files, and batch lists of URLs.</p>
-<hr />
-<p>Because each tool is a portable single file, it integrates naturally
-into developer pipelines: call it synchronously, then parse the
-machine-readable CSV or JSON output as part of a larger automated
-workflow.</p>
-<p>Both tools are designed for users comfortable with the Windows
-command line. If you work in accessibility testing, document production,
-or web quality assurance, I hope you find them useful. Feedback and
-contributions are welcome.</p>
-<p>#accessibility #wcag #a11y #assistivetechnology #commandlinetools
-#opensource</p>
+<header id="title-block-header">
+<h1 class="title">urlCheck Announce</h1>
+</header>
+<h1 id="urlcheck-release-notes">urlCheck Release Notes</h1>
+<h2 id="version-1.10.0">Version 1.10.0</h2>
+<h3 id="whats-new">What’s new</h3>
+<ul>
+<li><strong>Edge browser handling.</strong> urlCheck drives the
+system-installed Microsoft Edge through Playwright’s
+<code>channel="msedge"</code> mechanism. The build script no longer runs
+<code>playwright install msedge</code>, which was actively harmful: on a
+Windows machine where Edge is already installed (the universal case),
+Playwright errors with “msedge is already installed on the system” and
+would fail the build. Edge ships in-box with Windows 10 and 11.</li>
+<li><strong>Friendly Edge error.</strong> If the rare situation occurs
+where Playwright cannot find Edge (Edge removed by the user, unusual
+configuration), urlCheck now surfaces a friendly message pointing at
+https://www.microsoft.com/edge instead of a Python traceback.</li>
+<li><strong>64-bit build guard.</strong> <code>buildUrlCheck.cmd</code>
+verifies the selected Python interpreter is 64-bit before invoking
+PyInstaller. A 32-bit Python is rejected with a clear error so the
+produced <code>urlCheck.exe</code> is consistently 64-bit.</li>
+<li><strong>Skip-or-overwrite output behavior, consistent with extCheck
+and 2htm.</strong> When a per-page output folder with the same sanitized
+page title already exists, urlCheck now skips that URL by default rather
+than auto-suffixing a new folder. With <code>--force</code> (or the
+Force replacements checkbox in the dialog), the existing folder is
+emptied and a fresh scan is written into it. The skip decision is made
+right after the page title is read, before the expensive accessibility
+scan, so re-running urlCheck on a long URL list is cheap when most pages
+have already been scanned. Note: this is a behavior change from prior
+versions, which used auto-suffixed folder names like
+<code>My Page-001</code>.</li>
+<li><strong>Force replacements checkbox in the GUI dialog.</strong>
+Matches the corresponding checkbox in extCheck and 2htm.</li>
+<li><strong>Picker initial directory.</strong> The Browse source and
+Choose output buttons now open at the directory derived from the
+text-field value when that value points to an existing path (whether the
+user just typed it or it was loaded from a saved configuration), and at
+the user’s Documents folder otherwise. The folder picker honors the
+initial path via a BFFCALLBACK that posts BFFM_SETSELECTION on
+BFFM_INITIALIZED — the previous version was unable to honor an initial
+path with the classic SHBrowseForFolder style.</li>
+<li><strong>Skipped count in the run summary.</strong> A multi-URL run
+now reports successful, skipped, and error counts separately.</li>
+<li><strong>No implicit error files.</strong> Earlier versions wrote an
+<code>error.txt</code> and a fallback <code>untitled-page</code> folder
+when a scan crashed unexpectedly. urlCheck now creates files only when
+the user explicitly asks for them. Errors are surfaced to the console
+(always) and to <code>urlCheck.log</code> when <code>-l</code> is on. If
+you run without <code>-l</code> and want full tracebacks for any errors,
+the run summary now reminds you to add <code>-l</code> next time.</li>
+<li><strong>Camel Type coding standard.</strong> All variable names
+follow the project’s Camel Type style. The <code>o</code> prefix is
+reserved for COM objects only; non-COM objects use the lowercase class
+name as their prefix. Examples: <code>oPath</code> → <code>path</code>,
+<code>oResponse</code> → <code>response</code>, <code>oDlg</code> →
+<code>dialog</code>, <code>oError</code> → <code>ex</code>. urlCheck
+does not use COM, so it has no remaining <code>o</code>-prefixed
+variables.</li>
+<li><strong>Cross-program naming.</strong> Identifier names for shared
+concepts now match across the three companion tools (urlCheck, extCheck,
+2htm). The program-name and version constants are
+<code>sProgramName</code> and <code>sProgramVersion</code>; the config
+and log filename constants are <code>sConfigDirName</code>,
+<code>sConfigFileName</code>, <code>sLogFileName</code>; the source and
+output-directory variables are <code>sSource</code> and
+<code>sOutputDir</code>; the GUI layout constants are all
+<code>iLayout*</code> (left, right, top, gap, rowGap, labelWidth,
+buttonWidth, buttonHeight, textHeight, formWidth). The
+<code>logger</code> class now has the same surface in all three
+programs: <code>open</code>, <code>close</code>, <code>info</code>,
+<code>warn</code>, <code>error</code>, <code>debug</code>.</li>
+</ul>
+<h3 id="technical-notes">Technical notes</h3>
+<ul>
+<li>The icon is embedded in <code>urlCheck.exe</code> at build time via
+PyInstaller’s <code>--icon</code> flag (multi-resolution: 16, 24, 32,
+48, 64, 128, 256). Shortcuts inherit the icon.</li>
+<li>Two ctypes Structure class definitions (<code>ProcessEntry32</code>
+and <code>BrowseInfoW</code>) were renamed from their old
+<code>o</code>-prefixed forms to follow Python’s PascalCase class-naming
+convention.</li>
+<li>The build script (<code>buildUrlCheck.cmd</code>) writes
+<code>urlCheck.exe</code> to the current working directory rather than a
+<code>dist\</code> subfolder, and it no longer copies
+<code>urlCheck.cmd</code> or <code>urlCheck.ico</code> aside (those
+files already live in the working directory next to
+<code>urlCheck.iss</code>). PyInstaller’s intermediate work files are
+stashed in a <code>build\</code> subfolder out of the way; the
+auto-generated <code>urlCheck.spec</code> is removed after a successful
+build. The script uses no forward <code>call :label</code>; it ships
+with CRLF line endings as defense-in-depth.</li>
+<li>The Invisible checkbox in the dialog is labeled “Invisible mode”
+(mnemonic on the I).</li>
+</ul>
+<h3 id="installer-urlcheck_setup.exe">Installer
+(<code>urlCheck_setup.exe</code>)</h3>
+<ul>
+<li>64-bit only.</li>
+<li>Prompts for the installation directory (default:
+<code>C:\Program Files\urlCheck</code>).</li>
+<li>Includes a brief MIT-license summary on the welcome page.</li>
+<li>Installs only HTML versions of the documentation
+(<code>ReadMe.htm</code>, <code>Announce.htm</code>,
+<code>License.htm</code>); the Markdown counterparts and
+source/build/installer scripts live in the GitHub repository.</li>
+<li>The “Launch urlCheck now” checkbox on the final page reminds the
+user that the desktop hotkey is Alt+Ctrl+U.</li>
+</ul>
 </body>
 </html>

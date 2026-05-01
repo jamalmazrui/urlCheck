@@ -4,54 +4,63 @@
 ; Compile with the Inno Setup IDE (ISCC.exe) to produce urlCheck_setup.exe.
 ; The resulting installer:
 ;   - Requires administrator privileges.
-;   - Installs urlCheck.exe and supporting documentation files to
-;     C:\Program Files\urlCheck (standard GUI-program install path).
+;   - Prompts the user for the installation directory; default is
+;     C:\Program Files\urlCheck.
+;   - Shows a brief MIT license summary on the welcome page (no extra
+;     wizard screen). The full license text is installed alongside
+;     the program as License.htm.
 ;   - Registers the product for "Apps & Features" uninstall.
 ;   - Creates a desktop shortcut with hotkey Alt+Ctrl+U that
 ;     launches urlCheck in GUI mode with saved-configuration loading
 ;     enabled (equivalent to urlCheck -g -u).
-;   - Does NOT register a File Explorer right-click verb. urlCheck
-;     accepts a URL, a single local HTML file, or a single plain text
-;     file listing URLs one per line; that range of inputs is best
-;     entered through the GUI dialog or the command line, not through
-;     a per-extension shell verb.
+;   - Does NOT register a File Explorer right-click verb.
 ;   - On the final wizard page, offers two PostInstall checkboxes
-;     (both checked by default): launch urlCheck, and read the HTML
-;     documentation.
+;     (both checked by default): launch urlCheck (with a hotkey
+;     reminder), and read the HTML documentation.
+;
+; This installer ships only the runtime distribution (the .exe, the
+; documentation in HTML form, and the license). The Markdown sources,
+; the Python source, the build script, and this .iss script live in
+; the GitHub repository.
 ; =====================================================================
 
-#define cAppName       "urlCheck"
-#define cAppVersion    "1.10.0"
-#define cAppPublisher  "Jamal Mazrui"
-#define cAppUrl        "https://github.com/JamalMazrui/urlCheck"
-#define cAppExeName    "urlCheck.exe"
-#define cAppCopyright  "Copyright (c) 2026 Jamal Mazrui. MIT License."
+#define sAppName       "urlCheck"
+#define sAppVersion    "1.10.0"
+#define sAppPublisher  "Jamal Mazrui"
+#define sAppUrl        "https://github.com/JamalMazrui/urlCheck"
+#define sAppExeName    "urlCheck.exe"
+#define sAppCopyright  "Copyright (c) 2026 Jamal Mazrui. MIT License."
+#define sHotKey        "Alt+Ctrl+U"
 
 [Setup]
 AppId={{B2C4F1A8-3D9E-4F7B-8C5D-9E1A2B3C4D5E}
 
-AppName={#cAppName}
-AppVersion={#cAppVersion}
-AppVerName={#cAppName} {#cAppVersion}
-AppPublisher={#cAppPublisher}
-AppPublisherURL={#cAppUrl}
-AppSupportURL={#cAppUrl}
-AppUpdatesURL={#cAppUrl}/releases
-AppCopyright={#cAppCopyright}
-VersionInfoVersion={#cAppVersion}
+AppName={#sAppName}
+AppVersion={#sAppVersion}
+AppVerName={#sAppName} {#sAppVersion}
+AppPublisher={#sAppPublisher}
+AppPublisherURL={#sAppUrl}
+AppSupportURL={#sAppUrl}
+AppUpdatesURL={#sAppUrl}/releases
+AppCopyright={#sAppCopyright}
+VersionInfoVersion={#sAppVersion}
 
-; Install under Program Files (standard GUI-program location).
-DefaultDirName={pf}\{#cAppName}
-DefaultGroupName={#cAppName}
+; Install under Program Files. {autopf} resolves to "Program Files"
+; on 64-bit Windows when the installer runs in 64-bit mode (see
+; ArchitecturesInstallIn64BitMode below). The user can override this
+; default on the wizard's directory page.
+DefaultDirName={autopf}\{#sAppName}
+DefaultGroupName={#sAppName}
 DisableProgramGroupPage=yes
 UsePreviousAppDir=yes
 UsePreviousGroup=yes
 
 OutputDir=.
-OutputBaseFilename=urlCheck_setup
+OutputBaseFilename={#sAppName}_setup
 Compression=lzma2
 SolidCompression=yes
-SetupIconFile=urlCheck.ico
+SetupIconFile={#sAppName}.ico
+WizardStyle=modern
 
 ; Installer requires admin to write to Program Files.
 PrivilegesRequired=admin
@@ -62,52 +71,51 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 
 Uninstallable=yes
-UninstallDisplayIcon={app}\{#cAppExeName}
-UninstallDisplayName={#cAppName} {#cAppVersion}
+UninstallDisplayIcon={app}\{#sAppExeName}
+UninstallDisplayName={#sAppName} {#sAppVersion}
 
 MinVersion=10.0
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
+[Messages]
+; Replace the default welcome-page body text with one that includes a
+; brief MIT license notice. This satisfies the requirement that the
+; license summary appear on an existing wizard screen rather than on
+; an additional dedicated page (which is what LicenseFile= would
+; produce). The full license text is installed alongside the program.
+WelcomeLabel2=This will install [name/ver] on your computer.%n%n[name] is licensed under the MIT License: free to use, copy, modify, and distribute; provided "as is" with no warranty. The full license text will be installed as License.htm in the program folder.%n%nIt is recommended that you close all other applications before continuing.
+
 [Files]
-; Note: urlCheck.ico is NOT copied to {app} because PyInstaller embeds it
-; directly into urlCheck.exe at build time (via --icon=urlCheck.ico in
-; buildUrlCheck.cmd). The shortcut icons in [Icons] inherit from the exe's
-; embedded icon by default. The .ico file IS still needed at COMPILE time
-; for the SetupIconFile= directive above, which gives urlCheck_setup.exe
-; itself an icon -- but that's a compile-time dependency only and does not
-; need to ship with the installed program.
-Source: "urlCheck.exe";       DestDir: "{app}"; Flags: ignoreversion
-Source: "urlCheck.cmd";       DestDir: "{app}"; Flags: ignoreversion
-Source: "README.htm";         DestDir: "{app}"; Flags: ignoreversion
-Source: "README.md";          DestDir: "{app}"; Flags: ignoreversion
-Source: "license.htm";        DestDir: "{app}"; Flags: ignoreversion
-Source: "announce.md";        DestDir: "{app}"; Flags: ignoreversion
-Source: "announce.htm";       DestDir: "{app}"; Flags: ignoreversion onlyifdoesntexist
-Source: "urlCheck.py";        DestDir: "{app}"; Flags: ignoreversion
-Source: "buildUrlCheck.cmd";  DestDir: "{app}"; Flags: ignoreversion
-Source: "urlCheck.iss";       DestDir: "{app}"; Flags: ignoreversion
-Source: "requirements.txt";   DestDir: "{app}"; Flags: ignoreversion
+; The runtime distribution: just the executable, the cosmetic-warning
+; suppression wrapper, the HTML docs, and the license. The icon is
+; embedded in urlCheck.exe at build time (PyInstaller --icon flag),
+; so the .ico does not need to ship in the install directory.
+Source: "{#sAppName}.exe";    DestDir: "{app}"; Flags: ignoreversion
+Source: "{#sAppName}.cmd";    DestDir: "{app}"; Flags: ignoreversion
+Source: "ReadMe.htm";         DestDir: "{app}"; Flags: ignoreversion
+Source: "Announce.htm";       DestDir: "{app}"; Flags: ignoreversion
+Source: "License.htm";        DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 ; Start Menu group. WorkingDir is set to the user's Documents folder so
 ; output folders and the optional urlCheck.log land somewhere writable
 ; (the install dir under Program Files is not writable for non-admins).
-Name: "{group}\{#cAppName}"; \
-  Filename: "{app}\{#cAppExeName}"; \
+Name: "{group}\{#sAppName}"; \
+  Filename: "{app}\{#sAppExeName}"; \
   Parameters: "-g -u"; \
   WorkingDir: "{userdocs}"; \
   Comment: "Check web pages and HTML files for accessibility problems"
 
-Name: "{group}\{#cAppName} README"; \
-  Filename: "{app}\README.htm"; \
+Name: "{group}\{#sAppName} ReadMe"; \
+  Filename: "{app}\ReadMe.htm"; \
   WorkingDir: "{app}"; \
-  Comment: "Documentation for {#cAppName}"
+  Comment: "Documentation for {#sAppName}"
 
-Name: "{group}\Uninstall {#cAppName}"; \
+Name: "{group}\Uninstall {#sAppName}"; \
   Filename: "{uninstallexe}"; \
-  Comment: "Remove {#cAppName} from this computer"
+  Comment: "Remove {#sAppName} from this computer"
 
 ; Desktop shortcut with the Alt+Ctrl+U hotkey. Launches urlCheck in
 ; GUI mode (-g) with saved-configuration loading (-u). The hotkey is
@@ -115,26 +123,25 @@ Name: "{group}\Uninstall {#cAppName}"; \
 ; individual applications may intercept it when they have focus.
 ; WorkingDir is the user's Documents folder for the same writability
 ; reason as the Start Menu shortcut above.
-Name: "{userdesktop}\{#cAppName}"; \
-  Filename: "{app}\{#cAppExeName}"; \
+Name: "{userdesktop}\{#sAppName}"; \
+  Filename: "{app}\{#sAppExeName}"; \
   WorkingDir: "{userdocs}"; \
   Parameters: "-g -u"; \
-  HotKey: Alt+Ctrl+U; \
-  Comment: "Check accessibility (Alt+Ctrl+U)"
+  HotKey: {#sHotKey}; \
+  Comment: "Check accessibility ({#sHotKey})"
 
 [Run]
 ; Post-install checkboxes shown on the final wizard page. Both
-; default to checked; the user can uncheck either to skip.
+; default to checked; the user can uncheck either to skip. The launch
+; checkbox label includes a reminder of the desktop hotkey so the
+; user notices and remembers it.
 
-; Launch urlCheck (GUI mode). WorkingDir is the user's Documents folder
-; so any output folders or log file land somewhere writable.
-FileName: "{app}\{#cAppExeName}"; \
+FileName: "{app}\{#sAppExeName}"; \
   Parameters: "-g"; \
   WorkingDir: "{userdocs}"; \
-  Description: "Launch {#cAppName} now"; \
+  Description: "Launch {#sAppName} now (desktop hotkey: {#sHotKey})"; \
   Flags: nowait postinstall skipifsilent
 
-; Open the HTML documentation.
-FileName: "{app}\README.htm"; \
-  Description: "Read documentation for {#cAppName}"; \
+FileName: "{app}\ReadMe.htm"; \
+  Description: "Read documentation for {#sAppName}"; \
   Flags: postinstall shellexec skipifsilent
