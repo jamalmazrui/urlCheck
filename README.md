@@ -58,12 +58,12 @@ Launch `urlCheck` from any of these:
 
 The parameter dialog has these controls. Each label has an underlined letter that you can press with **Alt** to jump straight to that control:
 
-- **Source files** [S] — one URL (https://example.com), or a domain (microsoft.com), or several of either separated by spaces, or the path to a single plain text file that lists URLs, domains, or local HTML file paths one per line. The list file may have any extension; urlCheck verifies it is plain text by inspecting its contents.
+- **Source urls** [S] — one url (https://example.com), or a domain (microsoft.com), or several of either separated by spaces, or the path to a single plain text file that lists urls, domains, or local HTML file paths one per line. The list file may have any extension; urlCheck verifies it is plain text by inspecting its contents.
 - **Browse source...** [B] — pick a single source from a file picker
 - **Output directory** [O] — where the output is written. Blank means the current working directory.
 - **Choose output...** [C] — pick the output directory from a folder picker
 - **Invisible mode** [I] — run Edge with no visible browser window
-- **Force replacements** [F] — reuse an existing per-page output folder by emptying its contents and writing a fresh set of files. Without this, urlCheck skips the URL when its per-page output folder already exists, preserving previous scan results.
+- **Force replacements** [F] — reuse an existing per-page output folder by emptying its contents and writing a fresh set of files. Without this, urlCheck skips the url when its per-page output folder already exists, preserving previous scan results.
 - **View output** [V] — open the output directory in File Explorer when the run is done
 - **Log session** [L] — write a fresh `urlCheck.log` in the output directory (or current directory if no output directory is set)
 - **Use configuration** [U] — load these field values from the saved configuration at startup, and save them back when you press OK
@@ -72,6 +72,8 @@ The parameter dialog has these controls. Each label has an underlined letter tha
 - **OK** / **Cancel** — start the run, or cancel without running. Enter is OK; Esc is Cancel.
 
 The Browse source and Choose output pickers open at the directory derived from the corresponding text field's current value when that value points to an existing path; otherwise they open at your Documents folder. With **Use configuration** checked, those text fields are pre-populated from your last session, so the pickers naturally pick up where you left off.
+
+If you press OK with an output directory that does not yet exist, urlCheck prompts to create it (default Yes). Choosing No keeps the dialog open with focus on the output field so you can correct it.
 
 When all pages have been processed, a final results dialog summarizes what was done.
 
@@ -127,11 +129,11 @@ Every option in the GUI corresponds one-to-one with a command-line flag, so a wo
 
 urlCheck accepts:
 
-- A single URL (`https://example.com` or just `example.com`)
-- Several URLs separated by spaces
-- The path to a plain text file with one URL or local HTML file path per line; the file may have any extension
+- A single url (`https://example.com` or just `example.com`)
+- Several urls separated by spaces
+- The path to a plain text file with one url or local HTML file path per line; the file may have any extension
 
-URL-list files are detected automatically by content sniffing, not by extension.
+Url-list files are detected automatically by content sniffing, not by extension.
 
 ---
 
@@ -147,7 +149,7 @@ For each scanned page, urlCheck creates a folder named after the page title and 
 - `page.htm` — saved page source with stylesheet hrefs preserved
 - `page.png` — full-page screenshot
 
-If a per-page folder with the same sanitized title already exists, urlCheck skips that URL by default — previous scan results are preserved. Use `--force` (or check **Force replacements** in the dialog) to instead empty the existing folder and replace its contents with a fresh scan. The skip decision is made right after the page title is read, before the expensive accessibility scan, so re-running urlCheck on a long URL list is cheap when most pages have already been scanned.
+If a per-page folder with the same sanitized title already exists, urlCheck skips that url by default — previous scan results are preserved. Use `--force` (or check **Force replacements** in the dialog) to instead empty the existing folder and replace its contents with a fresh scan. The skip decision is made right after the page title is read, before the expensive accessibility scan, so re-running urlCheck on a long url list is cheap when most pages have already been scanned.
 
 If `--view-output` is set, the **parent** output directory (the one containing the per-page subfolders) opens in File Explorer at the end of the run.
 

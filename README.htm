@@ -326,12 +326,11 @@ hotkey)</li>
 letter that you can press with <strong>Alt</strong> to jump straight to
 that control:</p>
 <ul>
-<li><strong>Source files</strong> [S] — one URL (https://example.com),
-or a domain (microsoft.com), or several of either separated by spaces,
-or the path to a single plain text file that lists URLs, domains, or
-local HTML file paths one per line. The list file may have any
-extension; urlCheck verifies it is plain text by inspecting its
-contents.</li>
+<li><strong>Source urls</strong> [S] — one url (https://example.com), or
+a domain (microsoft.com), or several of either separated by spaces, or
+the path to a single plain text file that lists urls, domains, or local
+HTML file paths one per line. The list file may have any extension;
+urlCheck verifies it is plain text by inspecting its contents.</li>
 <li><strong>Browse source…</strong> [B] — pick a single source from a
 file picker</li>
 <li><strong>Output directory</strong> [O] — where the output is written.
@@ -342,7 +341,7 @@ a folder picker</li>
 browser window</li>
 <li><strong>Force replacements</strong> [F] — reuse an existing per-page
 output folder by emptying its contents and writing a fresh set of files.
-Without this, urlCheck skips the URL when its per-page output folder
+Without this, urlCheck skips the url when its per-page output folder
 already exists, preserving previous scan results.</li>
 <li><strong>View output</strong> [V] — open the output directory in File
 Explorer when the run is done</li>
@@ -365,6 +364,9 @@ value points to an existing path; otherwise they open at your Documents
 folder. With <strong>Use configuration</strong> checked, those text
 fields are pre-populated from your last session, so the pickers
 naturally pick up where you left off.</p>
+<p>If you press OK with an output directory that does not yet exist,
+urlCheck prompts to create it (default Yes). Choosing No keeps the
+dialog open with focus on the output field so you can correct it.</p>
 <p>When all pages have been processed, a final results dialog summarizes
 what was done.</p>
 <h3 id="from-the-command-line">From the command line</h3>
@@ -467,13 +469,13 @@ batch file without surprises.</p>
 <h2 id="supported-sources">Supported sources</h2>
 <p>urlCheck accepts:</p>
 <ul>
-<li>A single URL (<code>https://example.com</code> or just
+<li>A single url (<code>https://example.com</code> or just
 <code>example.com</code>)</li>
-<li>Several URLs separated by spaces</li>
-<li>The path to a plain text file with one URL or local HTML file path
+<li>Several urls separated by spaces</li>
+<li>The path to a plain text file with one url or local HTML file path
 per line; the file may have any extension</li>
 </ul>
-<p>URL-list files are detected automatically by content sniffing, not by
+<p>Url-list files are detected automatically by content sniffing, not by
 extension.</p>
 <hr />
 <h2 id="output">Output</h2>
@@ -493,12 +495,12 @@ preserved</li>
 <li><code>page.png</code> — full-page screenshot</li>
 </ul>
 <p>If a per-page folder with the same sanitized title already exists,
-urlCheck skips that URL by default — previous scan results are
+urlCheck skips that url by default — previous scan results are
 preserved. Use <code>--force</code> (or check <strong>Force
 replacements</strong> in the dialog) to instead empty the existing
 folder and replace its contents with a fresh scan. The skip decision is
 made right after the page title is read, before the expensive
-accessibility scan, so re-running urlCheck on a long URL list is cheap
+accessibility scan, so re-running urlCheck on a long url list is cheap
 when most pages have already been scanned.</p>
 <p>If <code>--view-output</code> is set, the <strong>parent</strong>
 output directory (the one containing the per-page subfolders) opens in

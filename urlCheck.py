@@ -96,11 +96,11 @@ aGlossaryRows = [
 ]
 
 aProcedures = [
-    "Open the supplied URL or local HTML file in the installed Microsoft Edge browser through the synchronous Playwright API.",
+    "Open the supplied url or local HTML file in the installed Microsoft Edge browser through the synchronous Playwright API.",
     "Wait for the page to finish loading, then pause briefly so late DOM updates are more likely to settle.",
     "Load axe-core from reliable public CDNs without requiring Node.js on the user system.",
     "Run axe-core with its default behavior and the minimal resultTypes option set used to return violations, incomplete, passes, and inapplicable results.",
-    "Capture the page title, final URL, user agent, browser version, screenshot, page HTML, and structured accessibility findings.",
+    "Capture the page title, final url, user agent, browser version, screenshot, page HTML, and structured accessibility findings.",
     "Write a static HTML report and a structured Excel workbook.",
 ]
 
@@ -345,7 +345,7 @@ def buildConsoleSummary(dResults, dMetadata, sOutputDir):
             elif sImpact == "minor": iMinor += 1
     lLines.append("")
     lLines.append(f"Page:      {sPageTitle}")
-    lLines.append(f"URL:       {sPageUrl}")
+    lLines.append(f"url:       {sPageUrl}")
     lLines.append(f"Output:    {sOutputDir}")
     lLines.append(f"Timestamp: {str(dMetadata.get('scanTimestampUtc') or '')}")
     lLines.append("")
@@ -717,7 +717,7 @@ def buildReportHtml(dResults, dMetadata, lRows):
     lParts.append("<h2 id=\"scan-details\">Scan details</h2>")
     lParts.append("<dl class=\"meta-grid\">")
     for sLabel, sValue in [
-        ["URL scanned", str(dMetadata.get("pageUrl") or "")],
+        ["url scanned", str(dMetadata.get("pageUrl") or "")],
         ["Page title", str(dMetadata.get("pageTitle") or "")],
         ["Scan time (UTC)", str(dMetadata.get("scanTimestampUtc") or "")],
         ["Browser", str(dMetadata.get("browserVersion") or "")],
@@ -934,7 +934,7 @@ def chooseOutputDir(pathBaseDir, sPageTitle, bForce=False):
     """Decide the per-page output folder.
 
     Returns the Path of the folder to write into, OR None if the folder
-    already exists and bForce is False (caller should skip this URL).
+    already exists and bForce is False (caller should skip this url).
 
     When the folder does not exist, it is created.
     When the folder exists and bForce is True, its contents are deleted
@@ -991,7 +991,7 @@ def getAxeScript(page, sPreFetchedContent=""):
     sUrl = ""
 
     # If we have pre-fetched content, inject it directly — this bypasses CDN
-    # reachability issues and avoids CSP blocks on external script URLs.
+    # reachability issues and avoids CSP blocks on external script urls.
     if sPreFetchedContent:
         for sUrl in aAxeCdnUrls:
             try:
@@ -999,7 +999,7 @@ def getAxeScript(page, sPreFetchedContent=""):
                 return sUrl
             except Exception as ex:
                 break
-    # Fall back to URL injection then content fetch per CDN URL
+    # Fall back to url injection then content fetch per CDN url
     for sUrl in aAxeCdnUrls:
         try:
             page.add_script_tag(url=sUrl)
@@ -1013,7 +1013,7 @@ def getAxeScript(page, sPreFetchedContent=""):
             return sUrl
         except Exception as ex:
             continue
-    raise RuntimeError("Unable to load axe-core from the configured CDN URLs.")
+    raise RuntimeError("Unable to load axe-core from the configured CDN urls.")
 
 
 def getImpactRows(lRows):
@@ -1030,8 +1030,27 @@ def getImpactRows(lRows):
     return lOutput
 
 
+def firstLine(sText):
+    """Trim and shorten a message for inline display next to a url.
+
+    Exception messages can span multiple lines or be very long; for
+    inline rendering ("https://x.com: <reason>") we want a single
+    short string. Returns "" if the input is empty/None.
+    """
+    iMaxLen = 120
+    if not sText: return ""
+    iNl = -1
+    for sNl in ("\r", "\n"):
+        i = sText.find(sNl)
+        if i >= 0 and (iNl < 0 or i < iNl): iNl = i
+    if iNl >= 0: sText = sText[:iNl]
+    sText = sText.strip()
+    if len(sText) > iMaxLen: sText = sText[:iMaxLen - 3] + "..."
+    return sText
+
+
 def getNormalizedUrl(sInput):
-    """Convert a user-supplied input to a fully qualified URL or local file URI.
+    """Convert a user-supplied input to a fully qualified url or local file URI.
     Accepts bare domains (microsoft.com), IP addresses, paths with or without
     scheme, and local files. Any existing local file is treated as HTML to be
     loaded in the browser, regardless of its extension; the user is
@@ -1150,7 +1169,7 @@ def getInitialBrowseDir(sFieldText):
     sFieldText is the current text of the source-input or output-directory
     field. The function:
 
-      - returns Documents if sFieldText is empty or looks like a URL or
+      - returns Documents if sFieldText is empty or looks like a url or
         domain (urlCheck source field can contain those, which are not
         filesystem paths)
       - looks at the first space-separated token if sFieldText has many
@@ -1175,11 +1194,11 @@ def getInitialBrowseDir(sFieldText):
     # Strip surrounding quotes a user may have typed.
     if len(sFirstToken) >= 2 and sFirstToken[0] == '"' and sFirstToken[-1] == '"':
         sFirstToken = sFirstToken[1:-1]
-    # URL or domain -- not a filesystem location. Use Documents.
+    # url or domain -- not a filesystem location. Use Documents.
     if re.match(r"^[a-z][a-z0-9+.-]*://", sFirstToken, re.IGNORECASE):
         return getDocumentsDir()
     if re.match(r"^[a-z0-9-]+(\.[a-z0-9-]+)+$", sFirstToken, re.IGNORECASE) and "/" not in sFirstToken and "\\" not in sFirstToken:
-        # Bare-domain heuristic: contains a dot, no slashes. Treat as URL.
+        # Bare-domain heuristic: contains a dot, no slashes. Treat as url.
         return getDocumentsDir()
     # Try as a path. If it has wildcards, strip the basename and inspect
     # the parent directory.
@@ -1265,13 +1284,13 @@ def getSummaryData(dResults, lRows):
 
 
 def getUrlsFromFile(sInput):
-    """Read a plain text file and return a list of non-blank URLs/paths.
+    """Read a plain text file and return a list of non-blank urls/paths.
 
     Each line is stripped; lines that are blank or start with # are ignored.
     The file's contents are sniffed up-front: if the leading bytes look
     binary (NUL bytes or a high ratio of non-printable bytes), we raise a
-    clear error rather than producing garbage URLs. Lines that don't look
-    URL-like are also rejected with a precise line-number error message.
+    clear error rather than producing garbage urls. Lines that don't look
+    url-like are also rejected with a precise line-number error message.
 
     Raises ValueError on parse failure with a message suitable for the
     user. Raises OSError (FileNotFoundError, PermissionError) if the file
@@ -1307,7 +1326,7 @@ def getUrlsFromFile(sInput):
     if bLikelyBinary:
         raise ValueError(
             f"File does not appear to be plain text: {sInput}\n"
-            "urlCheck expects a plain text file with one URL per line. "
+            "urlCheck expects a plain text file with one url per line. "
             "If this is a Word, Excel, PDF, or other binary file, export "
             "or save it as plain text first.")
 
@@ -1324,13 +1343,13 @@ def getUrlsFromFile(sInput):
                     continue
                 if sLine.startswith("#"): continue
                 # Cheap sanity check: each non-comment line should look
-                # like a URL, a domain, or a local file path.
+                # like a url, a domain, or a local file path.
                 if not _looksLikeUrlOrPath(sLine):
                     raise ValueError(
                         f"{sInput}: line {iLineNo} does not look like a "
-                        f"URL, domain, or file path: {sLine!r}\n"
+                        f"url, domain, or file path: {sLine!r}\n"
                         "Each non-blank, non-comment line should be one "
-                        "URL, one domain name, or one local HTML file path.")
+                        "url, one domain name, or one local HTML file path.")
                 lUrls.append(sLine)
     except UnicodeDecodeError as ex:
         raise ValueError(
@@ -1338,25 +1357,25 @@ def getUrlsFromFile(sInput):
             f"Decode error: {ex}\n"
             "Re-save the file as plain UTF-8 text and try again.")
     if not lUrls:
-        raise ValueError(f"No URLs found in file: {sInput}")
+        raise ValueError(f"No urls found in file: {sInput}")
     return lUrls
 
 
 def _looksLikeUrlOrPath(sLine):
-    """Heuristic: does sLine look like a URL, a bare domain, or a file path?
+    """Heuristic: does sLine look like a url, a bare domain, or a file path?
 
     Used by getUrlsFromFile to catch obviously-wrong lines (e.g. random
     English text from a misclassified document). Generous on purpose --
     we'd rather pass through one bad line and have Playwright reject it
-    with a clear error than refuse a legitimate URL because we got the
+    with a clear error than refuse a legitimate url because we got the
     pattern wrong. Rejects only lines that contain whitespace or that
     are pure ASCII text with no dot, slash, or colon.
     """
-    # Lines with embedded whitespace are never valid (URLs and paths
+    # Lines with embedded whitespace are never valid (urls and paths
     # don't contain bare whitespace; if they did, the user should
     # quote/encode).
     if any(c.isspace() for c in sLine): return False
-    # A URL has a colon (after the scheme), a path has slashes or a drive
+    # A url has a colon (after the scheme), a path has slashes or a drive
     # letter, a domain has at least one dot. Anything with at least one of
     # these structural characters is plausible.
     return ("://" in sLine) or ("." in sLine) or ("/" in sLine) or ("\\" in sLine)
@@ -1419,7 +1438,7 @@ def isUrlListFile(sInput):
     """Return True if sInput is a path to an existing file (any extension).
 
     The user is responsible for supplying a plain text file. If a file is
-    given that turns out to be binary or non-URL-like, getUrlsFromFile will
+    given that turns out to be binary or non-url-like, getUrlsFromFile will
     fail with a clear error.
     """
     path = None
@@ -1438,25 +1457,91 @@ def isUrlListFile(sInput):
 def classifyInput(sInput):
     """Classify the source input string.
 
+    Friendlier parsing rules:
+      1. Strip leading/trailing whitespace.
+      2. Strip a single layer of surrounding double quotes (so the user
+         can paste a Windows path with spaces verbatim, with or without
+         the quotes File Explorer adds when copying a path).
+      3. Test the entire string as a file path FIRST. This means a path
+         containing internal spaces (e.g. C:\\My Documents\\urls.txt) is
+         recognized as a file even without quotes.
+      4. If it is not a file, fall back to space-tokenization, treating
+         the result as one or more urls or domains.
+
+    The user only needs to use quotes when supplying multiple specs and
+    at least one contains a space. For a single path, no quotes are
+    needed -- the entire trimmed input is tested as one path.
+
     Returns one of:
       ('listfile', sPath)  -- sInput is a path to an existing file (any
                               extension), to be parsed as plain text with
-                              one URL or local file path per line.
-      ('urls', lUrls)      -- sInput is one or more space-separated URLs/
-                              domains. lUrls is the list of tokens.
+                              one url or local file path per line.
+      ('urls', lUrls)      -- sInput is one or more space-separated urls/
+                              domains. lUrls is the list of tokens, with
+                              quotes around individual tokens stripped.
       ('error', sReason)   -- sInput is invalid (currently only the empty
                               case; bad file contents are surfaced later
                               by getUrlsFromFile with a precise message).
     """
     sStripped = ""
+    sUnquoted = ""
     sStripped = (sInput or "").strip()
     if not sStripped:
         return ("error", "No input provided.")
-    if isUrlListFile(sStripped):
-        return ("listfile", sStripped)
-    # Not a file path. Treat as one or more space-separated URLs/domains.
-    lTokens = sStripped.split()
+    # Strip a single pair of surrounding double quotes.
+    sUnquoted = sStripped
+    if len(sUnquoted) >= 2 and sUnquoted[0] == '"' and sUnquoted[-1] == '"':
+        sUnquoted = sUnquoted[1:-1].strip()
+    # Test the entire (unquoted) input as a file path first. This catches
+    # paths with embedded spaces without requiring the user to add quotes.
+    if isUrlListFile(sUnquoted):
+        return ("listfile", sUnquoted)
+    # Not a single file. Fall back to space-tokenization, but honor
+    # quoted segments so the user can supply a mix of paths-with-spaces
+    # and individual urls.
+    lTokens = parseSpaceSeparated(sStripped)
     return ("urls", lTokens)
+
+
+def parseSpaceSeparated(sText):
+    """Tokenize sText on whitespace, treating "..." as a single token.
+
+    Used when the user has supplied multiple specs in a single string and
+    at least one of them needs to be quoted because it contains spaces.
+
+    Examples:
+      parseSpaceSeparated('a b c')                    -> ['a', 'b', 'c']
+      parseSpaceSeparated('"a b" c')                  -> ['a b', 'c']
+      parseSpaceSeparated('"C:\\My Docs\\file.txt"')  -> ['C:\\My Docs\\file.txt']
+      parseSpaceSeparated('a "b c" d')                -> ['a', 'b c', 'd']
+
+    Backslashes are NOT treated as escapes (Windows path-friendly).
+    Mismatched quotes: any leading-quote without a matching trailer
+    closes at end of string.
+    """
+    lTokens = []
+    sCurrent = ""
+    bInQuote = False
+    sChar = ""
+
+    for sChar in sText:
+        if bInQuote:
+            if sChar == '"':
+                bInQuote = False
+                continue
+            sCurrent += sChar
+        else:
+            if sChar == '"':
+                bInQuote = True
+                continue
+            if sChar.isspace():
+                if sCurrent:
+                    lTokens.append(sCurrent)
+                    sCurrent = ""
+                continue
+            sCurrent += sChar
+    if sCurrent: lTokens.append(sCurrent)
+    return lTokens
 
 
 def parseArguments():
@@ -1467,16 +1552,16 @@ def parseArguments():
         description=(
             "Check one or more web pages for accessibility problems and save "
             "a set of output files in a folder named after each page title. "
-            "Pass URLs as separate arguments, or pass the path to a single "
-            "plain text file that lists URLs, domains, or local file paths -- "
+            "Pass urls as separate arguments, or pass the path to a single "
+            "plain text file that lists urls, domains, or local file paths -- "
             "one per line. The list file may have any extension; urlCheck "
             "verifies it is plain text by inspecting its contents."
         ),
         epilog=(
-            f"Single URL:    {sProgramName} https://example.com\n"
+            f"Single url:    {sProgramName} https://example.com\n"
             f"Domain only:   {sProgramName} microsoft.com\n"
-            f"Several URLs:  {sProgramName} https://a.com https://b.com https://c.com\n"
-            f"URL list file: {sProgramName} urls.txt\n"
+            f"Several urls:  {sProgramName} https://a.com https://b.com https://c.com\n"
+            f"url list file: {sProgramName} urls.txt\n"
             f"GUI dialog:    {sProgramName} -g\n"
             f"\n"
             f"Output files (in a folder named after each page title):\n"
@@ -1494,8 +1579,8 @@ def parseArguments():
         "sSource",
         nargs="*",
         help=(
-            "One or more URLs (or domain names) separated by spaces, or the "
-            "path to a single plain text file that lists URLs, domains, or "
+            "One or more urls (or domain names) separated by spaces, or the "
+            "path to a single plain text file that lists urls, domains, or "
             "local file paths one per line. The list file may have any "
             "extension. Files referenced inside the list are loaded as HTML "
             "in the browser regardless of extension. Blank lines and lines "
@@ -1514,14 +1599,14 @@ def parseArguments():
     argParser.add_argument("-l", "--log", dest="bLog", action="store_true",
         help="Write detailed diagnostics to urlCheck.log in the current working directory (UTF-8 with BOM). Any prior urlCheck.log is deleted at the start of the run, so the file always reflects only the current session.")
     argParser.add_argument("-f", "--force", dest="bForce", action="store_true",
-        help="Reuse an existing per-page output folder by emptying its contents and writing a fresh set of files. Without this flag urlCheck skips a URL whose per-page output folder already exists, so previous scans are preserved.")
+        help="Reuse an existing per-page output folder by emptying its contents and writing a fresh set of files. Without this flag urlCheck skips a url whose per-page output folder already exists, so previous scans are preserved.")
     argParser.add_argument("-i", "--invisible", dest="bInvisible", action="store_true",
         help="Run Microsoft Edge invisibly (the headless browser mode): no visible browser window during the scan.")
     return argParser.parse_args()
 
 
 def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, sAxeContent="", bForce=False):
-    """Run a single-URL scan.
+    """Run a single-url scan.
 
     Returns:
       - the output directory path string on a successful scan
@@ -1563,14 +1648,11 @@ def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, sAxeContent="
         sPageTitle = str(page.title() or sFallbackTitle)
         # Decide the output folder. If chooseOutputDir returns None,
         # the per-page folder already exists and --force is not set,
-        # so we skip this URL. Skip happens BEFORE the expensive
+        # so we skip this url. Skip happens BEFORE the expensive
         # axe-core run, screenshot, snapshot, and report-writing.
         pathOutputDir = chooseOutputDir(pathBaseDir, sPageTitle, bForce=bForce)
         if pathOutputDir is None:
             sExistingDir = str(pathBaseDir / getSafeTitle(sPageTitle))
-            print(f"{sNormalizedUrl}")
-            print(f"  Skipping ({pathlib.Path(sExistingDir).name} exists, "
-                f"use -f to overwrite)")
             logger.info(f"Skipped (output folder exists, no --force): "
                 f"{sNormalizedUrl} -> {sExistingDir}")
             return "skipped"
@@ -1618,7 +1700,7 @@ def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, sAxeContent="
             pass
         pathlib.Path(pathOutputDir, sReportName).write_text(buildReportHtml(dResults, dMetadata, lRows), encoding="utf-8")
         writeReportWorkbook(pathlib.Path(pathOutputDir, sReportWorkbookName), dResults, dMetadata, lRows)
-        # User-visible: just URL and page title for this scan. Detailed
+        # User-visible: just url and page title for this scan. Detailed
         # violation counts go to report.htm/report.csv/report.xlsx and to
         # the log.
         print(f"{sNormalizedUrl}")
@@ -1693,8 +1775,8 @@ def writeReportWorkbook(pathWorkbook, dResults, dMetadata, lRows):
         ["Program", sProgramName],
         ["Version", sProgramVersion],
         ["Input", str(dMetadata.get("inputValue") or "")],
-        ["Normalized URL", str(dMetadata.get("normalizedUrl") or "")],
-        ["Page URL", str(dMetadata.get("pageUrl") or "")],
+        ["Normalized url", str(dMetadata.get("normalizedUrl") or "")],
+        ["Page url", str(dMetadata.get("pageUrl") or "")],
         ["Page title", str(dMetadata.get("pageTitle") or "")],
         ["Scan timestamp (UTC)", str(dMetadata.get("scanTimestampUtc") or "")],
         ["Browser channel", str(dMetadata.get("browserChannel") or "")],
@@ -1731,7 +1813,7 @@ def writeReportWorkbook(pathWorkbook, dResults, dMetadata, lRows):
     lRuleRows = getRuleFrequencyRows(lRows)
     lWcagRows = getWcagFrequencyRows(lRows)
     worksheet.append(["Overview", "Page title", str(dMetadata.get("pageTitle") or "")])
-    worksheet.append(["Overview", "Page URL", str(dMetadata.get("pageUrl") or "")])
+    worksheet.append(["Overview", "Page url", str(dMetadata.get("pageUrl") or "")])
     worksheet.append(["Overview", "Violations (rules)", len(dResults.get("violations", []))])
     worksheet.append(["Overview", "Failed instances", sum(len(dRule.get("nodes", [])) for dRule in dResults.get("violations", []))])
     worksheet.append(["Overview", "Needs Review (rules)", len(dResults.get("incomplete", []))])
@@ -1751,7 +1833,7 @@ def writeReportWorkbook(pathWorkbook, dResults, dMetadata, lRows):
     styleWorksheet(worksheet)
 
     worksheet = workbook.create_sheet("Results")
-    worksheet.append(["Scan timestamp (UTC)", "Page title", "Page URL", "Browser version", "axe-core source", "Outcome", "Rule ID", "Impact", "Description", "Help", "Help URL", "Tags", "WCAG criteria", "Standards refs", "Instance count", "Instance index", "Path (CSS selector)", "Snippet (HTML)", "Failure summary"])
+    worksheet.append(["Scan timestamp (UTC)", "Page title", "Page url", "Browser version", "axe-core source", "Outcome", "Rule ID", "Impact", "Description", "Help", "Help url", "Tags", "WCAG criteria", "Standards refs", "Instance count", "Instance index", "Path (CSS selector)", "Snippet (HTML)", "Failure summary"])
     for lRow in lRows:
         worksheet.append([lRow["scanTimestampUtc"], lRow["pageTitle"], lRow["pageUrl"], lRow["browserVersion"], lRow["axeSource"], lRow["outcome"], lRow["ruleId"], lRow["impact"], lRow["description"], lRow["help"], lRow["helpUrl"], lRow["tags"], lRow["wcagRefs"], lRow["standardsRefs"], lRow["ruleNodeCount"], lRow["ruleNodeIndex"], lRow["target"], lRow["html"], lRow["failureSummary"]])
     styleWorksheet(worksheet)
@@ -2010,6 +2092,46 @@ class logger:
     def error(cls, sMsg): cls.write("ERROR", sMsg)
     @classmethod
     def debug(cls, sMsg): cls.write("DEBUG", sMsg)
+
+    @classmethod
+    def header(cls, sName, sVersion, lParams):
+        """Write the run header to the log: program name and version,
+        the friendly run-start timestamp, and the resolved parameter
+        list. Emits raw lines (no per-line timestamp/level prefix) so
+        the header reads as a clean banner. The processing
+        notifications that follow use the standard format via
+        info/warn/error/debug.
+
+        lParams is a list of (label, value) tuples; the caller controls
+        the order in which parameters appear.
+        """
+        if not cls.bEnabled or cls.fLog is None: return
+        try:
+            cls.fLog.write(f"=== {sName} {sVersion} ===\n")
+            cls.fLog.write(f"Run on {cls.friendlyTime(datetime.datetime.now())}\n")
+            if lParams:
+                cls.fLog.write("Parameters:\n")
+                iPad = max((len(sLabel) for sLabel, _ in lParams), default=0)
+                for sLabel, sValue in lParams:
+                    cls.fLog.write(f"  {sLabel.ljust(iPad)} : {sValue}\n")
+            cls.fLog.write("===\n")
+            cls.fLog.flush()
+        except Exception:
+            pass
+
+    @classmethod
+    def friendlyTime(cls, dt):
+        """Render a datetime in a friendly form, e.g.,
+        'May 1, 2026 at 2:30 PM'. Removes a leading zero from the
+        day and the hour for natural reading.
+        """
+        sMonth = dt.strftime("%B")
+        sDay = str(dt.day)
+        sYear = str(dt.year)
+        sHour12 = str(((dt.hour - 1) % 12) + 1)
+        sMin = f"{dt.minute:02d}"
+        sAmPm = "AM" if dt.hour < 12 else "PM"
+        return f"{sMonth} {sDay}, {sYear} at {sHour12}:{sMin} {sAmPm}"
 
     @classmethod
     def close(cls):
@@ -2352,7 +2474,7 @@ def showGuiDialog(arguments):
     user's chosen values. Returns True on OK, False on Cancel.
 
     Layout mirrors 2htm:
-      Row 1: "Source URLs:"                  [textbox]   [Browse source]
+      Row 1: "Source urls:"                  [textbox]   [Browse source]
       Row 2: "Output directory:"             [textbox]   [Choose output]
       Row 3: [x] Invisible mode             [x] View output
       Row 4: [x] Log session                [x] Use configuration
@@ -2469,7 +2591,7 @@ def showGuiDialog(arguments):
     # --- Row 1: Target ---
     y = iLayoutTop
     lblTarget = Label()
-    lblTarget.Text = "&Source files:"
+    lblTarget.Text = "&Source urls:"
     lblTarget.AutoSize = False
     lblTarget.Location = Point(iLayoutLeft, y + 3)
     lblTarget.Size = Size(iLayoutLabelWidth, iLayoutTextHeight)
@@ -2617,9 +2739,9 @@ def showGuiDialog(arguments):
             f"{sProgramName} {sProgramVersion} checks one or more web pages "
             f"for accessibility problems and saves a set of output files in "
             f"a folder named after each page title.\r\n\r\n"
-            f"Source files: enter one URL (https://example.com), or a domain "
+            f"Source files: enter one url (https://example.com), or a domain "
             f"(microsoft.com), or several of either separated by spaces, or "
-            f"the path to a single plain text file that lists URLs, domains, "
+            f"the path to a single plain text file that lists urls, domains, "
             f"or local file paths one per line. The list file may have any "
             f"extension; urlCheck verifies it is plain text by inspecting "
             f"its contents.\r\n\r\n"
@@ -2630,7 +2752,7 @@ def showGuiDialog(arguments):
             f"  Invisible mode - run Edge with no visible browser window\r\n"
             f"  Force replacements - reuse an existing per-page output "
             f"folder (emptying its contents and writing a fresh set of "
-            f"files) instead of skipping the URL\r\n"
+            f"files) instead of skipping the url\r\n"
             f"  View output - open the parent output directory in File "
             f"Explorer when all scans are done\r\n"
             f"  Log session - write urlCheck.log (replacing any prior log) "
@@ -2663,7 +2785,7 @@ def showGuiDialog(arguments):
         try:
             dialog = OpenFileDialog()
             dialog.AutoUpgradeEnabled = False
-            dialog.Title = "Choose a plain text URL list"
+            dialog.Title = "Choose a plain text url list"
             dialog.Filter = ("Plain text files (*.txt;*.lst;*.md)|*.txt;*.lst;*.md|"
                            "All files (*.*)|*.*")
             dialog.FilterIndex = 2  # default to All files; user may have any extension
@@ -2727,8 +2849,8 @@ def showGuiDialog(arguments):
         sCurrent = (txtTarget.Text or "").strip()
         if not sCurrent:
             MessageBox.Show(
-                "Please enter one or more URLs separated by spaces, "
-                "or the path to a plain text file of URLs.",
+                "Please enter one or more urls separated by spaces, "
+                "or the path to a plain text file of urls.",
                 f"{sProgramName} - Missing source",
                 MessageBoxButtons.OK, MessageBoxIcon.Warning)
             txtTarget.Focus()
@@ -2742,6 +2864,32 @@ def showGuiDialog(arguments):
             txtTarget.Focus()
             frm.DialogResult = DialogResult.None_
             return
+        # Output directory validation: if the user specified a directory
+        # that does not exist, prompt to create it (default Yes). On No
+        # or creation failure, keep the dialog open.
+        sOutCandidate = (txtOut.Text or "").strip()
+        if len(sOutCandidate) >= 2 and sOutCandidate[0] == '"' and sOutCandidate[-1] == '"':
+            sOutCandidate = sOutCandidate[1:-1].strip()
+        if sOutCandidate and not os.path.isdir(sOutCandidate):
+            dr = MessageBox.Show(
+                f"Create {sOutCandidate}?",
+                sProgramName,
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question,
+                MessageBoxDefaultButton.Button1)
+            if dr != DialogResult.Yes:
+                frm.DialogResult = DialogResult.None_
+                txtOut.Focus()
+                return
+            try:
+                os.makedirs(sOutCandidate, exist_ok=True)
+            except Exception as ex:
+                MessageBox.Show(
+                    f"Could not create directory:\r\n{sOutCandidate}\r\n\r\n{ex}",
+                    sProgramName,
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                frm.DialogResult = DialogResult.None_
+                txtOut.Focus()
+                return
         # sKind is 'urls' or 'listfile' -- both are valid; let the dialog close.
 
     btnBrowseTarget.Click += EventHandler(fnPickFile)
@@ -2925,8 +3073,8 @@ def main():
 
     # nargs="*" returns a list. Collapse to a single space-joined string so
     # the rest of main() can treat the field uniformly with the GUI dialog's
-    # text-field semantics (one URL, several space-separated URLs, or a path
-    # to a URL list file). Empty list -> empty string -> "no input given."
+    # text-field semantics (one url, several space-separated urls, or a path
+    # to a url list file). Empty list -> empty string -> "no input given."
     if isinstance(arguments.sSource, list):
         arguments.sSource = " ".join(arguments.sSource).strip()
 
@@ -3026,6 +3174,24 @@ def main():
     logger.info(f"Output base: {pathBaseDir}")
     logger.info(f"Target: {arguments.sSource}")
 
+    # Write the run header to the log: program version, friendly start
+    # time, and the resolved parameter list (showing both explicit and
+    # defaulted values). The parameter labels mirror the GUI dialog
+    # controls so the user can map a logged run to the dialog state.
+    lHeaderParams = [
+        ("Source urls",        str(arguments.sSource or "(none)")),
+        ("Output directory",   str(pathBaseDir)),
+        ("Force replacements", str(bool(arguments.bForce)).lower()),
+        ("Invisible mode",     str(bool(arguments.bInvisible)).lower()),
+        ("View output",        str(bool(arguments.bViewOutput)).lower()),
+        ("Use configuration",  str(bool(arguments.bUseConfig)).lower()),
+        ("Log session",        str(bool(arguments.bLog)).lower()),
+        ("GUI mode",           str(bool(bGuiMode)).lower()),
+        ("Working directory",  os.getcwd()),
+        ("Command line",       " ".join(sys.argv)),
+    ]
+    logger.header(sProgramName, sProgramVersion, lHeaderParams)
+
     # In GUI mode, capture stdout/stderr so we can present the run summary in
     # a final dialog rather than scrolling past in a console the user can't
     # see. The CLI path leaves stdout/stderr alone.
@@ -3039,24 +3205,24 @@ def main():
     # Three-case input dispatch:
     #
     #   (1) sInput is a path to an existing file that is NOT an allowed HTML
-    #       extension -> treat as a URL list file (one URL per line).
+    #       extension -> treat as a url list file (one url per line).
     #
     #   (2) sInput contains internal whitespace and case (1) did not match
-    #       -> treat as a list of URLs separated by spaces. This is what
-    #       lets the GUI Source URLs field accept "https://a.com https://b.com".
+    #       -> treat as a list of urls separated by spaces. This is what
+    #       lets the GUI Source urls field accept "https://a.com https://b.com".
     #
-    #   (3) Otherwise -> single URL / domain / local HTML file path.
+    #   (3) Otherwise -> single url / domain / local HTML file path.
     #
-    # All three cases produce the same lUrls list, after which the per-URL
-    # scan loop below treats every entry uniformly. A multi-URL run (lUrls
+    # All three cases produce the same lUrls list, after which the per-url
+    # scan loop below treats every entry uniformly. A multi-url run (lUrls
     # with more than one element) suppresses the auto-launch of report.htm
-    # the same way a URL list file does.
+    # the same way a url list file does.
     # Three-case input dispatch using classifyInput():
     #
-    #   ('listfile', sPath)  -> read URLs from sPath (.txt only). The list
-    #                           file's lines may be URLs, domains, or local
+    #   ('listfile', sPath)  -> read urls from sPath (.txt only). The list
+    #                           file's lines may be urls, domains, or local
     #                           HTML file paths.
-    #   ('urls', lTokens)    -> sInput is one or more space-separated URLs/
+    #   ('urls', lTokens)    -> sInput is one or more space-separated urls/
     #                           domains. Local HTML file paths are NOT valid
     #                           on direct input and have already been
     #                           rejected by classifyInput.
@@ -3076,7 +3242,7 @@ def main():
         try:
             lUrls = getUrlsFromFile(vDetail)
         except Exception as ex:
-            print(f"[ERROR] Could not read URL list file: {ex}")
+            print(f"[ERROR] Could not read url list file: {ex}")
             if bGuiMode:
                 sys.stdout = streamOriginalOut
                 sys.stderr = streamOriginalErr
@@ -3085,13 +3251,13 @@ def main():
             return 1
         bMultiUrl = True
         iUrlTotal = len(lUrls)
-        logger.info(f"URL list: {vDetail} ({iUrlTotal} URL(s))")
+        logger.info(f"url list: {vDetail} ({iUrlTotal} url(s))")
     else:
         # sKind == "urls"
         lUrls = [getNormalizedUrl(sToken) for sToken in vDetail if sToken]
         iUrlTotal = len(lUrls)
         bMultiUrl = iUrlTotal > 1
-        if bMultiUrl: logger.info(f"URL set: {iUrlTotal} URL(s) from the source field")
+        if bMultiUrl: logger.info(f"url set: {iUrlTotal} url(s) from the source field")
 
     try:
         with sync_playwright() as playwrightCtx:
@@ -3142,6 +3308,9 @@ def main():
                 except Exception:
                     continue
             iUrlIndex = 0
+            lScanned = []        # URLs that scanned successfully
+            lFailed = []         # list of (sUrl, sReason)
+            lSkippedExisting = []  # URLs whose output folder already exists
             for sUrl in lUrls:
                 iUrlIndex += 1
                 # lUrls is already a list of normalized targets regardless of
@@ -3151,35 +3320,70 @@ def main():
                 # file without prior normalization.)
                 sNormalizedUrl = getNormalizedUrl(sUrl) if sKind == "listfile" else sUrl
                 if iUrlTotal > 1: logger.info(f"[{iUrlIndex}/{iUrlTotal}] {sNormalizedUrl}")
+                # CLI mode: print the URL inline as work begins; on
+                # success terminate with newline; on failure or skip
+                # append ": <reason>" on the same line. GUI mode:
+                # captured stdout becomes the final MessageBox -- we
+                # want only the structured summary there, so no inline
+                # writes. urlCheck has no per-page status form (unlike
+                # 2htm and extCheck), so no progress UI to update.
+                if not bGuiMode: print(sNormalizedUrl, end="", flush=True)
                 try:
                     vResult = scanUrl(
                         sUrl, sNormalizedUrl, browser, context, pathBaseDir,
                         sAxeContent, bForce=bool(arguments.bForce))
                     if vResult == "skipped":
-                        iSkippedCount += 1
+                        lSkippedExisting.append(sNormalizedUrl)
+                        if not bGuiMode: print(": skipped (output folder exists, use -f to overwrite)")
+                    else:
+                        lScanned.append(sNormalizedUrl)
+                        if not bGuiMode: print()
                 except Exception as ex:
-                    iErrorCount += 1
-                    # Surface the error to the console (always, since
-                    # console output is the user's expected view of run
-                    # results) and to the log (only if -l is on; the
-                    # logger silently no-ops otherwise). We never create
-                    # an error file on disk that the user did not
-                    # explicitly request.
-                    print(f"Error scanning {sNormalizedUrl}: {ex}")
+                    sReason = firstLine(str(ex))
+                    lFailed.append((sNormalizedUrl, sReason))
+                    if not bGuiMode: print(f": {sReason}")
                     logger.info(f"Error scanning {sNormalizedUrl}: {ex}")
                     logger.info(f"Traceback:\n{traceback.format_exc()}")
-            if iUrlTotal > 1:
-                iSucceeded = iUrlTotal - iErrorCount - iSkippedCount
-                sSummary = f"Done. {iSucceeded} of {iUrlTotal} URLs scanned successfully"
-                if iSkippedCount > 0: sSummary += f", {iSkippedCount} skipped"
-                if iErrorCount > 0: sSummary += f", {iErrorCount} error(s)"
-                sSummary += "."
-                logger.info(sSummary)
-                print(sSummary)
-                if iErrorCount > 0 and arguments.bLog:
-                    logger.info("Error details (per-URL traceback) above in this log.")
-                elif iErrorCount > 0:
-                    print("Re-run with -l to log full error tracebacks to urlCheck.log.")
+
+            iScanned = len(lScanned)
+            iFailed = len(lFailed)
+            iSkipped = len(lSkippedExisting)
+            iErrorCount = iFailed     # legacy variable retained for
+            iSkippedCount = iSkipped  # the existing exit-code logic
+
+            # ---- Structured results summary ----
+            #
+            # Three sections, each printed only when non-zero.
+            # Singular "url" if count == 1; plural "urls" otherwise.
+            # In CLI mode the URLs were already printed inline during
+            # the loop, so the per-URL list under each header is
+            # suppressed (it would just repeat). In GUI mode the
+            # captured stdout is the final MessageBox, so include
+            # the lists there.
+
+            if iScanned > 0:
+                print()
+                print(f"Scanned {iScanned} {'url' if iScanned == 1 else 'urls'}:")
+                if bGuiMode:
+                    for s in lScanned: print(s)
+            if iFailed > 0:
+                print()
+                print(f"Failed to scan {iFailed} {'url' if iFailed == 1 else 'urls'}:")
+                if bGuiMode:
+                    for sUrlF, sReason in lFailed:
+                        if sReason: print(f"{sUrlF}: {sReason}")
+                        else:       print(sUrlF)
+            if iSkipped > 0:
+                print()
+                print(f"Skipped {iSkipped} {'url' if iSkipped == 1 else 'urls'}. "
+                      f"Check \"Force replacements\" to overwrite.")
+            if iScanned == 0 and iFailed == 0 and iSkipped == 0:
+                print()
+                print("No urls scanned.")
+
+            if iFailed > 0 and not arguments.bLog and not bGuiMode:
+                print("Re-run with -l to log full error tracebacks to urlCheck.log.")
+
             # Open the parent output directory once at the end of the run, if
             # requested. This shows the user all per-page subdirectories at
             # once rather than focusing on any single page's folder.

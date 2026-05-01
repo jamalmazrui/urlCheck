@@ -1,0 +1,8 @@
+﻿[2026-05-01 12:54:34] [INFO] urlCheck 1.10.0 log opened (previous urlCheck.log deleted)
+[2026-05-01 12:54:34] [INFO] showGuiDialog: _loadDotNetForms returned: ok
+[2026-05-01 12:54:34] [INFO] .NET runtime: Version=4.0.30319.42000 OSVersion=Microsoft Windows NT 10.0.26200.0 Is64Bit=True
+[2026-05-01 12:54:34] [INFO] SetApartmentState(STA) failed (continuing): Failed to set the specified COM apartment state.
+   at System.Threading.Thread.SetApartmentState(ApartmentState state)
+[2026-05-01 12:54:34] [INFO] Showing dialog (frm.ShowDialog)
+[2026-05-01 12:54:37] [INFO] Dialog returned: Cancel
+[2026-05-01 12:54:37] [INFO] User cancelled the dialog

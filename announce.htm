@@ -208,12 +208,12 @@ PyInstaller. A 32-bit Python is rejected with a clear error so the
 produced <code>urlCheck.exe</code> is consistently 64-bit.</li>
 <li><strong>Skip-or-overwrite output behavior, consistent with extCheck
 and 2htm.</strong> When a per-page output folder with the same sanitized
-page title already exists, urlCheck now skips that URL by default rather
+page title already exists, urlCheck now skips that url by default rather
 than auto-suffixing a new folder. With <code>--force</code> (or the
 Force replacements checkbox in the dialog), the existing folder is
 emptied and a fresh scan is written into it. The skip decision is made
 right after the page title is read, before the expensive accessibility
-scan, so re-running urlCheck on a long URL list is cheap when most pages
+scan, so re-running urlCheck on a long url list is cheap when most pages
 have already been scanned. Note: this is a behavior change from prior
 versions, which used auto-suffixed folder names like
 <code>My Page-001</code>.</li>
@@ -227,15 +227,57 @@ the user’s Documents folder otherwise. The folder picker honors the
 initial path via a BFFCALLBACK that posts BFFM_SETSELECTION on
 BFFM_INITIALIZED — the previous version was unable to honor an initial
 path with the classic SHBrowseForFolder style.</li>
-<li><strong>Skipped count in the run summary.</strong> A multi-URL run
-now reports successful, skipped, and error counts separately.</li>
+<li><strong>Friendlier source-field parsing.</strong> When you supply a
+single URL list file whose path contains spaces, you no longer need to
+put quotes around it. urlCheck tests the entire trimmed source field as
+a path first; only when it is not an existing file does it fall back to
+space-tokenization (treating the tokens as urls or domains). Quotes are
+only required when supplying multiple specs and at least one contains a
+space.</li>
+<li><strong>Output-directory create prompt.</strong> If you press OK
+with an output directory that does not yet exist, urlCheck asks “Create
+[path]?” with default Yes. Choosing No keeps the dialog open with focus
+on the output field.</li>
+<li><strong>Source label and lowercase “url”.</strong> The dialog field
+label is now <strong>Source urls</strong> (was Source files), and “url”
+is rendered lowercase throughout the help text, error messages, and
+documentation. The exception is camelCase identifiers like
+<code>urlCheck</code> and <code>getNormalizedUrl</code> where the casing
+is structural.</li>
+<li><strong>Invisible mode label.</strong> The Invisible checkbox in the
+dialog is labeled “Invisible mode” (mnemonic on the I).</li>
+<li><strong>Structured results summary.</strong> The per-url run is now
+summarized in three sections — <code>Scanned N url(s):</code>,
+<code>Failed to scan N url(s):</code>, and
+<code>Skipped N url(s). Check "Force replacements" to overwrite.</code>
+— each shown only when its count is non-zero, with singular “url” /
+plural “urls” inflection. Failed entries include a short reason after
+the url when one is available
+(<code>https://example.com: Timeout</code>); the full traceback goes to
+the log when <code>-l</code> is on.</li>
+<li><strong>CLI vs GUI output styles.</strong> In CLI mode the URLs
+print inline as the loop runs — natural progress feedback for the
+console user. In GUI mode the loop is silent on stdout (urlCheck has no
+per-page status form), and the structured summary is the final dialog.
+The structured summary is printed in both modes, but the per-url lists
+are suppressed in CLI mode (they would just repeat what already scrolled
+by).</li>
 <li><strong>No implicit error files.</strong> Earlier versions wrote an
 <code>error.txt</code> and a fallback <code>untitled-page</code> folder
 when a scan crashed unexpectedly. urlCheck now creates files only when
 the user explicitly asks for them. Errors are surfaced to the console
 (always) and to <code>urlCheck.log</code> when <code>-l</code> is on. If
 you run without <code>-l</code> and want full tracebacks for any errors,
-the run summary now reminds you to add <code>-l</code> next time.</li>
+the run summary reminds you to add <code>-l</code> next time.</li>
+<li><strong>Log header.</strong> When <code>-l</code> (Log session) is
+enabled, the log file now begins with a clean header before the
+timestamped processing notifications: program name and version, a
+friendly run timestamp (<code>Run on May 1, 2026 at 2:30 PM</code>), and
+a <code>Parameters:</code> block listing each setting with both explicit
+and defaulted values resolved (Source urls, Output directory, Force
+replacements, Invisible mode, View output, Use configuration, Log
+session, GUI mode, Working directory, Command line). The header is
+followed by the normal timestamped log entries.</li>
 <li><strong>Camel Type coding standard.</strong> All variable names
 follow the project’s Camel Type style. The <code>o</code> prefix is
 reserved for COM objects only; non-COM objects use the lowercase class
@@ -277,15 +319,18 @@ stashed in a <code>build\</code> subfolder out of the way; the
 auto-generated <code>urlCheck.spec</code> is removed after a successful
 build. The script uses no forward <code>call :label</code>; it ships
 with CRLF line endings as defense-in-depth.</li>
-<li>The Invisible checkbox in the dialog is labeled “Invisible mode”
-(mnemonic on the I).</li>
 </ul>
 <h3 id="installer-urlcheck_setup.exe">Installer
 (<code>urlCheck_setup.exe</code>)</h3>
 <ul>
 <li>64-bit only.</li>
-<li>Prompts for the installation directory (default:
-<code>C:\Program Files\urlCheck</code>).</li>
+<li>Prompts for the installation directory on every run (default:
+<code>C:\Program Files\urlCheck</code>). The directory page is now
+explicitly enabled (<code>DisableDirPage=no</code> in the .iss);
+previously it was at the Inno Setup default of <code>auto</code>, which
+silently skipped the page on reinstalls of the same <code>AppId</code>.
+The previous directory is pre-filled, so on a reinstall the user just
+presses Next to keep the same path.</li>
 <li>Includes a brief MIT-license summary on the welcome page.</li>
 <li>Installs only HTML versions of the documentation
 (<code>ReadMe.htm</code>, <code>Announce.htm</code>,

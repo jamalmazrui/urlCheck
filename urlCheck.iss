@@ -53,6 +53,16 @@ DefaultDirName={autopf}\{#sAppName}
 DefaultGroupName={#sAppName}
 DisableProgramGroupPage=yes
 UsePreviousAppDir=yes
+
+; Force the "Select Destination Location" page to always be shown,
+; even on reinstall. Without this, DisableDirPage defaults to "auto",
+; which means: hide the directory page if a prior install of the same
+; AppId is detected. We want the page shown every time so the user
+; can review the install location, and so it is obviously editable.
+; UsePreviousAppDir=yes pre-fills the field with the previous
+; directory, so the user just presses Next on a reinstall to keep the
+; same path -- but they can also change it.
+DisableDirPage=no
 UsePreviousGroup=yes
 
 OutputDir=.
