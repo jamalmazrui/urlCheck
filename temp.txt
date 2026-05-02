@@ -1,0 +1,1 @@
+Could not launch or connect to Edge in server mode: 'BrowserType' object has no attribute 'launch_server'

@@ -1,8 +1,42 @@
-﻿[2026-05-01 12:54:34] [INFO] urlCheck 1.10.0 log opened (previous urlCheck.log deleted)
-[2026-05-01 12:54:34] [INFO] showGuiDialog: _loadDotNetForms returned: ok
-[2026-05-01 12:54:34] [INFO] .NET runtime: Version=4.0.30319.42000 OSVersion=Microsoft Windows NT 10.0.26200.0 Is64Bit=True
-[2026-05-01 12:54:34] [INFO] SetApartmentState(STA) failed (continuing): Failed to set the specified COM apartment state.
+﻿[2026-05-01 19:31:07] [INFO] urlCheck 1.10.0 log opened (previous urlCheck.log deleted)
+[2026-05-01 19:31:07] [INFO] showGuiDialog: _loadDotNetForms returned: ok
+[2026-05-01 19:31:07] [INFO] .NET runtime: Version=4.0.30319.42000 OSVersion=Microsoft Windows NT 10.0.26200.0 Is64Bit=True
+[2026-05-01 19:31:07] [INFO] SetApartmentState(STA) failed (continuing): Failed to set the specified COM apartment state.
    at System.Threading.Thread.SetApartmentState(ApartmentState state)
-[2026-05-01 12:54:34] [INFO] Showing dialog (frm.ShowDialog)
-[2026-05-01 12:54:37] [INFO] Dialog returned: Cancel
-[2026-05-01 12:54:37] [INFO] User cancelled the dialog
+[2026-05-01 19:31:07] [INFO] Showing dialog (frm.ShowDialog)
+[2026-05-01 19:31:15] [INFO] Dialog returned: OK
+[2026-05-01 19:31:15] [INFO] Saved configuration to C:\Users\Jamal\AppData\Local\urlCheck\urlCheck.ini
+[2026-05-01 19:31:15] [INFO] After dialog: input='facebook.com' outputDir='c:\\temp\\test me urlcheck' invisible=False authenticate=True force=False viewOutput=True log=True useConfig=True
+[2026-05-01 19:31:15] [INFO] Output base: c:\temp\test me urlcheck
+[2026-05-01 19:31:15] [INFO] Target: facebook.com
+=== urlCheck 1.10.0 ===
+Run on May 1, 2026 at 7:31 PM
+Parameters:
+  Source urls              : facebook.com
+  Output directory         : c:\temp\test me urlcheck
+  Force replacements       : false
+  Invisible mode           : false
+  Authenticate credentials : true
+  View output              : true
+  Use configuration        : true
+  Log session              : true
+  GUI mode                 : true
+  Working directory        : c:\urlCheck
+  Command line             : urlcheck -a -g facebook.com
+===
+[2026-05-01 19:31:17] [INFO] axe-core pre-fetched from https://cdn.jsdelivr.net/npm/axe-core@4.11.0/axe.min.js
+[2026-05-01 19:31:17] [INFO] Navigating to https://facebook.com
+[2026-05-01 19:31:18] [INFO] Prompting for authentication on registrable domain facebook.com (url=https://facebook.com)
+[2026-05-01 19:32:08] [INFO] User confirmed; resuming scan of https://facebook.com
+[2026-05-01 19:32:11] [INFO] Output directory: c:\temp\test me urlcheck\facebook
+[2026-05-01 19:32:11] [INFO] Running axe-core
+[2026-05-01 19:32:12] [INFO] Capturing page snapshot and screenshot
+[2026-05-01 19:32:14] [INFO] 
+Page:      Facebook
+url:       https://www.facebook.com/two_step_verification/authentication/?encrypted_context=AWRT5-OHOIJSuPf824nVAtZOP3T3mNanaSdCQczrWtR8DNaVye84ZUW4pX4Cw8wEPJFwWj8ED2v-OP4gEr9nv4pKEbSm-wkGvzwltEce1_xZj5Qwfkn14hzZXdW2AwOApefWfsDkj5Lj341PXgxRaRW-PLrHaIF_gtxsHRIEKeoCSsYCI_y617yoUh2wnqkqz6IK6WZGW5X_IclAuXK6UtFViRIrAPcUM6OE-0T5WZvkuFwenBnlUe4LMu7K7Bmsgq9YXrmwjuTBg4GFwMfu9KfDATge9Mpeeewgk-8piCV_7oKMX5I2mVeUXpQkx6rzTgpkd9Ijv6cq2ONrWHLcV3jNuO6o_NV8Qn1Ybywv7NXj6aVDlzklrCcxsCpXN4m3rJodixQ00hs1rAhcABbvbS6vUtYqtxJz1ZbuLKCCUClP_NRmzpZBt6c3quoA30h-4VsRbeC1kpxDwXhkr0fhvFPvUdFTP1vaSr_O0fk5HmAB_4bWwBPyjyaZui3ACb3EhlsHPlHZ0C-aY2Et3OwELQhP2e6pwZOvxE8gZgWuGXMWpS4cecPE1Yj4Pc9o_EENo2dOg4Ap126mGPCFIFzoM94waV3W8I5mLy3rB88s-eKdSjD-3MmAfpiFNNeVU80KqiyUD2QHac6Ks5mZap9e0X2b1ZmJXRWIzNek_imLu5v0Jhrf5EiIfpjnGWMxIIeVeoWWtgUweXFO5VI_RR1dI_CCNZbNc-fmmmLu0qT2cUhlrz3hLl2RbLR1VXXV9VgQNzhE1w9nN86c5UYJ5gyo-ZGmDXqECNmhzmY42JoRVUspQroNCpg3vS759dtQBwgzItI3DRo18eTPlG07d8w0NZp3Uqxp-sFmx2MpvroKoEOnbfFjT8p58EkR4pawWAEzrXvabnZkdbyU8JiJ7M7FdX9USgZTYx7lSzg7yBD31x-CmSNTkn-R53MuCLwSFxDbDwiTxzI9TDDD0Q8EUIS9ScBM53Kt_fqt3qeXOB3Z2USR9CGNVtzWAxYHmobyTJXPWkk-9MYInO7zUc7AXEs_CCSkvifU6jYDws187wsEyEdosqjbPusmR_DmCmwAhv4yiJu630X-UYiHajZa8QI2lR5t7or1xV1zjDlHD_js3ZZPnpfX1F3yK6THjlJ7OgIBk8pNmzd3mqX_7BemO3oDdcAgO2WwGGgFUlZ0XwLMLJQDuSIM7shVoONe89_8WD4TpNJV2PKTV4CreBxkChlSzqQv8avCCBlbsG5wRxNxN7QNUEiwY_dbwVScJvi_XB2k-mgocsiNUHKi6JLghjAP7B4AsNSFZZtJWLm1-Eaa-iohfjeR0Ea7wuRVqRBHtVtiJ-aEENosnS9BK01U7FCWL_bPfR_jWQVT_ll58k6nNtguX7vj45-05vQbFi-1jACOOgg4SY_5SylhrP3TZniv8KID8BWULa2o1LXoCB_4397jAKhy&flow=pre_authentication&next
+Output:    c:\temp\test me urlcheck\facebook
+Timestamp: 2026-05-02T02:32:12+00:00
+
+Violations: 5 nodes across 5 rules
+  Critical: 0  Serious: 1  Moderate: 3  Minor: 1
+[2026-05-01 19:32:24] [INFO] Done. 1 of 1 scanned. 0 error(s).

@@ -339,6 +339,10 @@ Blank means the current working directory.</li>
 a folder picker</li>
 <li><strong>Invisible mode</strong> [I] — run Edge with no visible
 browser window</li>
+<li><strong>Authenticate credentials</strong> [A] — pause after each
+newly-encountered domain so you can sign in / dismiss cookie banners /
+accept popups, then press Enter on the console to resume the scan.
+Forces a visible browser. CLI-only at present.</li>
 <li><strong>Force replacements</strong> [F] — reuse an existing per-page
 output folder by emptying its contents and writing a fresh set of files.
 Without this, urlCheck skips the url when its per-page output folder
@@ -459,6 +463,12 @@ directory; replaced each session</td>
 <td><code>-i</code></td>
 <td><code>--invisible</code></td>
 <td>Run Microsoft Edge with no visible browser window</td>
+</tr>
+<tr class="even">
+<td><code>-a</code></td>
+<td><code>--authenticate</code></td>
+<td>Pause on first url of each new hostname for the user to
+authenticate, then press Enter to continue</td>
 </tr>
 </tbody>
 </table>

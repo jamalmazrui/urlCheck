@@ -1,4 +1,4 @@
-import argparse, csv, ctypes, datetime, html, io, json, os, pathlib, platform, re, shutil, signal, struct, subprocess, sys, traceback, urllib.error, urllib.parse, urllib.request
+import argparse, csv, ctypes, datetime, html, io, json, os, pathlib, platform, re, shutil, signal, struct, subprocess, sys, tempfile, time, traceback, urllib.error, urllib.parse, urllib.request
 
 import openpyxl
 from openpyxl.styles import Alignment, Font, PatternFill
@@ -36,6 +36,13 @@ iLayoutTextHeight = 23
 iLayoutTop = 12
 iMaxTitleLen = 80
 iNetworkIdleTimeoutMs = 8000
+# Extra delay applied AFTER the user confirms the --authenticate
+# prompt, on top of networkidle and the default post-load delay.
+# Post-auth UIs on sites like Facebook, WhatsApp Web, and Slack
+# render their main content asynchronously after networkidle fires,
+# so without this extra wait the accessibility scan can run against
+# a half-rendered DOM and produce a misleadingly empty report.
+iAuthPostConfirmSettleDelayMs = 4000
 
 sAccessibilityInsightsUrl = "https://accessibilityinsights.io/docs/web/overview/"
 sAccessibilityYamlName = "page.yaml"
@@ -973,6 +980,125 @@ def ensureSuccess(bCondition, sMessage):
     return True
 
 
+def waitForDevToolsPort(sUserDataDir, iTimeoutSeconds=30):
+    """Wait for Edge to write DevToolsActivePort into its user-data
+    directory and return the port number as a string.
+
+    When Edge is launched with --remote-debugging-port=0, it picks a
+    free port and writes the chosen port number (followed by a
+    websocket URL on a second line) to a file named
+    DevToolsActivePort inside its --user-data-dir. We poll for that
+    file and return the first line.
+
+    Returns "" on timeout. Caller should check.
+    """
+    sPortFile = os.path.join(sUserDataDir, "DevToolsActivePort")
+    nDeadline = time.time() + iTimeoutSeconds
+    while time.time() < nDeadline:
+        if os.path.isfile(sPortFile):
+            try:
+                with open(sPortFile, "r", encoding="utf-8") as fIn:
+                    sFirstLine = (fIn.readline() or "").strip()
+                if sFirstLine and sFirstLine.isdigit():
+                    return sFirstLine
+            except Exception:
+                pass
+        time.sleep(0.2)
+    return ""
+
+
+def getEdgeExecutablePath():
+    """Return the absolute path of msedge.exe on the system, or None
+    if not found. Tried in this order:
+      1. %ProgramFiles(x86)%\\Microsoft\\Edge\\Application\\msedge.exe
+      2. %ProgramFiles%\\Microsoft\\Edge\\Application\\msedge.exe
+      3. %LocalAppData%\\Microsoft\\Edge\\Application\\msedge.exe
+    On Windows 10/11, Edge is installed system-wide at the first
+    location for x64 installs (Edge is a 32-bit-folder install
+    historically). We deliberately do NOT walk the registry --
+    file probing is good enough for the common case and avoids
+    pulling in winreg.
+    """
+    lCandidates = []
+    sProgFiles86 = os.environ.get("ProgramFiles(x86)", "")
+    sProgFiles = os.environ.get("ProgramFiles", "")
+    sLocalAppData = os.environ.get("LOCALAPPDATA", "")
+    if sProgFiles86: lCandidates.append(os.path.join(sProgFiles86, "Microsoft", "Edge", "Application", "msedge.exe"))
+    if sProgFiles: lCandidates.append(os.path.join(sProgFiles, "Microsoft", "Edge", "Application", "msedge.exe"))
+    if sLocalAppData: lCandidates.append(os.path.join(sLocalAppData, "Microsoft", "Edge", "Application", "msedge.exe"))
+    for sCandidate in lCandidates:
+        if os.path.isfile(sCandidate): return sCandidate
+    return None
+
+
+def getEdgeUserDataDir():
+    """Return the path of the user's default Microsoft Edge user-data
+    directory on Windows, or None if it cannot be determined.
+
+    On Windows, Edge stores its user data (cookies, history, saved
+    passwords, extensions, profile preferences) under
+    %LOCALAPPDATA%\\Microsoft\\Edge\\User Data. This is the parent
+    directory; specific profiles (Default, Profile 1, etc.) are
+    subdirectories. Playwright's launch_persistent_context() expects
+    this parent directory and selects "Default" by default; other
+    profiles can be picked via --profile-directory=... in args.
+    """
+    sLocalAppData = os.environ.get("LOCALAPPDATA", "")
+    if not sLocalAppData: return None
+    sCandidate = os.path.join(sLocalAppData, "Microsoft", "Edge", "User Data")
+    if not os.path.isdir(sCandidate): return None
+    return sCandidate
+
+
+def isEdgeRunning():
+    """Return True if msedge.exe appears to be running, False otherwise.
+
+    Used to fail fast with a clear message before urlCheck attempts
+    to launch a persistent-context Edge against a user-data directory
+    that the existing Edge process holds locked. Without this check,
+    Playwright's launch fails with an opaque error that's hard for a
+    blind user to interpret.
+
+    Implementation: shell out to tasklist.exe (built into Windows)
+    with a filter for msedge.exe. CREATE_NO_WINDOW so the cmd
+    window doesn't flash for users in CLI mode.
+    """
+    try:
+        iCreateNoWindow = 0x08000000
+        result = subprocess.run(
+            ["tasklist.exe", "/FI", "IMAGENAME eq msedge.exe", "/NH"],
+            capture_output=True, text=True, timeout=5,
+            creationflags=iCreateNoWindow)
+        sOut = (result.stdout or "").lower()
+        return "msedge.exe" in sOut
+    except Exception:
+        # If we can't tell, assume not running and let the launch
+        # attempt produce its own error if there's a conflict. This
+        # is safer than blocking the user erroneously.
+        return False
+
+
+def applyWebdriverOverride(context):
+    """Add the navigator.webdriver=undefined init script to a context.
+
+    Used both at initial launch and on every reconnect during -t
+    (temp-profile + disconnect/reconnect) runs. The override runs on
+    every new document before any site JavaScript can read it,
+    producing navigator.webdriver=undefined without using a command-
+    line flag (which would itself trigger the "unsupported flag"
+    warning bar).
+
+    The 'configurable: true' allows later test pages to redefine the
+    property without TypeError.
+    """
+    try:
+        context.add_init_script(
+            "Object.defineProperty(navigator, 'webdriver', "
+            "{get: () => undefined, configurable: true});")
+    except Exception as ex:
+        logger.warn(f"Could not add navigator.webdriver init script: {ex}")
+
+
 def fetchText(sUrl):
     dHeaders = {}
     request = None
@@ -1602,10 +1728,380 @@ def parseArguments():
         help="Reuse an existing per-page output folder by emptying its contents and writing a fresh set of files. Without this flag urlCheck skips a url whose per-page output folder already exists, so previous scans are preserved.")
     argParser.add_argument("-i", "--invisible", dest="bInvisible", action="store_true",
         help="Run Microsoft Edge invisibly (the headless browser mode): no visible browser window during the scan.")
+    argParser.add_argument("-a", "--authenticate", dest="bAuthenticate", action="store_true",
+        help="When a url's domain is encountered for the first time in this run, pause after the page loads and prompt the user on the console to authenticate (sign in, accept cookies, dismiss popups, etc.) and press Enter to continue. Within the same run, subsequent urls on the same domain reuse the established session without prompting. Forces visible browser mode (overrides --invisible). Honored in CLI mode only at present; in GUI mode the option is recorded but not acted on.")
+    argParser.add_argument("-t", "--temp-profile", dest="bTempProfile", action="store_true",
+        help="With --authenticate, launch Edge against a fresh temporary profile (not your real Edge user profile) and disconnect Playwright's automation channel during the user-interaction pause. Trades saved logins (the user must sign in fresh on every site that requires auth) for stronger anti-detection: the browser appears uncontrolled to the page during user interaction, which can let highly-fingerprinted sites (such as WhatsApp Web) complete navigations that they refuse with the default profile. No effect without --authenticate. The temp directory is removed at end of run.")
     return argParser.parse_args()
 
 
-def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, sAxeContent="", bForce=False):
+# Module-level state for the --authenticate feature. Tracks the set of
+# url hostnames already seen in this run so the user is prompted at
+# most once per registrable domain. Cleared implicitly when the
+# program exits.
+setSeenDomains = set()
+
+# Two-letter labels that, when followed by a 2-letter country TLD,
+# form a public 2-level suffix (so the registrable domain needs three
+# labels rather than two). For example "co.uk", "com.au", "ac.uk",
+# "co.jp" -- in those cases bbc.co.uk is the registrable domain, not
+# co.uk. This heuristic covers the common cases without depending on
+# the full Mozilla Public Suffix List. If the user encounters a real
+# website whose registrable domain isn't extracted correctly, the
+# only consequence is being prompted twice for the same site -- not
+# data loss.
+sSecondLevelPublicSuffixes = {
+    "co", "com", "org", "net", "gov", "edu", "ac", "mil",
+    "or", "ne", "info", "biz", "int", "nom", "go",
+}
+
+
+def getRegistrableDomain(sHost):
+    """Reduce a hostname to its registrable domain.
+
+    Examples:
+      www.facebook.com         -> facebook.com
+      m.facebook.com           -> facebook.com
+      Accounts.Google.COM      -> google.com   (caller lowercases)
+      bbc.co.uk                -> bbc.co.uk
+      news.bbc.co.uk           -> bbc.co.uk
+      example.com.au           -> example.com.au
+      192.168.1.1              -> 192.168.1.1   (IPv4 stays as-is)
+      [::1]                    -> ::1            (IPv6 stays as-is)
+      localhost                -> localhost     (single-label)
+
+    The result is always lowercased.
+    """
+    if not sHost: return ""
+    sHost = sHost.lower().strip().strip(".")
+    # IPv6 / IPv4: the urlsplit-derived hostname doesn't have brackets,
+    # but it can have colons (IPv6) or be all-digits-and-dots (IPv4).
+    # Treat both as a single token (no dotted-domain decomposition).
+    if ":" in sHost: return sHost
+    if all((c.isdigit() or c == ".") for c in sHost): return sHost
+    lParts = sHost.split(".")
+    if len(lParts) <= 2: return sHost
+    sLast = lParts[-1]
+    sSecond = lParts[-2]
+    # 2-letter country TLD with a known 2-level suffix label:
+    #   bbc.co.uk -> bbc.co.uk (3 labels)
+    #   news.bbc.co.uk -> bbc.co.uk (last 3)
+    if len(sLast) == 2 and sSecond in sSecondLevelPublicSuffixes:
+        return ".".join(lParts[-3:])
+    # Otherwise registrable domain is the last 2 labels.
+    return ".".join(lParts[-2:])
+
+
+def getDomainForAuth(sUrl):
+    """Return the registrable domain of sUrl as a stable lowercase
+    key, or None if there is no meaningful host to authenticate
+    against (file://, about:, blank, etc.). The caller compares
+    results case-insensitively without further work since we
+    lowercase here.
+
+    Subdomains collapse to the registrable domain by default, since
+    most sites authenticate per registrable domain (cookies set on
+    .example.com cover m.example.com, www.example.com, accounts.
+    example.com, etc.).
+    """
+    if not sUrl: return None
+    try:
+        oParts = urllib.parse.urlsplit(sUrl)
+    except Exception:
+        return None
+    sScheme = (oParts.scheme or "").lower()
+    if sScheme in ("file", "about", "data", "javascript", ""): return None
+    sHost = (oParts.hostname or "").lower()
+    if not sHost: return None
+    return getRegistrableDomain(sHost)
+
+
+def pauseForAuthenticationIfNeeded(page, sUrl, bAuthenticate, bGuiMode):
+    """If --authenticate is on and sUrl's registrable domain has not
+    been seen this run, prompt the user to interact with the visible
+    browser window (sign in, dismiss cookie banners, accept popups,
+    etc.) and confirm when ready to continue. The browser was
+    launched non-headless because -a is on, so the user can interact
+    directly with its window during the pause.
+
+    Returns the page that should be used for the rest of the scan.
+    Usually this is the original `page`, but auth flows commonly
+    open popups, redirect through OAuth/SSO providers, or land the
+    user on a different page than the originally-requested url. In
+    those cases the original page reference is stale; we swap to
+    the most-recently-active page in the context and return that.
+
+    Two prompt mechanisms:
+      - CLI mode: write the prompt to stdout (preceded by a newline
+        so it doesn't run into the URL printed inline by the per-url
+        progress) and wait for Enter via sys.stdin.readline().
+      - GUI mode: show a small MessageBox via System.Windows.Forms,
+        owned by an invisible TopMost form so the dialog appears on
+        top of the Edge browser window rather than behind it. Without
+        the TopMost owner, JAWS/NVDA users can't find the dialog.
+
+    After confirmation, refreshes the page state by waiting for
+    domcontentloaded so any user-initiated navigation (sign-in
+    redirect, OAuth callback, popup, etc.) is settled before the
+    accessibility scan runs against the now-authenticated DOM.
+
+    A no-op when:
+      - bAuthenticate is False
+      - sUrl has no host (file://, about:, etc.)
+      - the registrable domain has already been seen this run
+    """
+    if not bAuthenticate: return page
+    sDomain = getDomainForAuth(sUrl)
+    if sDomain is None: return page
+    if sDomain in setSeenDomains: return page
+    setSeenDomains.add(sDomain)
+
+    sPrompt = ("Authenticate credentials, if needed, to show the "
+        "page. To resume automation, press Enter:")
+    sPromptGui = ("Authenticate credentials, if needed, to show "
+        "the page in the open browser window. When ready, click OK "
+        "to resume automation.")
+
+    logger.info(f"Prompting for authentication on registrable domain "
+        f"{sDomain} (url={sUrl})")
+    try:
+        if bGuiMode:
+            # GUI mode: pop a MessageBox owned by a hidden TopMost
+            # form so the dialog appears on top of the Edge window
+            # rather than behind it. Without an owner, MessageBox
+            # belongs to whatever process/window happens to have
+            # focus -- and Edge typically does, after the user
+            # clicked into it to sign in.
+            import clr  # type: ignore
+            clr.AddReference("System.Windows.Forms")
+            clr.AddReference("System.Drawing")
+            from System.Windows.Forms import (
+                Form, FormBorderStyle, FormStartPosition,
+                MessageBox, MessageBoxButtons, MessageBoxIcon,
+                MessageBoxDefaultButton)
+            from System.Drawing import Size
+            owner = Form()
+            owner.TopMost = True
+            owner.ShowInTaskbar = False
+            owner.FormBorderStyle = getattr(FormBorderStyle, "None")
+            owner.StartPosition = FormStartPosition.Manual
+            owner.Size = Size(1, 1)  # 1x1 pixel; effectively invisible
+            try:
+                owner.Show()
+                MessageBox.Show(
+                    owner,
+                    sPromptGui,
+                    f"{sProgramName} - Authenticate",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information,
+                    MessageBoxDefaultButton.Button1)
+            finally:
+                try: owner.Close(); owner.Dispose()
+                except Exception: pass
+        else:
+            # CLI mode: leading "\n" terminates the URL printed inline
+            # by the per-url progress, so the prompt appears on its
+            # own line. End with a space (no newline) so the user's
+            # Enter naturally terminates the prompt line.
+            sys.stdout.write("\n" + sPrompt + " ")
+            sys.stdout.flush()
+            sys.stdin.readline()
+        logger.info(f"User confirmed; resuming scan of {sUrl}")
+    except Exception as ex:
+        logger.warn(f"Authentication prompt failed: {ex}; continuing")
+
+    # After the user has had a chance to interact, the original page
+    # may be stale: an OAuth/SSO flow may have opened popups,
+    # redirected through other origins, or left the user on a
+    # different page than the originally-requested url. Swap to the
+    # most-recently-active page in the context if it's different
+    # from the original. The original page (if it's still open and
+    # different) is closed so it doesn't hold onto resources.
+    pageActive = page
+    try:
+        lPages = list(page.context.pages)
+        if lPages:
+            pageCandidate = lPages[-1]
+            try:
+                # is_closed exists in modern Playwright; fall through if not.
+                bClosed = bool(pageCandidate.is_closed())
+            except Exception:
+                bClosed = False
+            if (not bClosed) and (pageCandidate is not page):
+                logger.info(f"Auth flow created a new page; switching from "
+                    f"{page.url!r} to {pageCandidate.url!r}")
+                try:
+                    if not page.is_closed(): page.close()
+                except Exception:
+                    pass
+                pageActive = pageCandidate
+    except Exception as ex:
+        logger.warn(f"Could not re-acquire active page after auth: {ex}; "
+            f"using original page reference")
+
+    # Re-settle whichever page we now have in case the user is
+    # mid-navigation or the page is still loading. domcontentloaded
+    # is sufficient -- networkidle would hang on chatty pages.
+    try:
+        pageActive.wait_for_load_state("domcontentloaded", timeout=15000)
+    except Exception:
+        pass
+
+    return pageActive
+
+
+def pauseForAuthenticationWithDisconnect(playwrightCtx, sWsEndpoint,
+        browser, context, page, sUrl, bAuthenticate, bGuiMode):
+    """Disconnect/reconnect variant of pauseForAuthenticationIfNeeded
+    used when --temp-profile (-t) is set together with --authenticate
+    (-a). Differs from the default-profile variant in two ways:
+
+    1. Before prompting the user, calls browser.close() to sever
+       Playwright's WebSocket connection to the launched Edge
+       process. The Edge process keeps running (it's owned by the
+       BrowserServer, not by this client connection), so the user
+       can interact with the visible window without any automation
+       channel attached -- which lets sites that detect CDP-level
+       fingerprinting (WhatsApp Web, some banking sites) complete
+       navigations they would otherwise refuse.
+
+    2. After the user confirms, reconnects via chromium.connect() to
+       the same WebSocket endpoint, finds the existing context and
+       the page the user was last on, re-applies the navigator.web
+       driver init script to the new context binding, and returns
+       the new (browser, context, page) triple. The caller MUST
+       use the returned triple; the input browser/context/page
+       references become stale during the disconnect.
+
+    Returns (browser, context, page) -- a tuple of fresh references
+    suitable for the rest of the scan. On the no-prompt-needed path
+    (domain already authenticated this run), returns the inputs
+    unchanged.
+    """
+    if not bAuthenticate: return (browser, context, page)
+    sDomain = getDomainForAuth(sUrl)
+    if sDomain is None: return (browser, context, page)
+    if sDomain in setSeenDomains: return (browser, context, page)
+    setSeenDomains.add(sDomain)
+
+    sPrompt = ("Authenticate credentials, if needed, to show the "
+        "page. To resume automation, press Enter:")
+    sPromptGui = ("Authenticate credentials, if needed, to show "
+        "the page in the open browser window. When ready, click OK "
+        "to resume automation.")
+
+    logger.info(f"Disconnecting Playwright before authentication "
+        f"prompt on registrable domain {sDomain} (url={sUrl})")
+    # Sever the Playwright client connection. The Edge process keeps
+    # running -- we'll reconnect after the user confirms.
+    try:
+        browser.close()
+    except Exception as ex:
+        logger.warn(f"browser.close() during auth disconnect raised: "
+            f"{ex}; continuing anyway")
+
+    try:
+        if bGuiMode:
+            import clr  # type: ignore
+            clr.AddReference("System.Windows.Forms")
+            clr.AddReference("System.Drawing")
+            from System.Windows.Forms import (
+                Form, FormBorderStyle, FormStartPosition,
+                MessageBox, MessageBoxButtons, MessageBoxIcon,
+                MessageBoxDefaultButton)
+            from System.Drawing import Size
+            owner = Form()
+            owner.TopMost = True
+            owner.ShowInTaskbar = False
+            owner.FormBorderStyle = getattr(FormBorderStyle, "None")
+            owner.StartPosition = FormStartPosition.Manual
+            owner.Size = Size(1, 1)
+            try:
+                owner.Show()
+                MessageBox.Show(
+                    owner,
+                    sPromptGui,
+                    f"{sProgramName} - Authenticate",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information,
+                    MessageBoxDefaultButton.Button1)
+            finally:
+                try: owner.Close(); owner.Dispose()
+                except Exception: pass
+        else:
+            sys.stdout.write("\n" + sPrompt + " ")
+            sys.stdout.flush()
+            sys.stdin.readline()
+        logger.info(f"User confirmed; reconnecting to Edge at {sWsEndpoint}")
+    except Exception as ex:
+        logger.warn(f"Authentication prompt failed: {ex}; continuing")
+
+    # Reconnect. The Edge process kept running so all open pages,
+    # contexts, and cookies (in our temp --user-data-dir) persist.
+    try:
+        browserNew = playwrightCtx.chromium.connect_over_cdp(sWsEndpoint)
+    except Exception as ex:
+        logger.warn(f"Reconnect to {sWsEndpoint} failed: {ex}")
+        # Best-effort fallback: return stale references and let the
+        # caller surface a per-url error rather than crash the run.
+        return (browser, context, page)
+
+    # Get the existing context (the one the user was interacting with
+    # post-auth). With connect_over_cdp, the connected browser
+    # exposes any contexts in the running Edge process. We expect
+    # exactly one context that we created at run start.
+    contextNew = None
+    try:
+        lContexts = list(browserNew.contexts)
+        if lContexts: contextNew = lContexts[0]
+    except Exception as ex:
+        logger.warn(f"Could not enumerate contexts after reconnect: {ex}")
+    if contextNew is None:
+        try:
+            contextNew = browserNew.new_context(
+                bypass_csp=True,
+                ignore_https_errors=bDefaultIgnoreHttpsErrors,
+                user_agent=sUserAgent,
+                viewport={"width": iDefaultViewportWidth,
+                    "height": iDefaultViewportHeight})
+        except Exception as ex:
+            logger.warn(f"Could not create new context after reconnect: {ex}")
+            return (browser, context, page)
+
+    # Re-apply the navigator.webdriver init script. add_init_script
+    # is idempotent in effect -- adding the same script twice means
+    # it runs twice on each page load, which is harmless because the
+    # second defineProperty() call overwrites with the same value.
+    applyWebdriverOverride(contextNew)
+
+    # Find the page the user was last on. The auth flow may have
+    # navigated, opened popups, or redirected through OAuth/SSO; the
+    # last page in the context is most likely the one with the
+    # authenticated post-auth content.
+    pageNew = None
+    try:
+        lPages = list(contextNew.pages)
+        if lPages: pageNew = lPages[-1]
+    except Exception as ex:
+        logger.warn(f"Could not enumerate pages after reconnect: {ex}")
+    if pageNew is None:
+        try:
+            pageNew = contextNew.new_page()
+            pageNew.goto(sUrl, timeout=iDefaultNavTimeoutMs,
+                wait_until="domcontentloaded")
+        except Exception as ex:
+            logger.warn(f"Could not create/navigate page after reconnect: {ex}")
+            return (browserNew, contextNew, page)
+
+    try:
+        pageNew.wait_for_load_state("domcontentloaded", timeout=15000)
+    except Exception:
+        pass
+
+    return (browserNew, contextNew, pageNew)
+
+
+def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, sAxeContent="", bForce=False, bAuthenticate=False, bGuiMode=False, bTempProfile=False, playwrightCtx=None, sWsEndpoint=None, lConnHolder=None):
     """Run a single-url scan.
 
     Returns:
@@ -1630,15 +2126,74 @@ def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, sAxeContent="
     try:
         page = context.new_page()
         logger.info(f"Navigating to {sNormalizedUrl}")
-        page.goto(sNormalizedUrl, timeout=iDefaultNavTimeoutMs, wait_until="load")
-        # After the load event, wait briefly for network to settle.
-        # A short networkidle timeout lets SPA content finish rendering on most sites
-        # while sites with persistent connections (e.g. WebSocket-heavy SPAs) simply
-        # time out and continue after iNetworkIdleTimeoutMs milliseconds.
+        # When --authenticate is on, wait only for "domcontentloaded"
+        # initially -- enough for the page to be interactive so the
+        # user can authenticate, but without paying the long "load"
+        # event delay before they see the auth prompt. The full
+        # "load" + networkidle settling happens AFTER the user
+        # confirms, when the page may have navigated to a post-auth
+        # destination that needs its own settling time.
+        #
+        # When --authenticate is off, keep the original "load"
+        # behavior so the rest of the flow is unchanged for non-auth
+        # runs.
+        sInitialWaitUntil = "domcontentloaded" if bAuthenticate else "load"
+        page.goto(sNormalizedUrl, timeout=iDefaultNavTimeoutMs, wait_until=sInitialWaitUntil)
+
+        # If --authenticate is on and this is the first url on this
+        # registrable domain, pause now so the user can sign in /
+        # accept cookies / dismiss popups / complete 2FA. Returns the
+        # page that should be used for the rest of the scan --
+        # normally the same `page`, but if the auth flow opened a
+        # popup or redirected to another page, the helper swaps in
+        # the most-recently-active page so the scan captures the
+        # post-auth content.
+        if bTempProfile and bAuthenticate:
+            # Temp-profile path: disconnect Playwright before
+            # prompting, prompt, reconnect after the user confirms.
+            # Returns a fresh (browser, context, page) triple; the
+            # input references become stale across the disconnect.
+            # Update lConnHolder so the caller can pick up the fresh
+            # refs for the next url.
+            (browser, context, page) = pauseForAuthenticationWithDisconnect(
+                playwrightCtx, sWsEndpoint,
+                browser, context, page, sNormalizedUrl,
+                bAuthenticate, bGuiMode)
+            if lConnHolder is not None:
+                lConnHolder[0] = browser
+                lConnHolder[1] = context
+        else:
+            page = pauseForAuthenticationIfNeeded(page, sNormalizedUrl,
+                bAuthenticate, bGuiMode)
+
+        # After the user confirms (or immediately, for non-auth
+        # runs), settle the page. For auth runs we add an extra
+        # wait_for_load_state("load") because we only waited for
+        # domcontentloaded above, AND because the user may have
+        # triggered a post-auth navigation that we need to follow.
+        # For non-auth runs the goto already waited for "load", so
+        # this call returns quickly.
+        try:
+            page.wait_for_load_state("load", timeout=iDefaultNavTimeoutMs)
+        except Exception:
+            pass
+        # Then wait briefly for network to settle. A short
+        # networkidle timeout lets SPA content finish rendering on
+        # most sites; sites with persistent connections (e.g.
+        # WebSocket-heavy SPAs) simply time out and continue after
+        # iNetworkIdleTimeoutMs ms.
         try:
             page.wait_for_load_state("networkidle", timeout=iNetworkIdleTimeoutMs)
         except Exception:
             pass
+        # For auth runs, add an extra settling delay because post-
+        # auth UIs (Facebook feed, WhatsApp main panel, Slack
+        # workspace) often render their main content asynchronously
+        # via React/Vue/etc. after networkidle is reported. Without
+        # this extra time the accessibility scan can run against a
+        # half-rendered DOM and produce a misleadingly empty report.
+        if bAuthenticate:
+            page.wait_for_timeout(iAuthPostConfirmSettleDelayMs)
         page.wait_for_timeout(iDefaultPostLoadDelayMs)
         # Scroll to bottom and back to trigger lazy-loaded content, then wait briefly
         page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
@@ -1662,10 +2217,29 @@ def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, sAxeContent="
         ensureSuccess(bool(page.evaluate("() => Boolean(window.axe && window.axe.run)")), "axe-core did not load into the page.")
         sResultsJson = page.evaluate("async (opts) => JSON.stringify(await window.axe.run(document, opts))", aAxeRunOptions)
         dResults = json.loads(sResultsJson)
+        # browser.version is None when using launch_persistent_context
+        # (Playwright doesn't expose a Browser object in that case).
+        # Fall back to extracting Edge's version from the page's
+        # navigator.userAgent string, which always contains
+        # "Edg/<version>" on a Microsoft Edge browser.
+        sBrowserVersion = ""
+        try:
+            if browser is not None:
+                sBrowserVersion = str(browser.version or "")
+        except Exception:
+            pass
+        if not sBrowserVersion:
+            try:
+                sUa = str(page.evaluate("navigator.userAgent") or "")
+                oMatch = re.search(r"Edg/(\S+)", sUa)
+                if oMatch: sBrowserVersion = oMatch.group(1)
+            except Exception:
+                pass
+
         dMetadata = {
             "axeSource": sAxeSource,
             "browserChannel": sBrowserChannel,
-            "browserVersion": str(browser.version),
+            "browserVersion": sBrowserVersion,
             "inputValue": sInput,
             "navTimeoutMs": iDefaultNavTimeoutMs,
             "normalizedUrl": sNormalizedUrl,
@@ -2238,13 +2812,15 @@ class configManager:
             arguments.bViewOutput = configManager.getBool(d, "view_output")
         if not getattr(arguments, "bInvisible", False):
             arguments.bInvisible = configManager.getBool(d, "invisible")
+        if not getattr(arguments, "bAuthenticate", False):
+            arguments.bAuthenticate = configManager.getBool(d, "authenticate")
         if not getattr(arguments, "bForce", False):
             arguments.bForce = configManager.getBool(d, "force_replacements")
         if not getattr(arguments, "bLog", False):
             arguments.bLog = configManager.getBool(d, "log_session")
 
     @staticmethod
-    def save(sSource, sOutputDir, bViewOutput, bInvisible, bForce, bLog):
+    def save(sSource, sOutputDir, bViewOutput, bInvisible, bForce, bLog, bAuthenticate=False):
         sDir = ""
         sPath = ""
 
@@ -2261,6 +2837,7 @@ class configManager:
                 fIni.write(f"output_directory={sOutputDir or ''}\n")
                 fIni.write(f"view_output={'1' if bViewOutput else '0'}\n")
                 fIni.write(f"invisible={'1' if bInvisible else '0'}\n")
+                fIni.write(f"authenticate={'1' if bAuthenticate else '0'}\n")
                 fIni.write(f"force_replacements={'1' if bForce else '0'}\n")
                 fIni.write(f"log_session={'1' if bLog else '0'}\n")
             logger.info(f"Saved configuration to {sPath}")
@@ -2560,6 +3137,7 @@ def showGuiDialog(arguments):
     sInitOutDir = getattr(arguments, "sOutputDir", "") or ""
     bInitView = bool(getattr(arguments, "bViewOutput", False))
     bInitInvisible = bool(getattr(arguments, "bInvisible", False))
+    bInitAuth = bool(getattr(arguments, "bAuthenticate", False))
     bInitForce = bool(getattr(arguments, "bForce", False))
     bInitLog = bool(getattr(arguments, "bLog", False))
     bInitUseCfg = bool(getattr(arguments, "bUseConfig", False))
@@ -2603,6 +3181,9 @@ def showGuiDialog(arguments):
     txtTarget.Location = Point(iTextX, y)
     txtTarget.Size = Size(iTextW, iLayoutTextHeight)
     txtTarget.TabIndex = 0
+    # Explicit AccessibleName so JAWS/NVDA announce the field by its
+    # label even when the visual layout doesn't auto-associate.
+    txtTarget.AccessibleName = "Source urls"
     frm.Controls.Add(txtTarget)
 
     btnBrowseTarget = Button()
@@ -2628,6 +3209,7 @@ def showGuiDialog(arguments):
     txtOut.Location = Point(iTextX, y)
     txtOut.Size = Size(iTextW, iLayoutTextHeight)
     txtOut.TabIndex = 2
+    txtOut.AccessibleName = "Output directory"
     frm.Controls.Add(txtOut)
 
     btnBrowseOut = Button()
@@ -2652,6 +3234,14 @@ def showGuiDialog(arguments):
     chkInvisible.TabIndex = 4
     frm.Controls.Add(chkInvisible)
 
+    chkAuth = CheckBox()
+    chkAuth.Text = "&Authenticate credentials"
+    chkAuth.Checked = bInitAuth
+    chkAuth.Location = Point(iLayoutLeft + iChkW, y)
+    chkAuth.Size = Size(iChkW, iLayoutTextHeight)
+    chkAuth.TabIndex = 5
+    frm.Controls.Add(chkAuth)
+
     # --- Row 4: Force replacements + View output (common 2x2 grid, top row) ---
     y += iLayoutTextHeight + iLayoutRowGap
     chkForce = CheckBox()
@@ -2659,7 +3249,7 @@ def showGuiDialog(arguments):
     chkForce.Checked = bInitForce
     chkForce.Location = Point(iLayoutLeft, y)
     chkForce.Size = Size(iChkW, iLayoutTextHeight)
-    chkForce.TabIndex = 5
+    chkForce.TabIndex = 6
     frm.Controls.Add(chkForce)
 
     chkView = CheckBox()
@@ -2667,7 +3257,7 @@ def showGuiDialog(arguments):
     chkView.Checked = bInitView
     chkView.Location = Point(iLayoutLeft + iChkW, y)
     chkView.Size = Size(iChkW, iLayoutTextHeight)
-    chkView.TabIndex = 6
+    chkView.TabIndex = 7
     frm.Controls.Add(chkView)
 
     # --- Row 5: Log session + Use configuration (common 2x2 grid, bottom row) ---
@@ -2677,7 +3267,7 @@ def showGuiDialog(arguments):
     chkLog.Checked = bInitLog
     chkLog.Location = Point(iLayoutLeft, y)
     chkLog.Size = Size(iChkW, iLayoutTextHeight)
-    chkLog.TabIndex = 7
+    chkLog.TabIndex = 8
     frm.Controls.Add(chkLog)
 
     chkUseCfg = CheckBox()
@@ -2685,7 +3275,7 @@ def showGuiDialog(arguments):
     chkUseCfg.Checked = bInitUseCfg
     chkUseCfg.Location = Point(iLayoutLeft + iChkW, y)
     chkUseCfg.Size = Size(iChkW, iLayoutTextHeight)
-    chkUseCfg.TabIndex = 8
+    chkUseCfg.TabIndex = 9
     frm.Controls.Add(chkUseCfg)
 
     # --- Bottom row: Help, Defaults on the left; OK, Cancel on the right ---
@@ -2694,7 +3284,7 @@ def showGuiDialog(arguments):
     btnHelp.Text = "&Help"
     btnHelp.Location = Point(iLayoutLeft, y)
     btnHelp.Size = Size(iLayoutButtonWidth, iLayoutButtonHeight)
-    btnHelp.TabIndex = 9
+    btnHelp.TabIndex = 10
     btnHelp.UseVisualStyleBackColor = True
     frm.Controls.Add(btnHelp)
 
@@ -2702,7 +3292,7 @@ def showGuiDialog(arguments):
     btnDefaults.Text = "&Default settings"
     btnDefaults.Location = Point(iLayoutLeft + iLayoutButtonWidth + iLayoutGap, y)
     btnDefaults.Size = Size(iLayoutButtonWidth, iLayoutButtonHeight)
-    btnDefaults.TabIndex = 10
+    btnDefaults.TabIndex = 11
     btnDefaults.UseVisualStyleBackColor = True
     frm.Controls.Add(btnDefaults)
 
@@ -2711,7 +3301,7 @@ def showGuiDialog(arguments):
     btnOk.DialogResult = DialogResult.OK
     btnOk.Location = Point(iFormW - iLayoutRight - 2 * iLayoutButtonWidth - iLayoutGap, y)
     btnOk.Size = Size(iLayoutButtonWidth, iLayoutButtonHeight)
-    btnOk.TabIndex = 11
+    btnOk.TabIndex = 12
     btnOk.UseVisualStyleBackColor = True
     frm.Controls.Add(btnOk)
 
@@ -2720,7 +3310,7 @@ def showGuiDialog(arguments):
     btnCancel.DialogResult = DialogResult.Cancel
     btnCancel.Location = Point(iBtnX, y)
     btnCancel.Size = Size(iLayoutButtonWidth, iLayoutButtonHeight)
-    btnCancel.TabIndex = 12
+    btnCancel.TabIndex = 13
     btnCancel.UseVisualStyleBackColor = True
     frm.Controls.Add(btnCancel)
 
@@ -2750,6 +3340,11 @@ def showGuiDialog(arguments):
             f"directory.\r\n\r\n"
             f"Options:\r\n"
             f"  Invisible mode - run Edge with no visible browser window\r\n"
+            f"  Authenticate credentials - when a url's domain is "
+            f"encountered for the first time in this run, pause after "
+            f"the page loads so the user can sign in / accept cookies / "
+            f"dismiss popups, then press Enter on the console to "
+            f"continue. Forces a visible browser. CLI-only at present.\r\n"
             f"  Force replacements - reuse an existing per-page output "
             f"folder (emptying its contents and writing a fresh set of "
             f"files) instead of skipping the url\r\n"
@@ -2836,6 +3431,7 @@ def showGuiDialog(arguments):
         txtTarget.Text = ""
         txtOut.Text = ""
         chkInvisible.Checked = False
+        chkAuth.Checked = False
         chkForce.Checked = False
         chkView.Checked = False
         chkLog.Checked = False
@@ -2914,6 +3510,7 @@ def showGuiDialog(arguments):
     arguments.sSource = (txtTarget.Text or "").strip()
     arguments.sOutputDir = (txtOut.Text or "").strip()
     arguments.bInvisible = bool(chkInvisible.Checked)
+    arguments.bAuthenticate = bool(chkAuth.Checked)
     arguments.bForce = bool(chkForce.Checked)
     arguments.bViewOutput = bool(chkView.Checked)
     arguments.bLog = bool(chkLog.Checked)
@@ -3051,10 +3648,13 @@ def main():
     context = None
     lArgs = []
     capture = None
+    edgeProcess = None
     streamOriginalErr = sys.stderr
     streamOriginalOut = sys.stdout
     pathBaseDir = pathlib.Path.cwd()
     pathOutputDir = None
+    sTempUserDataDir = None
+    sWsEndpoint = None
     playwrightCtx = None
 
     # Playwright suppresses the default SIGINT handler. Restore it so Ctrl+C works.
@@ -3145,17 +3745,18 @@ def main():
                 arguments.bViewOutput,
                 arguments.bInvisible,
                 arguments.bForce,
-                arguments.bLog)
+                arguments.bLog,
+                bAuthenticate=bool(getattr(arguments, "bAuthenticate", False)))
         logger.info(f"After dialog: input={arguments.sSource!r} "
             f"outputDir={arguments.sOutputDir!r} "
             f"invisible={arguments.bInvisible} "
+            f"authenticate={bool(getattr(arguments, 'bAuthenticate', False))} "
             f"force={arguments.bForce} "
             f"viewOutput={arguments.bViewOutput} "
             f"log={arguments.bLog} useConfig={arguments.bUseConfig}")
 
     if not arguments.sSource:
-        print(f"{sProgramName} {sProgramVersion}")
-        print(sUsage)
+        print("No urls to scan.")
         return 1
 
     # Resolve the base output directory. Default = CWD.
@@ -3164,7 +3765,7 @@ def main():
             pathBaseDir = pathlib.Path(arguments.sOutputDir).expanduser()
             pathBaseDir.mkdir(parents=True, exist_ok=True)
         except Exception as ex:
-            sErr = f"[ERROR] Output directory '{arguments.sOutputDir}' could not be created: {ex}"
+            sErr = f"Output directory '{arguments.sOutputDir}' could not be created: {ex}"
             print(sErr)
             if bGuiMode: showFinalGuiMessage(sErr, f"{sProgramName} - Error")
             return 1
@@ -3183,6 +3784,7 @@ def main():
         ("Output directory",   str(pathBaseDir)),
         ("Force replacements", str(bool(arguments.bForce)).lower()),
         ("Invisible mode",     str(bool(arguments.bInvisible)).lower()),
+        ("Authenticate credentials", str(bool(getattr(arguments, "bAuthenticate", False))).lower()),
         ("View output",        str(bool(arguments.bViewOutput)).lower()),
         ("Use configuration",  str(bool(arguments.bUseConfig)).lower()),
         ("Log session",        str(bool(arguments.bLog)).lower()),
@@ -3260,6 +3862,18 @@ def main():
         if bMultiUrl: logger.info(f"url set: {iUrlTotal} url(s) from the source field")
 
     try:
+        # Surface a fast user-visible message before starting the
+        # Playwright stack. Spinning up sync_playwright(), then
+        # locating msedge.exe, then opening the browser window can
+        # take several seconds on a cold start; without this
+        # message the user is left wondering whether urlCheck has
+        # hung. Print to stdout in CLI mode; GUI mode already shows
+        # its own progress dialog so an additional console line
+        # would be invisible there.
+        if not bGuiMode:
+            print("Launching Edge...")
+            sys.stdout.flush()
+        logger.info("Launching Edge...")
         with sync_playwright() as playwrightCtx:
             browserType = playwrightCtx.chromium
             lArgs = [
@@ -3271,6 +3885,10 @@ def main():
             # Playwright still calls this "headless"; we expose it to the
             # user as "Invisible" because that wording is clearer and not
             # tied to the implementation. The mapping is a 1:1 boolean.
+            # When --authenticate is set the browser MUST be visible
+            # so the user can interact with it (sign in, dismiss
+            # banners, etc.); we override --invisible in that case
+            # and log the override.
             #
             # urlCheck drives the system-installed Microsoft Edge through
             # channel="msedge"; we never download a Playwright-bundled
@@ -3279,25 +3897,321 @@ def main():
             # Edge or is on an unusual configuration where Playwright
             # cannot find it, surface a friendly message rather than a
             # raw Python traceback.
-            try:
-                browser = browserType.launch(channel=sBrowserChannel, headless=bool(arguments.bInvisible), args=lArgs)
-            except Exception as ex:
-                sErr = (
-                    f"Could not launch Microsoft Edge: {ex}\n\n"
-                    "urlCheck requires Microsoft Edge, which ships with "
-                    "Windows 10 and 11 by default. If Edge has been "
-                    "removed or is unavailable, install or repair it "
-                    "from https://www.microsoft.com/edge and try again."
-                )
-                print(f"[ERROR] {sErr}")
-                logger.info(f"Browser launch failed: {ex}")
-                if bGuiMode:
-                    sys.stdout = streamOriginalOut
-                    sys.stderr = streamOriginalErr
-                    showFinalGuiMessage(capture.getvalue(), f"{sProgramName} - Edge not available")
-                logger.close()
-                return 1
-            context = browser.new_context(bypass_csp=True, ignore_https_errors=bDefaultIgnoreHttpsErrors, user_agent=sUserAgent, viewport={"width": iDefaultViewportWidth, "height": iDefaultViewportHeight})
+            bAuthEnabled = bool(getattr(arguments, "bAuthenticate", False))
+            bTempProfile = bool(getattr(arguments, "bTempProfile", False))
+            bHeadless = bool(arguments.bInvisible)
+            if bAuthEnabled and bHeadless:
+                logger.info("--authenticate overrides --invisible; "
+                    "launching Edge with a visible window.")
+                bHeadless = False
+            if bTempProfile and not bAuthEnabled:
+                logger.info("--temp-profile has no effect without "
+                    "--authenticate; ignoring.")
+                bTempProfile = False
+
+            browser = None
+            context = None
+
+            if bAuthEnabled and bTempProfile:
+                # When -a -t is set, launch msedge.exe ourselves as a
+                # subprocess against a fresh temporary profile and use
+                # Playwright's chromium.connect_over_cdp() to attach.
+                # Then for each url's auth pause, call browser.close()
+                # to sever Playwright's CDP connection (the Edge
+                # subprocess keeps running because we, not Playwright,
+                # own its lifecycle), prompt the user, and connect_
+                # over_cdp() again to resume.
+                #
+                # Why subprocess + connect_over_cdp instead of launch_
+                # server: playwright-python (unlike playwright-node)
+                # does NOT expose BrowserType.launch_server. The
+                # documented Python API for "launch a browser
+                # ourselves and have Playwright attach" is connect_
+                # over_cdp.
+                #
+                # Why not launch_persistent_context: it doesn't
+                # support the disconnect/reconnect cycle. close() on
+                # a launch_persistent_context-owned context kills
+                # the browser process. We need the browser process
+                # to OUTLIVE Playwright disconnect/reconnect cycles.
+                #
+                # Why a temp user-data-dir: Chrome 136+ refuses
+                # --remote-debugging-port against the default user-
+                # data-dir for security. A fresh temp directory is
+                # non-default and so satisfies that restriction.
+                #
+                # Cookies and session state set by the user during
+                # authentication persist within the Edge process via
+                # its in-memory cookie jar (and on disk in the temp
+                # user-data-dir), so subsequent urls on the same
+                # domain reuse the established session without
+                # re-prompting -- exactly like normal browsing.
+                sEdgeExe = getEdgeExecutablePath()
+                if not sEdgeExe:
+                    sErr = ("Could not find msedge.exe at the standard "
+                        "Microsoft Edge install locations. urlCheck -t "
+                        "requires Edge to be installed.")
+                    print(sErr)
+                    logger.info(sErr)
+                    if bGuiMode:
+                        sys.stdout = streamOriginalOut
+                        sys.stderr = streamOriginalErr
+                        showFinalGuiMessage(capture.getvalue(),
+                            f"{sProgramName} - Edge not found")
+                    logger.close()
+                    return 1
+                try:
+                    sTempUserDataDir = tempfile.mkdtemp(prefix="urlCheck-tmp-profile-")
+                except Exception as ex:
+                    sErr = (f"Could not create temporary profile "
+                        f"directory: {ex}")
+                    print(sErr)
+                    logger.info(sErr)
+                    if bGuiMode:
+                        sys.stdout = streamOriginalOut
+                        sys.stderr = streamOriginalErr
+                        showFinalGuiMessage(capture.getvalue(),
+                            f"{sProgramName} - Temp profile error")
+                    logger.close()
+                    return 1
+                logger.info(f"Launching msedge.exe directly with "
+                    f"--remote-debugging-port=0 and "
+                    f"--user-data-dir={sTempUserDataDir}")
+                # Build msedge.exe command line. Mirror the same args
+                # we pass via Playwright in other paths, plus
+                # --remote-debugging-port=0 (let OS pick a free port,
+                # which Edge writes to DevToolsActivePort) and the
+                # temp user-data-dir.
+                lEdgeCmd = [sEdgeExe] + lArgs + [
+                    "--remote-debugging-port=0",
+                    f"--user-data-dir={sTempUserDataDir}",
+                    "about:blank",
+                ]
+                if bHeadless: lEdgeCmd.append("--headless=new")
+                try:
+                    iCreateNoWindow = 0x08000000
+                    edgeProcess = subprocess.Popen(
+                        lEdgeCmd,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        creationflags=iCreateNoWindow)
+                except Exception as ex:
+                    sErr = (f"Could not launch msedge.exe: {ex}")
+                    print(sErr)
+                    logger.info(sErr)
+                    if bGuiMode:
+                        sys.stdout = streamOriginalOut
+                        sys.stderr = streamOriginalErr
+                        showFinalGuiMessage(capture.getvalue(),
+                            f"{sProgramName} - Edge launch failed")
+                    logger.close()
+                    return 1
+                # Wait for Edge to write its chosen port to disk.
+                sPort = waitForDevToolsPort(sTempUserDataDir, iTimeoutSeconds=30)
+                if not sPort:
+                    sErr = ("msedge.exe did not write DevToolsActivePort "
+                        "within 30 seconds. The browser may have failed "
+                        "to start. urlCheck cannot continue with -t.")
+                    print(sErr)
+                    logger.info(sErr)
+                    try: edgeProcess.kill()
+                    except Exception: pass
+                    if bGuiMode:
+                        sys.stdout = streamOriginalOut
+                        sys.stderr = streamOriginalErr
+                        showFinalGuiMessage(capture.getvalue(),
+                            f"{sProgramName} - Edge did not start")
+                    logger.close()
+                    return 1
+                sCdpEndpoint = f"http://localhost:{sPort}"
+                sWsEndpoint = sCdpEndpoint  # Reuse same field name elsewhere
+                logger.info(f"Edge listening on CDP at {sCdpEndpoint}")
+                try:
+                    browser = browserType.connect_over_cdp(sCdpEndpoint)
+                    # connect_over_cdp returns a Browser whose existing
+                    # contexts include the default browser context that
+                    # opened with about:blank. Use that one.
+                    lContexts = list(browser.contexts)
+                    if lContexts:
+                        context = lContexts[0]
+                    else:
+                        context = browser.new_context(
+                            bypass_csp=True,
+                            ignore_https_errors=bDefaultIgnoreHttpsErrors,
+                            user_agent=sUserAgent,
+                            viewport={"width": iDefaultViewportWidth,
+                                "height": iDefaultViewportHeight})
+                    applyWebdriverOverride(context)
+                except Exception as ex:
+                    sErr = (f"Could not connect Playwright to Edge "
+                        f"via CDP at {sCdpEndpoint}: {ex}")
+                    print(sErr)
+                    logger.info(sErr)
+                    try: edgeProcess.kill()
+                    except Exception: pass
+                    if bGuiMode:
+                        sys.stdout = streamOriginalOut
+                        sys.stderr = streamOriginalErr
+                        showFinalGuiMessage(capture.getvalue(),
+                            f"{sProgramName} - CDP connect failed")
+                    logger.close()
+                    return 1
+            elif bAuthEnabled:
+                # When -a is set, launch Edge in PERSISTENT-CONTEXT mode
+                # against the user's real Edge profile so saved logins,
+                # cookies, and session state are available. This is what
+                # makes "I'm already logged into Facebook in my normal
+                # Edge" actually work in the urlCheck-driven session --
+                # an ephemeral Playwright launch would start with an
+                # empty profile and trigger anti-automation heuristics
+                # (often presenting a blank page after the user signs in).
+                #
+                # Edge cannot run two instances against the same profile
+                # at once, so we check first and surface a clear error
+                # before trying.
+                if isEdgeRunning():
+                    sErr = (
+                        "Microsoft Edge is currently running. urlCheck "
+                        "needs exclusive access to your Edge profile when "
+                        "--authenticate is set so it can use your saved "
+                        "logins. Please close all Edge windows (right-"
+                        "click the Edge taskbar icon and choose Close "
+                        "window, or quit Edge from its menu) and try "
+                        "again.")
+                    print(sErr)
+                    logger.info("Edge already running; aborting -a launch.")
+                    if bGuiMode:
+                        sys.stdout = streamOriginalOut
+                        sys.stderr = streamOriginalErr
+                        showFinalGuiMessage(capture.getvalue(),
+                            f"{sProgramName} - Edge is running")
+                    logger.close()
+                    return 1
+                sUserDataDir = getEdgeUserDataDir()
+                if not sUserDataDir:
+                    sErr = ("Could not locate the Microsoft Edge user-"
+                        "data directory under "
+                        "%LOCALAPPDATA%\\Microsoft\\Edge\\User Data. "
+                        "urlCheck cannot use your Edge profile for "
+                        "authenticated scans.")
+                    print(sErr)
+                    logger.info("Edge user-data dir not found; "
+                        "aborting -a launch.")
+                    if bGuiMode:
+                        sys.stdout = streamOriginalOut
+                        sys.stderr = streamOriginalErr
+                        showFinalGuiMessage(capture.getvalue(),
+                            f"{sProgramName} - Edge profile not found")
+                    logger.close()
+                    return 1
+                logger.info(f"Launching Edge with persistent context: "
+                    f"user_data_dir={sUserDataDir}")
+                # Suppress Playwright's --enable-automation default
+                # switch. That switch triggers the visible "Microsoft
+                # Edge is being controlled by automated test
+                # software" infobar AND sets navigator.webdriver=true.
+                # Removing it via ignore_default_args silences the
+                # infobar.
+                #
+                # Pass chromium_sandbox=True so Playwright does NOT
+                # add --no-sandbox to the command line. By default
+                # Playwright disables the sandbox (chromium_sandbox=
+                # False), which causes Edge to display an "unsupported
+                # command-line flag: --no-sandbox" warning bar. With
+                # the sandbox enabled (the same default Edge uses for
+                # normal user browsing), no warning bar appears AND
+                # the browser is more secure.
+                #
+                # Override navigator.webdriver via add_init_script
+                # after the context launches. The override runs on
+                # every new document before any site JavaScript can
+                # read it, producing navigator.webdriver=undefined
+                # without using a command-line flag (which would
+                # itself trigger the "unsupported flag" warning).
+                # This is needed because Playwright still passes
+                # --remote-debugging-port internally (its IPC
+                # channel), and per the MDN spec, navigator.web
+                # driver is set whenever --enable-automation,
+                # --headless, or --remote-debugging-port is in
+                # effect.
+                #
+                # Note: as of Edge/Chromium 136 (April 2025) the
+                # security model refuses --remote-debugging-port
+                # against the default user-data directory, so a
+                # literal "disconnect from CDP and reconnect" pattern
+                # is not available when running against the user's
+                # real Edge profile. The init-script approach
+                # achieves the practical goal (sites stop refusing
+                # the session because of automation fingerprinting)
+                # without needing CDP disconnect/reconnect mechanics.
+                try:
+                    context = browserType.launch_persistent_context(
+                        sUserDataDir,
+                        channel=sBrowserChannel,
+                        headless=bHeadless,
+                        args=lArgs,
+                        ignore_default_args=["--enable-automation"],
+                        chromium_sandbox=True,
+                        bypass_csp=True,
+                        ignore_https_errors=bDefaultIgnoreHttpsErrors,
+                        user_agent=sUserAgent,
+                        viewport={"width": iDefaultViewportWidth,
+                            "height": iDefaultViewportHeight})
+                    # Silently override navigator.webdriver before any
+                    # site JS runs. The 'configurable: true' allows
+                    # later test pages (including the user's actual
+                    # target site) to redefine it without TypeError.
+                    context.add_init_script(
+                        "Object.defineProperty(navigator, 'webdriver', "
+                        "{get: () => undefined, configurable: true});")
+                except Exception as ex:
+                    sErr = (
+                        f"Could not launch Microsoft Edge with your "
+                        f"profile: {ex}\n\n"
+                        "If Edge is still running, close all Edge "
+                        "windows and try again. If the problem persists, "
+                        "you can run urlCheck without --authenticate to "
+                        "use a fresh Edge profile (no saved logins).")
+                    print(sErr)
+                    logger.info(f"Persistent-context launch failed: {ex}")
+                    if bGuiMode:
+                        sys.stdout = streamOriginalOut
+                        sys.stderr = streamOriginalErr
+                        showFinalGuiMessage(capture.getvalue(),
+                            f"{sProgramName} - Edge launch failed")
+                    logger.close()
+                    return 1
+            else:
+                # Non-auth runs: ephemeral launch with a fresh profile.
+                # This is the original behavior for -a-not-set runs and
+                # is unchanged.
+                #
+                # urlCheck drives the system-installed Microsoft Edge through
+                # channel="msedge"; we never download a Playwright-bundled
+                # Chromium. On modern Windows 10/11, Edge ships in-box, so
+                # this almost always succeeds. If the user has somehow removed
+                # Edge or is on an unusual configuration where Playwright
+                # cannot find it, surface a friendly message rather than a
+                # raw Python traceback.
+                try:
+                    browser = browserType.launch(channel=sBrowserChannel, headless=bHeadless, args=lArgs)
+                except Exception as ex:
+                    sErr = (
+                        f"Could not launch Microsoft Edge: {ex}\n\n"
+                        "urlCheck requires Microsoft Edge, which ships with "
+                        "Windows 10 and 11 by default. If Edge has been "
+                        "removed or is unavailable, install or repair it "
+                        "from https://www.microsoft.com/edge and try again."
+                    )
+                    print(sErr)
+                    logger.info(f"Browser launch failed: {ex}")
+                    if bGuiMode:
+                        sys.stdout = streamOriginalOut
+                        sys.stderr = streamOriginalErr
+                        showFinalGuiMessage(capture.getvalue(), f"{sProgramName} - Edge not available")
+                    logger.close()
+                    return 1
+                context = browser.new_context(bypass_csp=True, ignore_https_errors=bDefaultIgnoreHttpsErrors, user_agent=sUserAgent, viewport={"width": iDefaultViewportWidth, "height": iDefaultViewportHeight})
             # Pre-fetch axe-core content once so CSP-restricted sites can still be scanned.
             sAxeContent = ""
             for sAxeUrl in aAxeCdnUrls:
@@ -3329,9 +4243,22 @@ def main():
                 # 2htm and extCheck), so no progress UI to update.
                 if not bGuiMode: print(sNormalizedUrl, end="", flush=True)
                 try:
+                    lConnHolder = [browser, context]
                     vResult = scanUrl(
                         sUrl, sNormalizedUrl, browser, context, pathBaseDir,
-                        sAxeContent, bForce=bool(arguments.bForce))
+                        sAxeContent, bForce=bool(arguments.bForce),
+                        bAuthenticate=bool(getattr(arguments, "bAuthenticate", False)),
+                        bGuiMode=bGuiMode,
+                        bTempProfile=bTempProfile,
+                        playwrightCtx=playwrightCtx,
+                        sWsEndpoint=sWsEndpoint,
+                        lConnHolder=lConnHolder)
+                    # If the temp-profile auth-disconnect path
+                    # replaced our browser/context inside scanUrl,
+                    # pick up the fresh references for the next url.
+                    if bTempProfile:
+                        browser = lConnHolder[0]
+                        context = lConnHolder[1]
                     if vResult == "skipped":
                         lSkippedExisting.append(sNormalizedUrl)
                         if not bGuiMode: print(": skipped (output folder exists, use -f to overwrite)")
@@ -3395,6 +4322,27 @@ def main():
             pass
         try:
             if browser is not None: browser.close()
+        except Exception:
+            pass
+        # When -t was used, we own the Edge subprocess directly.
+        # Terminate it so it doesn't outlive urlCheck. kill() is a
+        # hard SIGKILL-equivalent on Windows; that's fine because
+        # we'll discard the temp profile next.
+        try:
+            if edgeProcess is not None:
+                try: edgeProcess.kill()
+                except Exception: pass
+                try: edgeProcess.wait(timeout=5)
+                except Exception: pass
+        except Exception:
+            pass
+        # Clean up the temporary user-data directory. ignore_errors
+        # because Edge sometimes holds a transient file lock for a
+        # moment after exit; better to leak a temp dir than crash
+        # the cleanup path.
+        try:
+            if sTempUserDataDir and os.path.isdir(sTempUserDataDir):
+                shutil.rmtree(sTempUserDataDir, ignore_errors=True)
         except Exception:
             pass
 

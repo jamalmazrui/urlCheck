@@ -63,6 +63,7 @@ The parameter dialog has these controls. Each label has an underlined letter tha
 - **Output directory** [O] — where the output is written. Blank means the current working directory.
 - **Choose output...** [C] — pick the output directory from a folder picker
 - **Invisible mode** [I] — run Edge with no visible browser window
+- **Authenticate credentials** [A] — pause after each newly-encountered domain so you can sign in / dismiss cookie banners / accept popups, then press Enter on the console to resume the scan. Forces a visible browser. CLI-only at present.
 - **Force replacements** [F] — reuse an existing per-page output folder by emptying its contents and writing a fresh set of files. Without this, urlCheck skips the url when its per-page output folder already exists, preserving previous scan results.
 - **View output** [V] — open the output directory in File Explorer when the run is done
 - **Log session** [L] — write a fresh `urlCheck.log` in the output directory (or current directory if no output directory is set)
@@ -120,6 +121,7 @@ When invoked without arguments from a GUI shell (Explorer double-click, Start-me
 | `-l` | `--log` | Write `urlCheck.log` (UTF-8 with BOM) in the output directory; replaced each session |
 | `-u` | `--use-configuration` | Read saved defaults from `%LOCALAPPDATA%\urlCheck\urlCheck.ini` |
 | `-i` | `--invisible` | Run Microsoft Edge with no visible browser window |
+| `-a` | `--authenticate` | Pause on first url of each new hostname for the user to authenticate, then press Enter to continue |
 
 Every option in the GUI corresponds one-to-one with a command-line flag, so a workflow prototyped in the dialog can be translated to a batch file without surprises.
 
