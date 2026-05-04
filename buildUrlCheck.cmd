@@ -93,7 +93,7 @@ if not exist urlCheck.ico (
 
 echo [INFO] Installing Python dependencies (Playwright 1.58+ for
 echo        aria_snapshot, pythonnet 3.0.5+ for the WinForms GUI,
-echo        openpyxl for Excel output)...
+echo        openpyxl for Excel output, python-docx for ACR.docx)...
 %sPy% -m pip install --upgrade pip
 if errorlevel 1 exit /b %errorlevel%
 

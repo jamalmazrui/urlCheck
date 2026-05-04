@@ -1,4 +1,4 @@
-import argparse, csv, ctypes, datetime, html, io, json, os, pathlib, platform, re, shutil, signal, struct, subprocess, sys, tempfile, time, traceback, urllib.error, urllib.parse, urllib.request
+﻿import argparse, ctypes, datetime, html, io, json, os, pathlib, platform, re, shutil, signal, struct, subprocess, sys, tempfile, time, traceback, urllib.error, urllib.parse, urllib.request
 
 import openpyxl
 from openpyxl.styles import Alignment, Font, PatternFill
@@ -46,23 +46,27 @@ iAuthPostConfirmSettleDelayMs = 4000
 
 sAccessibilityInsightsUrl = "https://accessibilityinsights.io/docs/web/overview/"
 sAccessibilityYamlName = "page.yaml"
+sAcrDocxName = "ACR.docx"
+sAcrWorkbookName = "ACR.xlsx"
 sBrowserChannel = "msedge"
 sConfigDirName = "urlCheck"
 sConfigFileName = "urlCheck.ini"
-sCsvName = "report.csv"
+sDequeRuleUrlBase = "https://dequeuniversity.com/rules/axe"
+sFallbackAxeVersion = "4.10"
 sFallbackTitle = "untitled-page"
 sJsonName = "results.json"
 sLogFileName = "urlCheck.log"
 sMsAccessibilityUrl = "https://learn.microsoft.com/accessibility/"
 sProgramName = "urlCheck"
-sProgramVersion = "1.10.0"
+sProgramVersion = "1.11.0"
 sReportName = "report.htm"
 sReportWorkbookName = "report.xlsx"
 sScreenshotName = "page.png"
 sSourceName = "page.htm"
 sUsage = "Usage: urlCheck [options] <url, domain, local html file, or url-list text file>"
-sUserAgent = "urlCheck/1.10.0 (+Playwright Python + axe-core)"
+sUserAgent = "urlCheck/1.11.0 (+Playwright Python + axe-core)"
 sWcagBaseUrl = "https://www.w3.org/WAI/WCAG22/Understanding/"
+sWcagQuickRefBase = "https://www.w3.org/WAI/WCAG22/quickref/"
 
 
 # --- Data tables ---
@@ -86,7 +90,7 @@ aAxeCdnUrls = [
     "https://unpkg.com/axe-core@4.11.0/axe.min.js",
 ]
 
-aAxeRunOptions = {"resultTypes": ["violations", "incomplete"]}
+aAxeRunOptions = {"resultTypes": ["violations", "incomplete", "passes", "inapplicable"]}
 
 aGlossaryRows = [
     ["axe-core", "Deque Systems accessibility testing engine that runs rules against the browser DOM."],
@@ -264,6 +268,1059 @@ dBpWcagRefs = {
 }
 
 
+
+# WCAG 2.2 success criteria with manual-test instructions for the
+# Accessibility Conformance Report (ACR.xlsx) feature. 86 criteria
+# total: 31 at Level A, 24 at AA, 31 at AAA. The obsolete 4.1.1
+# Parsing is omitted (removed from WCAG 2.2). Manual-test text is
+# in second-person imperative voice, 4-5 numbered steps per
+# criterion. fragment is the URL fragment on the W3C Quick
+# Reference at https://www.w3.org/WAI/WCAG22/quickref/.
+dWcag22 = {
+    "1.1.1": {
+        "name": "Non-text Content",
+        "level": "A",
+        "fragment": "non-text-content",
+        "checks": [
+            "Identify each non-text element on the page (images, icons, charts, audio clips, video clips, CAPTCHA, form controls).",
+            "For each element, decide whether it conveys information, is purely decorative, or has a specific role (CAPTCHA, test, sensory experience).",
+            "Confirm that informational images have a text alternative that conveys the same purpose. Use a screen reader, inspect the alt attribute, or examine accessible-name properties.",
+            "Confirm that decorative images are hidden from assistive technologies (empty alt, role=presentation, aria-hidden, or CSS background).",
+            "For controls and inputs, confirm that an accessible name describes the purpose. For media, confirm that a text alternative identifies the content.",
+        ],
+    },
+    "1.2.1": {
+        "name": "Audio-only and Video-only (Prerecorded)",
+        "level": "A",
+        "fragment": "audio-only-and-video-only-prerecorded",
+        "checks": [
+            "Identify each prerecorded audio-only and video-only resource on the page.",
+            "For prerecorded audio-only, confirm that a text transcript is provided that conveys the same information.",
+            "For prerecorded video-only (no audio), confirm that either a text alternative or an audio track describing the visual content is provided.",
+            "Verify that the alternative is clearly labeled, easily found near the media, and accessible to screen readers.",
+        ],
+    },
+    "1.2.2": {
+        "name": "Captions (Prerecorded)",
+        "level": "A",
+        "fragment": "captions-prerecorded",
+        "checks": [
+            "Identify each prerecorded video with synchronized audio (movies, recorded webinars, instructional videos).",
+            "Confirm captions are available and synchronized with the audio track.",
+            "Verify captions include all spoken dialogue plus important non-speech audio (music, sound effects, speaker identification).",
+            "Confirm the user can turn captions on or off through standard player controls.",
+        ],
+    },
+    "1.2.3": {
+        "name": "Audio Description or Media Alternative (Prerecorded)",
+        "level": "A",
+        "fragment": "audio-description-or-media-alternative-prerecorded",
+        "checks": [
+            "Identify each prerecorded video that conveys information visually beyond what the audio track describes.",
+            "Confirm that EITHER an audio description is provided (additional narration during natural pauses) OR a text alternative is provided that conveys all visual and auditory content.",
+            "If an audio description is provided, listen with the audio track muted and verify that the description conveys the visual information.",
+            "If a text alternative is provided, verify it is clearly labeled and located near the media.",
+        ],
+    },
+    "1.2.4": {
+        "name": "Captions (Live)",
+        "level": "AA",
+        "fragment": "captions-live",
+        "checks": [
+            "Identify each live or streaming video that includes audio (live broadcasts, webinars, conferences).",
+            "Confirm that real-time captions are available and synchronized with the live audio.",
+            "Verify captions cover all spoken dialogue and important non-speech audio.",
+            "Test that captions are reliably delivered even when network conditions vary.",
+        ],
+    },
+    "1.2.5": {
+        "name": "Audio Description (Prerecorded)",
+        "level": "AA",
+        "fragment": "audio-description-prerecorded",
+        "checks": [
+            "Identify each prerecorded video with significant visual information not conveyed in its audio track.",
+            "Confirm an audio description track is provided that narrates important visual details during natural audio pauses.",
+            "Listen with the screen turned away and verify the audio description, combined with the original audio, conveys the full content.",
+            "Confirm the audio description can be enabled and disabled.",
+        ],
+    },
+    "1.2.6": {
+        "name": "Sign Language (Prerecorded)",
+        "level": "AAA",
+        "fragment": "sign-language-prerecorded",
+        "checks": [
+            "Identify each prerecorded video with synchronized audio.",
+            "Confirm that a sign language interpretation is provided for the audio content, either embedded in the video or available as a separate synchronized track.",
+            "Verify that the sign language interpreter is clearly visible (well-lit, in the foreground, large enough to read facial expressions and hand shapes).",
+            "Confirm the sign language matches the language community of the intended audience (e.g., ASL for U.S. content, BSL for U.K. content).",
+        ],
+    },
+    "1.2.7": {
+        "name": "Extended Audio Description (Prerecorded)",
+        "level": "AAA",
+        "fragment": "extended-audio-description-prerecorded",
+        "checks": [
+            "Identify prerecorded videos where audio pauses are too short to convey adequate audio descriptions.",
+            "Confirm that an extended audio description is available, where the video pauses to allow longer description.",
+            "Verify the extended description conveys all important visual information that the standard audio track does not cover.",
+            "Confirm the extended description can be turned on or off, since pausing the video may disrupt users who do not need it.",
+        ],
+    },
+    "1.2.8": {
+        "name": "Media Alternative (Prerecorded)",
+        "level": "AAA",
+        "fragment": "media-alternative-prerecorded",
+        "checks": [
+            "Identify each prerecorded synchronized media (video with audio) and each prerecorded video-only resource.",
+            "Confirm a complete text alternative (alternative for time-based media) is provided that conveys all visual and auditory information.",
+            "Verify the text alternative is structured (with headings, time markers, or scene descriptions) so a reader can follow the content.",
+            "Confirm the text alternative is clearly labeled and easy to find near the media.",
+        ],
+    },
+    "1.2.9": {
+        "name": "Audio-only (Live)",
+        "level": "AAA",
+        "fragment": "audio-only-live",
+        "checks": [
+            "Identify each live audio-only stream (live radio, live audio podcast, conference call).",
+            "Confirm that a real-time text alternative is available, such as live captioning or a real-time transcript.",
+            "Verify the text alternative captures all spoken content and important non-speech audio.",
+            "Confirm the text alternative is reliably available throughout the broadcast.",
+        ],
+    },
+    "1.3.1": {
+        "name": "Info and Relationships",
+        "level": "A",
+        "fragment": "info-and-relationships",
+        "checks": [
+            "Inspect the page structure: headings, lists, tables, form labels, and groupings.",
+            "Confirm visual structure is conveyed programmatically: headings use h1\u2013h6, lists use ul/ol/dl, tables use proper th/td and scope, form fields have associated label elements.",
+            "Use a screen reader to verify the structure is announced (heading levels, list items, table headers when navigating cells).",
+            "Confirm landmark roles (header, nav, main, footer) or HTML5 sectioning elements are present where appropriate.",
+        ],
+    },
+    "1.3.2": {
+        "name": "Meaningful Sequence",
+        "level": "A",
+        "fragment": "meaningful-sequence",
+        "checks": [
+            "Disable CSS or use a screen reader to read the page in DOM order.",
+            "Confirm the reading order makes sense: headings precede their content, labels precede their inputs, related items are adjacent.",
+            "Verify that visual reordering via CSS (flexbox order, grid placement, absolute positioning) has not made the DOM order incoherent.",
+            "Test with the keyboard: tab order should match the meaningful reading order.",
+        ],
+    },
+    "1.3.3": {
+        "name": "Sensory Characteristics",
+        "level": "A",
+        "fragment": "sensory-characteristics",
+        "checks": [
+            "Search the page for instructions that rely on shape, size, color, position, or sound (\"click the round button\", \"the field on the right\", \"when you hear a beep\").",
+            "Confirm each such instruction is supplemented with a non-sensory cue (a label, a heading, a name).",
+            "Verify a screen reader user can follow the instruction without seeing the page or hearing audio cues.",
+            "Verify a user with low vision or colorblindness can identify the referenced item.",
+        ],
+    },
+    "1.3.4": {
+        "name": "Orientation",
+        "level": "AA",
+        "fragment": "orientation",
+        "checks": [
+            "Open the page in both portrait and landscape orientations on a mobile device or rotated viewport.",
+            "Confirm the content displays correctly in both orientations.",
+            "Verify the page does not lock the user into a single orientation unless that orientation is essential (a check-deposit photo, a piano app).",
+            "Confirm functionality is preserved across orientation changes.",
+        ],
+    },
+    "1.3.5": {
+        "name": "Identify Input Purpose",
+        "level": "AA",
+        "fragment": "identify-input-purpose",
+        "checks": [
+            "Identify each form input that collects information about the user (name, email, address, phone, payment, demographic data).",
+            "Confirm each such input has the appropriate autocomplete attribute set to the standard token (\"name\", \"email\", \"street-address\", \"tel\", \"cc-number\", and so on).",
+            "Test browser autofill: the field should be filled correctly when the user invokes autofill.",
+            "Verify input types are appropriate (email, tel, url, number) so assistive technologies can adapt.",
+        ],
+    },
+    "1.3.6": {
+        "name": "Identify Purpose",
+        "level": "AAA",
+        "fragment": "identify-purpose",
+        "checks": [
+            "Identify user-interface components, icons, and regions on the page (navigation, search, contact, log-in).",
+            "Confirm the purpose of each component is programmatically determinable through ARIA roles, microdata, schema.org annotations, or descriptive accessible names.",
+            "Verify that personalization tools can recognize and adapt the components for users who need symbol substitution, simplified layouts, or content filtering.",
+            "Test with at least one personalization or symbol-augmentation tool that depends on these annotations.",
+        ],
+    },
+    "1.4.1": {
+        "name": "Use of Color",
+        "level": "A",
+        "fragment": "use-of-color",
+        "checks": [
+            "Identify any place where color alone conveys information, indicates an action, prompts a response, or distinguishes a visual element (required-field highlighting, status indicators, error states, link styling).",
+            "Confirm a non-color cue is also present: text, icon, underline, pattern, or shape.",
+            "View the page with a colorblindness simulator or in grayscale and verify all information is still conveyed.",
+            "Verify links within text are distinguishable from surrounding text by something other than color (underline, weight, icon).",
+        ],
+    },
+    "1.4.2": {
+        "name": "Audio Control",
+        "level": "A",
+        "fragment": "audio-control",
+        "checks": [
+            "Identify any audio that plays automatically on page load and lasts more than three seconds.",
+            "Confirm a mechanism is provided to pause, stop, or independently control the volume of that audio.",
+            "Verify the control is operable by keyboard and announced by screen readers.",
+            "Test that the control is reachable before the auto-playing audio interferes with screen reader output.",
+        ],
+    },
+    "1.4.3": {
+        "name": "Contrast (Minimum)",
+        "level": "AA",
+        "fragment": "contrast-minimum",
+        "checks": [
+            "Identify each text element on the page (body text, headings, links, buttons, labels).",
+            "For text below 18pt regular or 14pt bold, measure contrast and confirm it is at least 4.5:1 against its background.",
+            "For larger text (18pt+ regular or 14pt+ bold), confirm contrast is at least 3:1.",
+            "Use a contrast-checking tool or browser extension; check both the resting state and any hover, focus, or active states.",
+        ],
+    },
+    "1.4.4": {
+        "name": "Resize Text",
+        "level": "AA",
+        "fragment": "resize-text",
+        "checks": [
+            "Use the browser's text-zoom feature (or set zoom to 200%) and reload the page.",
+            "Confirm all text remains readable, all functionality remains operable, and no content is lost or clipped.",
+            "Verify text does not require horizontal scrolling within content blocks.",
+            "Confirm assistive technology (zoom software, screen magnifiers) is not required to read the resized content.",
+        ],
+    },
+    "1.4.5": {
+        "name": "Images of Text",
+        "level": "AA",
+        "fragment": "images-of-text",
+        "checks": [
+            "Identify each image that contains text (banner graphics, infographics, scanned documents, decorative quotes).",
+            "Confirm real text is used instead of images of text wherever the text could be presented with CSS styling.",
+            "Verify exceptions are limited to logos, brand marks, and cases where a particular visual presentation is essential.",
+            "For permitted images of text, confirm an accurate text alternative is provided.",
+        ],
+    },
+    "1.4.6": {
+        "name": "Contrast (Enhanced)",
+        "level": "AAA",
+        "fragment": "contrast-enhanced",
+        "checks": [
+            "Identify each text element on the page.",
+            "For text below 18pt regular or 14pt bold, confirm contrast is at least 7:1 against its background.",
+            "For larger text (18pt+ regular or 14pt+ bold), confirm contrast is at least 4.5:1.",
+            "Use a contrast-checking tool; verify both resting state and any focus, hover, or active states meet the enhanced ratio.",
+        ],
+    },
+    "1.4.7": {
+        "name": "Low or No Background Audio",
+        "level": "AAA",
+        "fragment": "low-or-no-background-audio",
+        "checks": [
+            "Identify each prerecorded audio-only resource that is primarily speech and is not a CAPTCHA, song, or vocalization.",
+            "Listen and confirm one of these is true: there is no background sound, the background sound can be turned off by the user, or the background sound is at least 20 decibels (4 times) quieter than the foreground speech.",
+            "Verify any user-controllable background audio has accessible controls.",
+            "Test playback in a noisy environment to confirm speech remains intelligible.",
+        ],
+    },
+    "1.4.8": {
+        "name": "Visual Presentation",
+        "level": "AAA",
+        "fragment": "visual-presentation",
+        "checks": [
+            "Verify a mechanism is available for the user to select foreground and background colors.",
+            "Confirm that text blocks are no wider than 80 characters (or 40 for CJK languages).",
+            "Verify text is not justified (aligned to both left and right edges).",
+            "Confirm line spacing is at least 1.5 within paragraphs and paragraph spacing is at least 1.5 times the line spacing.",
+            "Verify text resizes to 200% without requiring horizontal scrolling for paragraphs.",
+        ],
+    },
+    "1.4.9": {
+        "name": "Images of Text (No Exception)",
+        "level": "AAA",
+        "fragment": "images-of-text-no-exception",
+        "checks": [
+            "Identify each image that contains text on the page.",
+            "Confirm real text is used in every case except for logos and brand marks.",
+            "Verify there are no decorative images of text where styled text could have been used.",
+            "Test with text resizing and high-contrast mode to confirm text remains usable.",
+        ],
+    },
+    "1.4.10": {
+        "name": "Reflow",
+        "level": "AA",
+        "fragment": "reflow",
+        "checks": [
+            "Resize the browser viewport to 320 CSS pixels wide (mobile width) or zoom to 400% in a 1280-pixel window.",
+            "Confirm content reflows to fit without requiring horizontal scrolling, except for content that needs two-dimensional layout (data tables, maps, complex images, code).",
+            "Verify all functionality remains operable at the reduced viewport.",
+            "Confirm no content is hidden or clipped beyond a single scroll direction.",
+        ],
+    },
+    "1.4.11": {
+        "name": "Non-text Contrast",
+        "level": "AA",
+        "fragment": "non-text-contrast",
+        "checks": [
+            "Identify each user-interface component (buttons, form fields, links, icons indicating state).",
+            "Confirm the visual indicators (boundaries, fill, focus rings) have at least 3:1 contrast against adjacent colors.",
+            "Identify graphical objects necessary for understanding (chart segments, icons that convey meaning, infographic elements).",
+            "Confirm those have at least 3:1 contrast against adjacent colors.",
+        ],
+    },
+    "1.4.12": {
+        "name": "Text Spacing",
+        "level": "AA",
+        "fragment": "text-spacing",
+        "checks": [
+            "Apply a user stylesheet or browser extension that sets line height to 1.5x font size, paragraph spacing to 2x font size, letter spacing to 0.12x font size, and word spacing to 0.16x font size.",
+            "Confirm no content is lost or clipped, no text overlaps, and all functionality remains operable.",
+            "Verify text containers grow to accommodate the spacing rather than truncating content.",
+            "Test on key page templates (forms, navigation, content pages, interactive widgets).",
+        ],
+    },
+    "1.4.13": {
+        "name": "Content on Hover or Focus",
+        "level": "AA",
+        "fragment": "content-on-hover-or-focus",
+        "checks": [
+            "Identify content that appears on hover (tooltips, expanded menus) or on focus (popovers, hint text).",
+            "Confirm the additional content is dismissible without moving the pointer or focus, typically by pressing Escape.",
+            "Verify the user can move the pointer onto the additional content without it disappearing.",
+            "Confirm the additional content remains visible until the user dismisses it, moves focus or pointer away, or its information is no longer valid.",
+        ],
+    },
+    "2.1.1": {
+        "name": "Keyboard",
+        "level": "A",
+        "fragment": "keyboard",
+        "checks": [
+            "Set the page focus to the top of the document.",
+            "Press Tab repeatedly to move through every interactive element and confirm each is reachable.",
+            "Activate each element using Enter, Space, or arrow keys as appropriate, and confirm the action completes.",
+            "Verify drag-and-drop, gesture-based, and time-dependent interactions have keyboard equivalents.",
+        ],
+    },
+    "2.1.2": {
+        "name": "No Keyboard Trap",
+        "level": "A",
+        "fragment": "no-keyboard-trap",
+        "checks": [
+            "Tab through the entire page; confirm focus can move forward and backward through every interactive element.",
+            "Within widgets that capture keyboard input (modal dialogs, custom controls, embedded media), confirm the user can leave the widget using Tab, Shift+Tab, Escape, or another documented key.",
+            "Test embedded objects (media players, plugins, iframes) for trapping behavior.",
+            "Verify any non-standard exit method is documented or announced to the user.",
+        ],
+    },
+    "2.1.3": {
+        "name": "Keyboard (No Exception)",
+        "level": "AAA",
+        "fragment": "keyboard-no-exception",
+        "checks": [
+            "Identify all functionality on the page, including features that depend on path-specific user input (free drawing, signature capture, gesture-based interactions).",
+            "Confirm every function can be operated by keyboard alone, including those that 2.1.1 permits to be input-method-specific.",
+            "Verify keyboard alternatives exist for every gesture, drag operation, and continuous input.",
+            "Test with keyboard only and confirm no functionality is unreachable.",
+        ],
+    },
+    "2.1.4": {
+        "name": "Character Key Shortcuts",
+        "level": "A",
+        "fragment": "character-key-shortcuts",
+        "checks": [
+            "Identify any single-character keyboard shortcuts implemented by the page (typing \"j\" to jump, \"r\" to reply).",
+            "Confirm one of these is true for each shortcut: it can be turned off, it can be remapped to use modifier keys (Ctrl, Alt), or it is active only when the relevant control has focus.",
+            "Test shortcuts in form contexts to verify they do not interfere with text entry.",
+            "Verify shortcuts are documented somewhere accessible (help page, keyboard-shortcut overlay).",
+        ],
+    },
+    "2.2.1": {
+        "name": "Timing Adjustable",
+        "level": "A",
+        "fragment": "timing-adjustable",
+        "checks": [
+            "Identify any time limit set by the content (session timeouts, response deadlines, auto-advance carousels).",
+            "Confirm one of these is true for each: the user can turn it off, the user can adjust it to at least 10 times the default, or the user receives a warning at least 20 seconds before the limit and can extend it.",
+            "Verify the option to extend is reachable by keyboard and announced to assistive technology.",
+            "Confirm exceptions (real-time events, essential limits, 20-hour-plus limits) are genuinely unavoidable.",
+        ],
+    },
+    "2.2.2": {
+        "name": "Pause, Stop, Hide",
+        "level": "A",
+        "fragment": "pause-stop-hide",
+        "checks": [
+            "Identify any moving, blinking, or scrolling content lasting more than 5 seconds and presented in parallel with other content (carousels, marquees, animations, news tickers).",
+            "Confirm a mechanism is provided to pause, stop, or hide the moving content.",
+            "Identify any auto-updating content (live scoreboards, news feeds, stock tickers) and confirm a mechanism is provided to pause, stop, hide, or control the update frequency.",
+            "Verify the controls are operable by keyboard and accessible to assistive technology.",
+        ],
+    },
+    "2.2.3": {
+        "name": "No Timing",
+        "level": "AAA",
+        "fragment": "no-timing",
+        "checks": [
+            "Identify any time limits in the page or content.",
+            "Confirm there are no time limits except for real-time events (live auctions, real-time games) where timing is essential.",
+            "Verify session timeouts and content advancement are not time-based.",
+            "Confirm the user can take any amount of time to complete tasks.",
+        ],
+    },
+    "2.2.4": {
+        "name": "Interruptions",
+        "level": "AAA",
+        "fragment": "interruptions",
+        "checks": [
+            "Identify any content that interrupts the user (notifications, modal alerts, automatic refreshes, popovers).",
+            "Confirm the user can postpone or suppress these interruptions, except for those involving emergencies.",
+            "Verify a setting or mechanism is available before the interruption occurs.",
+            "Test that suppressing interruptions does not prevent the user from accessing essential information later.",
+        ],
+    },
+    "2.2.5": {
+        "name": "Re-authenticating",
+        "level": "AAA",
+        "fragment": "re-authenticating",
+        "checks": [
+            "Identify any session that may expire while the user is performing a task.",
+            "Simulate a session expiry (or wait for one) while the user has unsaved data.",
+            "Confirm that after re-authentication, the user can continue without losing the data they had entered.",
+            "Verify the data is preserved through the re-authentication flow without requiring the user to start over.",
+        ],
+    },
+    "2.2.6": {
+        "name": "Timeouts",
+        "level": "AAA",
+        "fragment": "timeouts",
+        "checks": [
+            "Identify any user inactivity that could cause data loss (form expiration, shopping cart clearance, session-based document storage).",
+            "Confirm the user is warned of the duration of inactivity that would cause loss, before they begin the task.",
+            "Verify the warning is presented in text and is reachable for screen readers.",
+            "Confirm exceptions (data preserved for 20+ hours of inactivity) are reasonable.",
+        ],
+    },
+    "2.3.1": {
+        "name": "Three Flashes or Below Threshold",
+        "level": "A",
+        "fragment": "three-flashes-or-below-threshold",
+        "checks": [
+            "Identify any content that flashes (rapid changes in luminance or color).",
+            "Confirm the flashing occurs no more than three times in any one-second period.",
+            "If flashing occurs more than three times per second, confirm the flash area is small (less than ~25% of a 10-degree visual field) and below the general flash and red flash thresholds.",
+            "Use the Photosensitive Epilepsy Analysis Tool (PEAT) or equivalent to measure flash content.",
+        ],
+    },
+    "2.3.2": {
+        "name": "Three Flashes",
+        "level": "AAA",
+        "fragment": "three-flashes",
+        "checks": [
+            "Identify any content that flashes on the page.",
+            "Confirm there is no flashing more than three times per second, regardless of size or threshold.",
+            "Test all media, animations, and transitions for compliance.",
+            "If flashing exists, confirm it can be removed or disabled by the user.",
+        ],
+    },
+    "2.3.3": {
+        "name": "Animation from Interactions",
+        "level": "AAA",
+        "fragment": "animation-from-interactions",
+        "checks": [
+            "Identify motion animation triggered by user interactions (parallax scrolling, slide transitions, large pan-and-zoom effects).",
+            "Confirm the animation can be disabled, except where it is essential to the functionality or information being conveyed.",
+            "Test that the prefers-reduced-motion media query is respected if used.",
+            "Verify a setting or toggle is exposed to disable non-essential motion.",
+        ],
+    },
+    "2.4.1": {
+        "name": "Bypass Blocks",
+        "level": "A",
+        "fragment": "bypass-blocks",
+        "checks": [
+            "Identify content that repeats across pages (header, navigation, footer).",
+            "Confirm a mechanism is provided to skip past repeated content: a skip link, ARIA landmarks (navigation, main, etc.), proper heading structure, or an explicit \"skip to main content\" feature.",
+            "Test the skip mechanism with the keyboard: pressing Tab early on the page should reach a skip link or landmark navigation.",
+            "Verify the skip target is appropriate and focus moves there correctly.",
+        ],
+    },
+    "2.4.2": {
+        "name": "Page Titled",
+        "level": "A",
+        "fragment": "page-titled",
+        "checks": [
+            "View the page title (browser tab, window title bar, or inspect the title element).",
+            "Confirm the title describes the page's topic or purpose.",
+            "Verify the title differs across pages so each is uniquely identifiable.",
+            "For applications, confirm the title updates as the user navigates through views.",
+        ],
+    },
+    "2.4.3": {
+        "name": "Focus Order",
+        "level": "A",
+        "fragment": "focus-order",
+        "checks": [
+            "Tab through every focusable element on the page from start to finish.",
+            "Confirm the focus order matches the meaning and operation of the page (top to bottom, left to right in left-to-right languages, related items together).",
+            "Verify modals trap and release focus appropriately when opened and closed.",
+            "Confirm dynamic content (newly inserted elements) appears in a logical place in the focus order.",
+        ],
+    },
+    "2.4.4": {
+        "name": "Link Purpose (In Context)",
+        "level": "A",
+        "fragment": "link-purpose-in-context",
+        "checks": [
+            "Identify each link on the page.",
+            "For each link, read the link text plus its surrounding context (sentence, list item, table cell, paragraph).",
+            "Confirm the purpose of the link is determinable from the link text or its programmatically determined context.",
+            "Avoid generic link text (\"click here\", \"read more\") unless the surrounding context fully clarifies the destination.",
+        ],
+    },
+    "2.4.5": {
+        "name": "Multiple Ways",
+        "level": "AA",
+        "fragment": "multiple-ways",
+        "checks": [
+            "Identify the navigation mechanisms available on the site.",
+            "Confirm at least two of the following are present: site map, search, table of contents, links to all pages, related-page links, and primary navigation.",
+            "Verify each mechanism is reachable from every page (or marked as part of a single process where exceptions apply).",
+            "Test each mechanism with a keyboard and a screen reader.",
+        ],
+    },
+    "2.4.6": {
+        "name": "Headings and Labels",
+        "level": "AA",
+        "fragment": "headings-and-labels",
+        "checks": [
+            "Identify each heading on the page.",
+            "Confirm each heading describes the content that follows it.",
+            "Identify each form label.",
+            "Confirm each label describes the purpose of the input it accompanies.",
+        ],
+    },
+    "2.4.7": {
+        "name": "Focus Visible",
+        "level": "AA",
+        "fragment": "focus-visible",
+        "checks": [
+            "Tab through every focusable element on the page.",
+            "Confirm each element shows a clearly visible focus indicator (outline, border change, background change, underline).",
+            "Verify the focus indicator is not removed by CSS (no outline:none without a replacement).",
+            "Test in both light and dark color schemes if both are supported.",
+        ],
+    },
+    "2.4.8": {
+        "name": "Location",
+        "level": "AAA",
+        "fragment": "location",
+        "checks": [
+            "Identify the user's current location indicators on the page (breadcrumb trail, current navigation item highlighted, page title in heading).",
+            "Confirm the user's location within the site structure is identifiable.",
+            "Verify the location information is exposed to assistive technology (current page marked with aria-current, breadcrumbs in a nav with appropriate label).",
+            "Test by navigating from the home page and confirming each visited page indicates where the user is.",
+        ],
+    },
+    "2.4.9": {
+        "name": "Link Purpose (Link Only)",
+        "level": "AAA",
+        "fragment": "link-purpose-link-only",
+        "checks": [
+            "Identify each link on the page.",
+            "For each link, confirm the link text alone (without surrounding context) describes the destination.",
+            "Avoid generic link text such as \"click here\", \"read more\", or \"learn more\" without further qualification.",
+            "If contextual exceptions exist, confirm they meet the criterion's exemption (the purpose is genuinely ambiguous to all users).",
+        ],
+    },
+    "2.4.10": {
+        "name": "Section Headings",
+        "level": "AAA",
+        "fragment": "section-headings",
+        "checks": [
+            "Identify the major sections of long content (chapters, parts, distinct topics).",
+            "Confirm each section begins with a heading element of appropriate level.",
+            "Verify the heading structure forms a logical outline (no skipped levels, hierarchical nesting).",
+            "Test with a screen reader to navigate by heading and confirm the structure is meaningful.",
+        ],
+    },
+    "2.4.11": {
+        "name": "Focus Not Obscured (Minimum)",
+        "level": "AA",
+        "fragment": "focus-not-obscured-minimum",
+        "checks": [
+            "Tab through every focusable element on the page.",
+            "Confirm the focused element is not entirely hidden by other content (sticky headers, cookie banners, chat widgets, modal overlays).",
+            "Verify the user can see at least part of the focused element.",
+            "Test at multiple viewport sizes including narrow mobile widths.",
+        ],
+    },
+    "2.4.12": {
+        "name": "Focus Not Obscured (Enhanced)",
+        "level": "AAA",
+        "fragment": "focus-not-obscured-enhanced",
+        "checks": [
+            "Tab through every focusable element on the page.",
+            "Confirm the focused element is fully visible \u2014 no part of it is obscured by other content.",
+            "Verify sticky elements, overlays, and floating elements never cover any portion of the focused element.",
+            "Test at multiple viewport sizes.",
+        ],
+    },
+    "2.4.13": {
+        "name": "Focus Appearance",
+        "level": "AAA",
+        "fragment": "focus-appearance",
+        "checks": [
+            "Tab to each focusable element and inspect the focus indicator.",
+            "Confirm the focus indicator has an area at least as large as a 2-CSS-pixel-thick perimeter around the focused element, OR a 2-CSS-pixel-thick line along the shortest side and not less than the line thickness in the other direction.",
+            "Confirm the contrast between the focused-state pixels and the unfocused-state pixels is at least 3:1.",
+            "Verify the indicator is not fully obscured by other content.",
+        ],
+    },
+    "2.5.1": {
+        "name": "Pointer Gestures",
+        "level": "A",
+        "fragment": "pointer-gestures",
+        "checks": [
+            "Identify any functionality activated by multipoint gestures (two-finger pinch, two-finger swipe) or path-based gestures (swipe, drag along a path).",
+            "Confirm the same functionality is available through a single-point pointer action (tap, click) without a path.",
+            "Verify the simpler alternative is documented or visually evident.",
+            "Test with assistive input devices (switch control, head tracker) to confirm the simpler alternative is operable.",
+        ],
+    },
+    "2.5.2": {
+        "name": "Pointer Cancellation",
+        "level": "A",
+        "fragment": "pointer-cancellation",
+        "checks": [
+            "Identify each interactive element with single-pointer activation.",
+            "Confirm one of these is true for each: activation occurs on the up-event (mouseup, pointerup, click), the user can abort by moving away before releasing, completion of the action can be undone, or the down-event activation is essential.",
+            "Test by pressing down on a control then dragging away to confirm the action does not fire.",
+            "Verify accidental activations can be reversed.",
+        ],
+    },
+    "2.5.3": {
+        "name": "Label in Name",
+        "level": "A",
+        "fragment": "label-in-name",
+        "checks": [
+            "Identify each user-interface component with a visible text label.",
+            "Confirm the accessible name (what assistive technology announces) contains the visible label text.",
+            "Verify the visible label is presented first or in the same order within the accessible name.",
+            "Test with a screen reader: speaking the visible label should activate the control via voice control software.",
+        ],
+    },
+    "2.5.4": {
+        "name": "Motion Actuation",
+        "level": "A",
+        "fragment": "motion-actuation",
+        "checks": [
+            "Identify any functionality triggered by device motion (shaking, tilting) or user motion (swiping, gesturing in space).",
+            "Confirm the same functionality is available through a standard user-interface control.",
+            "Verify the user can disable motion actuation to prevent accidental activation.",
+            "Confirm exceptions (an accelerometer-driven step counter) are essential to the function.",
+        ],
+    },
+    "2.5.5": {
+        "name": "Target Size (Enhanced)",
+        "level": "AAA",
+        "fragment": "target-size-enhanced",
+        "checks": [
+            "Identify each pointer-actuated target on the page (links, buttons, form controls, icons).",
+            "Measure the size of each target's hit area.",
+            "Confirm each target is at least 44 by 44 CSS pixels.",
+            "Verify exceptions (inline links in text, browser-controlled targets) are limited.",
+        ],
+    },
+    "2.5.6": {
+        "name": "Concurrent Input Mechanisms",
+        "level": "AAA",
+        "fragment": "concurrent-input-mechanisms",
+        "checks": [
+            "Identify the input mechanisms supported by the page (mouse, keyboard, touch, voice, switch).",
+            "Confirm none are restricted unless essential for security or essential for the activity.",
+            "Test using multiple input methods in the same session (a touchscreen with an external keyboard).",
+            "Verify the user can switch between input methods at any time without losing context.",
+        ],
+    },
+    "2.5.7": {
+        "name": "Dragging Movements",
+        "level": "AA",
+        "fragment": "dragging-movements",
+        "checks": [
+            "Identify each functionality activated by dragging (slider thumbs, drag-and-drop, sortable lists, draggable map controls).",
+            "Confirm a single-pointer alternative is available: tap-to-position, increment/decrement buttons, keyboard-driven movement.",
+            "Verify the alternative completes the same action as dragging.",
+            "Confirm exceptions (signature capture, drawing apps) are genuinely path-essential.",
+        ],
+    },
+    "2.5.8": {
+        "name": "Target Size (Minimum)",
+        "level": "AA",
+        "fragment": "target-size-minimum",
+        "checks": [
+            "Identify each pointer-actuated target on the page.",
+            "Measure the size of each target's hit area.",
+            "Confirm each target is at least 24 by 24 CSS pixels, OR has at least 24-pixel spacing to neighboring targets.",
+            "Verify exceptions (inline links in sentences, default browser-styled targets, equivalents available elsewhere) apply correctly.",
+        ],
+    },
+    "3.1.1": {
+        "name": "Language of Page",
+        "level": "A",
+        "fragment": "language-of-page",
+        "checks": [
+            "Inspect the html element's lang attribute.",
+            "Confirm the lang attribute is present and contains a valid language code (en, en-US, fr, ja).",
+            "Verify the language code matches the primary human language of the page content.",
+            "Test with a screen reader to confirm pronunciation matches the declared language.",
+        ],
+    },
+    "3.1.2": {
+        "name": "Language of Parts",
+        "level": "AA",
+        "fragment": "language-of-parts",
+        "checks": [
+            "Identify each passage or phrase on the page that is in a different language from the surrounding content.",
+            "Confirm each such passage has a lang attribute on a containing element.",
+            "Verify the lang value is the correct language code for the passage.",
+            "Test with a screen reader to confirm pronunciation switches appropriately.",
+        ],
+    },
+    "3.1.3": {
+        "name": "Unusual Words",
+        "level": "AAA",
+        "fragment": "unusual-words",
+        "checks": [
+            "Identify words used in unusual or restricted ways: jargon, idioms, slang, technical terms.",
+            "Confirm a mechanism is available to find definitions: a glossary, an inline definition, a tooltip, or a link to a dictionary.",
+            "Verify the definitions are accessible to screen readers and keyboard users.",
+            "Test by hovering or focusing on each unusual word and confirming the definition is reachable.",
+        ],
+    },
+    "3.1.4": {
+        "name": "Abbreviations",
+        "level": "AAA",
+        "fragment": "abbreviations",
+        "checks": [
+            "Identify each abbreviation, acronym, or initialism on the page.",
+            "Confirm a mechanism is available for identifying the expanded form: an abbr element with a title, an inline expansion at first occurrence, or a glossary.",
+            "Verify the expansion is accessible to assistive technology.",
+            "Test with a screen reader to confirm expansions are reachable.",
+        ],
+    },
+    "3.1.5": {
+        "name": "Reading Level",
+        "level": "AAA",
+        "fragment": "reading-level",
+        "checks": [
+            "Identify text that requires reading ability beyond a lower-secondary education level.",
+            "Confirm a supplemental version is available: a simpler-language summary, illustrations, audio narration, or a video alternative.",
+            "Run the text through a readability tool (Flesch-Kincaid, SMOG) to confirm the original reading level.",
+            "Verify the simpler version conveys the same essential information.",
+        ],
+    },
+    "3.1.6": {
+        "name": "Pronunciation",
+        "level": "AAA",
+        "fragment": "pronunciation",
+        "checks": [
+            "Identify words whose meaning depends on pronunciation in context (homographs, words with non-obvious pronunciation, names).",
+            "Confirm a mechanism is available for the pronunciation: a phonetic spelling, a pronunciation audio file, a ruby annotation, or an inline indication.",
+            "Verify the mechanism is exposed to assistive technology.",
+            "Test by reaching the pronunciation cue with a screen reader.",
+        ],
+    },
+    "3.2.1": {
+        "name": "On Focus",
+        "level": "A",
+        "fragment": "on-focus",
+        "checks": [
+            "Tab to each focusable element on the page.",
+            "Confirm focusing on the element does not initiate a change of context (page navigation, form submission, opened window, major UI shift).",
+            "Verify focus changes do not produce unexpected behavior that could disorient screen reader users.",
+            "Test that any focus-driven changes are limited to expected behaviors (showing tooltips, highlighting current item).",
+        ],
+    },
+    "3.2.2": {
+        "name": "On Input",
+        "level": "A",
+        "fragment": "on-input",
+        "checks": [
+            "Identify each form input, dropdown, or selection control.",
+            "Change the value of each control.",
+            "Confirm the change does not automatically initiate a change of context unless the user has been advised of the behavior beforehand.",
+            "Verify auto-submit behavior, if used, is announced or documented.",
+        ],
+    },
+    "3.2.3": {
+        "name": "Consistent Navigation",
+        "level": "AA",
+        "fragment": "consistent-navigation",
+        "checks": [
+            "Identify the navigation mechanisms used across the site (main nav, footer nav, breadcrumbs).",
+            "Confirm each navigation mechanism appears in the same relative order on each page where it is present.",
+            "Verify the same items appear in the same sequence within each instance.",
+            "Test by visiting several pages and comparing the navigation.",
+        ],
+    },
+    "3.2.4": {
+        "name": "Consistent Identification",
+        "level": "AA",
+        "fragment": "consistent-identification",
+        "checks": [
+            "Identify components that have the same functionality across the site (search button, login link, shopping cart icon).",
+            "Confirm these components are identified consistently (same icon, same label, same accessible name).",
+            "Verify the same naming applies in tooltips, alt text, and aria-label attributes.",
+            "Test by comparing the same component across multiple pages.",
+        ],
+    },
+    "3.2.5": {
+        "name": "Change on Request",
+        "level": "AAA",
+        "fragment": "change-on-request",
+        "checks": [
+            "Identify any automatic context changes (page navigation, popups, automatic refresh, automatic content update).",
+            "Confirm such changes occur only when initiated by the user, OR a mechanism is available to turn them off.",
+            "Verify auto-refresh, auto-redirect, and auto-launching behavior can be disabled.",
+            "Test that all context changes are predictable and user-initiated.",
+        ],
+    },
+    "3.2.6": {
+        "name": "Consistent Help",
+        "level": "A",
+        "fragment": "consistent-help",
+        "checks": [
+            "Identify any help mechanisms present on the site (contact details, help link, self-help features, contact form, chat).",
+            "Confirm these help mechanisms appear in the same relative order on each page where they exist.",
+            "Verify the user can locate help reliably from any page.",
+            "Test by visiting several pages and confirming help options are consistently placed.",
+        ],
+    },
+    "3.3.1": {
+        "name": "Error Identification",
+        "level": "A",
+        "fragment": "error-identification",
+        "checks": [
+            "Submit a form with intentional errors (invalid email, missing required field, value out of range).",
+            "Confirm errors are identified to the user in text.",
+            "Verify the field in error is described, not just flagged generically.",
+            "Test with a screen reader: errors should be announced when surfaced.",
+        ],
+    },
+    "3.3.2": {
+        "name": "Labels or Instructions",
+        "level": "A",
+        "fragment": "labels-or-instructions",
+        "checks": [
+            "Identify each input control on the page.",
+            "Confirm each control has a label or instruction explaining what to enter.",
+            "Verify required fields, format expectations (date format, password rules), and field examples are clearly indicated.",
+            "Test the form with a screen reader to confirm labels are announced when fields are reached.",
+        ],
+    },
+    "3.3.3": {
+        "name": "Error Suggestion",
+        "level": "AA",
+        "fragment": "error-suggestion",
+        "checks": [
+            "Trigger form validation errors.",
+            "Confirm error messages provide suggestions for correction (\"email must contain @\", \"password must be at least 8 characters\").",
+            "Verify suggestions are specific and actionable.",
+            "Confirm exceptions (security risk, inability to suggest) are limited and the original requirement is restated.",
+        ],
+    },
+    "3.3.4": {
+        "name": "Error Prevention (Legal, Financial, Data)",
+        "level": "AA",
+        "fragment": "error-prevention-legal-financial-data",
+        "checks": [
+            "Identify forms that cause legal commitments, financial transactions, or data modifications.",
+            "Confirm at least one of these is provided: submissions are reversible, the user must confirm the data before final submission, or the data is checked for validity with errors corrected before final submission.",
+            "Test by submitting a transaction-class form and confirming the safeguard appears.",
+            "Verify the safeguard is reachable by keyboard and screen reader.",
+        ],
+    },
+    "3.3.5": {
+        "name": "Help",
+        "level": "AAA",
+        "fragment": "help",
+        "checks": [
+            "Identify forms that require user input.",
+            "Confirm context-sensitive help is available throughout the form.",
+            "Verify help is reachable from each input (linked help text, popover, glossary).",
+            "Test that help is accessible to screen readers and keyboard users.",
+        ],
+    },
+    "3.3.6": {
+        "name": "Error Prevention (All)",
+        "level": "AAA",
+        "fragment": "error-prevention-all",
+        "checks": [
+            "Identify all forms that submit user data of any kind.",
+            "Confirm at least one of these is provided: submissions are reversible, data is checked with errors corrected before submission, or a confirmation step is provided before final submission.",
+            "Test that the safeguard applies to every submission, not just transactional ones.",
+            "Verify the safeguard is accessible to all users.",
+        ],
+    },
+    "3.3.7": {
+        "name": "Redundant Entry",
+        "level": "A",
+        "fragment": "redundant-entry",
+        "checks": [
+            "Identify multi-step processes (sign-up flows, checkouts) where the user enters data across multiple steps.",
+            "Confirm previously entered information is auto-populated or made selectable in subsequent steps.",
+            "Verify exceptions (re-entry essential for security, information that has changed, password fields) are limited.",
+            "Test by completing a multi-step flow and confirming earlier-entered values are not asked for again.",
+        ],
+    },
+    "3.3.8": {
+        "name": "Accessible Authentication (Minimum)",
+        "level": "AA",
+        "fragment": "accessible-authentication-minimum",
+        "checks": [
+            "Identify authentication processes (login, password reset, multi-factor authentication).",
+            "Confirm at least one method does not require a cognitive function test (remembering passwords, transcribing characters from CAPTCHA, solving puzzles).",
+            "Verify alternatives like password managers, biometric login, magic-link email, or OAuth providers are accepted.",
+            "Test that exceptions (object-recognition, personal-content recognition) apply only where genuinely needed.",
+        ],
+    },
+    "3.3.9": {
+        "name": "Accessible Authentication (Enhanced)",
+        "level": "AAA",
+        "fragment": "accessible-authentication-enhanced",
+        "checks": [
+            "Identify authentication processes.",
+            "Confirm no step relies on a cognitive function test, including object-recognition or personal-content recognition.",
+            "Verify only methods like passkeys, biometrics, or pre-existing trusted devices are required.",
+            "Test that all users, regardless of cognitive ability, can authenticate without memorization or transcription.",
+        ],
+    },
+    "4.1.2": {
+        "name": "Name, Role, Value",
+        "level": "A",
+        "fragment": "name-role-value",
+        "checks": [
+            "Identify each user-interface component (form controls, links, custom widgets).",
+            "Confirm each has a programmatically determinable name (accessible name) that conveys its purpose.",
+            "Confirm each has a programmatically determinable role (button, link, checkbox, etc.).",
+            "Confirm each has a programmatically determinable state and value where relevant (checked, expanded, selected, current value).",
+            "Test with a screen reader and an accessibility inspector to verify the trio is correct for each component.",
+        ],
+    },
+    "4.1.3": {
+        "name": "Status Messages",
+        "level": "AA",
+        "fragment": "status-messages",
+        "checks": [
+            "Identify each status message presented to the user (form-submission feedback, search results count, dynamic loading indicators, error notifications).",
+            "Confirm each is programmatically determinable through ARIA role (status, alert, log) or live regions.",
+            "Verify status messages are announced by screen readers without moving focus.",
+            "Test by triggering each status message with a screen reader running.",
+        ],
+    },
+}
+
+
+# Single-sentence summaries of each WCAG 2.2 success criterion,
+# used in the Summary column of the ACR rollup. Length target is
+# under 50 characters; longer entries wrap inside the cell.
+dWcag22Summary = {
+    "1.1.1": "Provide text alternatives for non-text content.",
+    "1.2.1": "Alternatives for prerecorded audio-only and video-only.",
+    "1.2.2": "Captions for prerecorded synchronized media.",
+    "1.2.3": "Audio description or text alternative for prerecorded video.",
+    "1.2.4": "Captions for live synchronized media.",
+    "1.2.5": "Audio description for prerecorded video.",
+    "1.2.6": "Sign language for prerecorded synchronized media.",
+    "1.2.7": "Extended audio description for prerecorded video.",
+    "1.2.8": "Text alternative for prerecorded synchronized media.",
+    "1.2.9": "Text alternative for live audio.",
+    "1.3.1": "Encode info, structure, and relationships in markup.",
+    "1.3.2": "Reading order is meaningful in the DOM.",
+    "1.3.3": "Instructions go beyond shape, color, or sound cues.",
+    "1.3.4": "Content works in any screen orientation.",
+    "1.3.5": "Mark inputs with their purpose for autofill.",
+    "1.3.6": "Mark UI components by purpose for personalization.",
+    "1.4.1": "Don't rely on color alone to convey information.",
+    "1.4.2": "Provide audio control for auto-playing audio.",
+    "1.4.3": "Text contrast is at least 4.5:1 (3:1 for large text).",
+    "1.4.4": "Text scales to 200 percent without loss of content.",
+    "1.4.5": "Use real text instead of images of text.",
+    "1.4.6": "Text contrast is at least 7:1 (4.5:1 for large text).",
+    "1.4.7": "Background audio is low or silenceable.",
+    "1.4.8": "Customizable text presentation: color, width, spacing.",
+    "1.4.9": "No images of text except logos.",
+    "1.4.10": "Content reflows at 320 px without horizontal scroll.",
+    "1.4.11": "UI and graphical objects have 3:1 contrast.",
+    "1.4.12": "Text spacing can be increased without loss.",
+    "1.4.13": "Hover and focus content is dismissible and persistent.",
+    "2.1.1": "All functionality is keyboard-operable.",
+    "2.1.2": "Keyboard focus can leave any component.",
+    "2.1.3": "All functionality is keyboard-operable, no exceptions.",
+    "2.1.4": "Single-key shortcuts are remappable or off.",
+    "2.2.1": "Time limits can be turned off, adjusted, or extended.",
+    "2.2.2": "Moving or auto-updating content can be paused.",
+    "2.2.3": "No timing required (except real-time events).",
+    "2.2.4": "Interruptions can be postponed or suppressed.",
+    "2.2.5": "Re-authentication preserves the user's data.",
+    "2.2.6": "User is warned before timeouts cause data loss.",
+    "2.3.1": "No flashing more than three times per second.",
+    "2.3.2": "No flashing more than three times per second, ever.",
+    "2.3.3": "Motion animation can be disabled.",
+    "2.4.1": "Mechanism to skip past repeated content.",
+    "2.4.2": "Each page has a descriptive title.",
+    "2.4.3": "Focus moves in a meaningful order.",
+    "2.4.4": "Link purpose is clear from text or context.",
+    "2.4.5": "Multiple ways to find pages on the site.",
+    "2.4.6": "Headings and labels describe their content.",
+    "2.4.7": "Keyboard focus is visually indicated.",
+    "2.4.8": "User can identify their location in the site.",
+    "2.4.9": "Link purpose is clear from link text alone.",
+    "2.4.10": "Section headings organize long content.",
+    "2.4.11": "Focused element is at least partly visible.",
+    "2.4.12": "Focused element is fully visible.",
+    "2.4.13": "Focus indicator has sufficient size and contrast.",
+    "2.5.1": "Multipoint and path gestures have simpler alternatives.",
+    "2.5.2": "Pointer activation can be aborted before release.",
+    "2.5.3": "Accessible name contains the visible label text.",
+    "2.5.4": "Motion-triggered functions have a UI alternative.",
+    "2.5.5": "Pointer targets are at least 44 by 44 pixels.",
+    "2.5.6": "All input mechanisms work concurrently.",
+    "2.5.7": "Dragging movements have a single-pointer alternative.",
+    "2.5.8": "Pointer targets are at least 24 by 24 pixels.",
+    "3.1.1": "Page language is programmatically set.",
+    "3.1.2": "Language of each part is programmatically set.",
+    "3.1.3": "Definitions for unusual words are available.",
+    "3.1.4": "Expansions for abbreviations are available.",
+    "3.1.5": "A simpler version is available for advanced text.",
+    "3.1.6": "Pronunciation cues are provided where needed.",
+    "3.2.1": "Focusing a component does not change context.",
+    "3.2.2": "Changing an input does not change context.",
+    "3.2.3": "Navigation is consistent across pages.",
+    "3.2.4": "Components are identified consistently.",
+    "3.2.5": "Context changes occur only on user request.",
+    "3.2.6": "Help is in the same place across pages.",
+    "3.3.1": "Errors are identified and described in text.",
+    "3.3.2": "Inputs have labels or instructions.",
+    "3.3.3": "Errors include suggestions for correction.",
+    "3.3.4": "Critical submissions can be reviewed or reversed.",
+    "3.3.5": "Context-sensitive help is available.",
+    "3.3.6": "All submissions can be reviewed or reversed.",
+    "3.3.7": "Don't ask for the same data twice.",
+    "3.3.8": "Authentication does not require a cognitive test.",
+    "3.3.9": "Authentication does not require any cognitive test.",
+    "4.1.2": "Components have name, role, and value programmatically.",
+    "4.1.3": "Status messages are announced via ARIA roles.",
+}
+
 # --- Functions (alphabetical) ---
 
 def flattenTarget(vTarget):
@@ -327,6 +1384,185 @@ def buildCsvRows(dResults, dMetadata):
                 lRows.append(dRow)
     lRows.sort(key=lambda dR: (dOutcomeRank.get(dR.get("outcome"), 99), dImpactRank.get(dR.get("impact"), 99), str(dR.get("ruleId") or ""), str(dR.get("target") or "")))
     return lRows
+
+
+# Accessibility failure rate metric.
+#
+# For each page, we compute an impact-weighted violation density:
+#
+#   numerator   = 1*minorCount + 2*moderateCount + 3*seriousCount + 4*criticalCount
+#   denominator = number of bytes in page.htm
+#   rate        = iAccessibilityRateScale * numerator / denominator
+#
+# Counts are by node instance (one DOM element flagged), not by
+# distinct rule. The constant tunes the result so that typical
+# real-world pages produce a value the user can read at a glance.
+# We use 100000 (=10^5) so the result is a percent: typical pages
+# land in roughly 0%..100% with most being well under 100%, and a
+# truly egregious page can exceed 100%. The percent framing is a
+# display convention, not a strict mathematical claim that the
+# ratio is bounded -- the underlying quantity is "impact-weighted
+# instances per byte of page source," scaled into a friendly range.
+#
+# Lower is better. The metric's purpose is to give the page owner a
+# single number to track over time. The goal is to reduce the rate
+# from one scan to the next: accessibility is a journey, not a
+# destination.
+#
+# When aggregating across multiple pages (the ACR-level rate), we
+# sum the per-page numerators and sum the per-page denominators
+# before dividing -- this is mathematically equivalent to a size-
+# weighted average of per-page rates, and it correctly reflects
+# that bigger pages with more content carry more weight in an
+# accessibility profile.
+
+iAccessibilityRateScale = 100000
+
+
+def computePageImpactNumerator(dResults):
+    """Sum 1*minor + 2*moderate + 3*serious + 4*critical instance
+    counts across every violation rule on a page. Returns 0 if no
+    violations.
+
+    Note that an instance is one flagged DOM node. So a page with
+    5 image elements lacking alt text contributes 5 to the count
+    for the relevant impact level (typically critical or serious
+    for image-alt). Best-practice and unknown-impact violations
+    are ignored: they do not have a defined severity and shouldn't
+    inflate the metric."""
+    dImpactWeight = {"minor": 1, "moderate": 2, "serious": 3, "critical": 4}
+    iSum = 0
+    for dRule in dResults.get("violations", []):
+        sImpact = str(dRule.get("impact") or "").lower()
+        iWeight = dImpactWeight.get(sImpact, 0)
+        if iWeight == 0: continue
+        iSum += iWeight * len(dRule.get("nodes", []))
+    return iSum
+
+
+def computeAccessibilityFailureRate(iNumerator, iPageBytes):
+    """Combine the impact-weighted numerator with the page-size
+    denominator to produce the per-page accessibility failure rate
+    as a percent. Returns 0.0 if iPageBytes is non-positive (avoids
+    divide-by-zero and gracefully handles missing page.htm files).
+    The return value is already in percent units; display it with a
+    '%' sign. Typical pages produce values in 0..100; truly broken
+    pages can exceed 100. Lower is better."""
+    if iPageBytes <= 0: return 0.0
+    return iAccessibilityRateScale * iNumerator / iPageBytes
+
+
+def computePageBytes(pathOutputDir):
+    """Return the byte size of the page.htm in the given per-page
+    output folder. 0 if missing or unreadable. Used as the denom-
+    inator of the accessibility failure rate."""
+    try:
+        path = pathlib.Path(pathOutputDir) / sSourceName
+        if path.is_file():
+            return path.stat().st_size
+    except Exception:
+        pass
+    return 0
+
+
+def captureViolationImages(page, dResults, pathOutputDir):
+    """Capture an element-level screenshot for each violation node
+    on the page and save as PNG in a 'violations/' subfolder.
+
+    Returns a dict keyed by (sRuleId, iRuleNodeIndex) mapping to a
+    relative path string like 'violations/image-001.png'. The
+    relative path is what gets written into the report.xlsx
+    Image-column cell as a hyperlink, so when the user clicks the
+    cell the OS resolves it against the workbook's actual location
+    and opens the PNG in the default viewer. Relative paths
+    survive moving or zipping the page folder.
+
+    Each successful capture increments a per-page counter (001,
+    002, ...). The counter is dense (no gaps) -- file numbers
+    reflect "successfully captured" not "node index." The mapping
+    associates each successful capture with its source rule + node
+    so the workbook writer can connect the right row to the right
+    image.
+
+    Failure modes are all silent (no log entry above DEBUG, no
+    warning printed):
+      - selector resolves to no element
+      - selector resolves to multiple elements
+      - element is hidden or zero-size (Playwright errors)
+      - screenshot times out
+      - any other Playwright exception
+
+    The 'violations/' folder is created lazily on the first
+    successful capture; if no captures succeed, no folder is
+    created. If a 'violations/' folder already exists from a prior
+    --force run, it is fully removed before this run starts so
+    stale PNGs don't accumulate.
+    """
+    dImages = {}
+    pathViolDir = pathlib.Path(pathOutputDir) / "violations"
+
+    # Pre-clean: if a previous run left a violations/ folder, remove
+    # it so this run's PNGs don't mix with stale ones. The page-
+    # folder cleanup that --force triggers happens before scanUrl
+    # runs, but be defensive in case of mid-run reruns.
+    try:
+        if pathViolDir.exists():
+            shutil.rmtree(pathViolDir, ignore_errors=True)
+    except Exception:
+        pass
+
+    iSeq = 0
+    for dRule in dResults.get("violations", []) or []:
+        sRuleId = str(dRule.get("id") or "")
+        if not sRuleId: continue
+        iRuleNodeIndex = 0
+        for dNode in dRule.get("nodes", []) or []:
+            iRuleNodeIndex += 1
+            aTargets = dNode.get("target") or []
+            if not aTargets: continue
+            # axe's target is an array; the first element is the
+            # primary CSS selector. Subsequent elements are present
+            # for shadow-DOM piercing (axe nests them); for our
+            # purposes the primary selector is what Playwright can
+            # resolve directly.
+            sCss = aTargets[0]
+            if isinstance(sCss, list):
+                # Defensive: nested array form. Take the first.
+                sCss = sCss[0] if sCss else ""
+            sCss = str(sCss or "")
+            if not sCss: continue
+
+            # Lazily create the violations/ folder on first attempt
+            # at capture (one folder per page; we don't want an empty
+            # violations/ folder if no captures succeed).
+            iSeqAttempt = iSeq + 1
+            sFileName = f"image-{iSeqAttempt:03d}.png"
+            pathPng = pathViolDir / sFileName
+            try:
+                pathViolDir.mkdir(parents=True, exist_ok=True)
+                # Playwright element-screenshot. .first picks the
+                # first match if the selector resolves to multiple.
+                # timeout in ms -- 2 seconds per node keeps a
+                # pathological page from stalling the run.
+                page.locator(sCss).first.screenshot(
+                    path=str(pathPng), type="png", timeout=2000)
+            except Exception:
+                # Skip silently per project policy. Clean up an
+                # empty file if Playwright created one before the
+                # exception.
+                try:
+                    if pathPng.exists() and pathPng.stat().st_size == 0:
+                        pathPng.unlink()
+                except Exception:
+                    pass
+                continue
+
+            # Successful capture: register and advance counter.
+            iSeq = iSeqAttempt
+            sRelPath = f"violations/{sFileName}"
+            dImages[(sRuleId, iRuleNodeIndex)] = sRelPath
+
+    return dImages
 
 
 def buildConsoleSummary(dResults, dMetadata, sOutputDir):
@@ -553,7 +1789,7 @@ def buildNarrativeSummary(dResults, dMetadata):
 
     return "\n".join(lParts)
 
-def buildReportHtml(dResults, dMetadata, lRows):
+def buildReportHtml(dResults, dMetadata, lRows, nPageRate=0.0, iPageBytes=0, iImpactNumer=0):
     dCheck = {}
     dNode = {}
     dRule = {}
@@ -600,11 +1836,11 @@ def buildReportHtml(dResults, dMetadata, lRows):
 
     lFiles = [
         f"<li><a href=\"{html.escape(sReportWorkbookName)}\">{html.escape(sReportWorkbookName)}</a> — Excel workbook</li>",
-        f"<li><a href=\"{html.escape(sCsvName)}\">{html.escape(sCsvName)}</a> — spreadsheet of violations</li>",
         f"<li><a href=\"{html.escape(sJsonName)}\">{html.escape(sJsonName)}</a> — full raw data</li>",
         f"<li><a href=\"{html.escape(sAccessibilityYamlName)}\">{html.escape(sAccessibilityYamlName)}</a> — ARIA accessibility tree</li>",
         f"<li><a href=\"{html.escape(sSourceName)}\">{html.escape(sSourceName)}</a> — saved page source</li>",
         f"<li><a href=\"{html.escape(sScreenshotName)}\">{html.escape(sScreenshotName)}</a> — page screenshot</li>",
+        f"<li><a href=\"violations/\">violations/</a> — per-violation element screenshots, linked from the Image column of the Excel workbook</li>",
     ]
 
     # CSS
@@ -697,6 +1933,25 @@ def buildReportHtml(dResults, dMetadata, lRows):
         if iMinor:    lParts.append(f"<span class=\"badge badge-minor\">Minor: {iMinor}</span>")
         lParts.append("</div>")
         lParts.append("<p class=\"muted\"><strong>Critical</strong> — blocks access completely. <strong>Serious</strong> — very hard to use. <strong>Moderate</strong> — causes difficulty. <strong>Minor</strong> — small problem with a workaround.</p>")
+    # Accessibility failure rate. Lower is better; the goal is to
+    # reduce this number from one scan to the next. Accessibility is
+    # a journey, not a destination. Displayed as a percent so the
+    # number is intuitive: a clean page is well under 1%, a typical
+    # problematic page is double-digit %, and a truly bad page can
+    # exceed 100%.
+    lParts.append(f"<p><strong>Accessibility failure rate: {nPageRate:.1f}%</strong></p>")
+    lParts.append(
+        f"<p class=\"muted\">Computed as "
+        f"<code>{iAccessibilityRateScale} &times; "
+        f"impact-weighted instance count / page bytes</code> = "
+        f"<code>{iAccessibilityRateScale} &times; {iImpactNumer} / "
+        f"{iPageBytes}</code>. Impact weights: minor 1, moderate 2, "
+        f"serious 3, critical 4. The constant {iAccessibilityRateScale} "
+        f"scales the result into a percent for easy reading; values can "
+        f"exceed 100% on heavily problematic pages. Lower is better. "
+        f"Track this number over time; the goal is to reduce it on "
+        f"every scan. Accessibility is a journey, not a destination.</p>"
+    )
     lParts.append("</section>")
 
     # Table of contents
@@ -1175,6 +2430,75 @@ def firstLine(sText):
     return sText
 
 
+def writeTextFile(pathFile, sContent):
+    """Write a text file in the canonical CRLF + UTF-8 BOM format
+    optimized for Windows users. Use this for any file the user is
+    expected to view or edit: .htm, .json, .yaml, .ini, .log, .md,
+    .csv, .txt. Binary formats (.xlsx, .docx, .pdf, .png, .jpg) are
+    written by their respective libraries and are not affected.
+
+    The function ensures parent directories exist, normalizes any
+    LF or CR-only line endings in the content to CRLF, and writes
+    with utf-8-sig (which prepends the BOM bytes 0xEF 0xBB 0xBF).
+    The path can be a string or pathlib.Path.
+
+    Returns the resolved string path, for symmetry with prior
+    write_text calls.
+    """
+    path = pathlib.Path(pathFile)
+    try: path.parent.mkdir(parents=True, exist_ok=True)
+    except Exception: pass
+    # Normalize line endings: convert any \r\n or \r alone to \n
+    # first, then write with newline="\r\n" so Python's text mode
+    # handles the conversion. This handles mixed-ending content
+    # that might come from network sources (page.htm etc.).
+    sNormalized = sContent.replace("\r\n", "\n").replace("\r", "\n")
+    with path.open("w", encoding="utf-8-sig", newline="\r\n") as fOut:
+        fOut.write(sNormalized)
+    return str(path)
+
+
+def getOsVersion():
+    """Return a succinct OS version string for display in reports.
+
+    On Windows, returns "Windows 11" or "Windows 10" using
+    platform.win32_ver() to disambiguate (platform.release() can
+    report '10' even on Windows 11 depending on the Python build,
+    because the kernel-version major didn't change between the
+    two). On non-Windows systems, returns a similarly compact form
+    like "macOS 14.6" or "Linux 6.5". On any failure, returns an
+    empty string -- the caller treats that as "unknown" and
+    suppresses the field from output."""
+    try:
+        sSystem = platform.system() or ""
+        if sSystem == "Windows":
+            # win32_ver returns (release, version, csd, ptype). The
+            # version field is the build number string; if it
+            # starts with "10.0.22000" or higher, it's Windows 11.
+            try:
+                aWin = platform.win32_ver()
+                sBuild = (aWin[1] or "") if len(aWin) > 1 else ""
+                # Build numbers >= 22000 = Windows 11; lower = Windows 10
+                aParts = sBuild.split(".")
+                iBuild = int(aParts[2]) if len(aParts) >= 3 and aParts[2].isdigit() else 0
+                if iBuild >= 22000: return "Windows 11"
+                if iBuild > 0: return "Windows 10"
+            except Exception:
+                pass
+            # Fallback: use whatever release reports
+            sRel = platform.release() or ""
+            return f"Windows {sRel}".strip() or "Windows"
+        if sSystem == "Darwin":
+            sRel = platform.mac_ver()[0] or platform.release() or ""
+            return f"macOS {sRel}".strip() or "macOS"
+        if sSystem == "Linux":
+            sRel = platform.release() or ""
+            return f"Linux {sRel}".strip() or "Linux"
+        return sSystem or ""
+    except Exception:
+        return ""
+
+
 def getNormalizedUrl(sInput):
     """Convert a user-supplied input to a fully qualified url or local file URI.
     Accepts bare domains (microsoft.com), IP addresses, paths with or without
@@ -1273,13 +2597,53 @@ def getRuleLinks(dRule):
 
 
 def getSafeTitle(sTitle):
-    sName = ""
+    """Sanitize a page title for use as a Windows folder name.
 
-    sName = re.sub(r"\s+", "-", str(sTitle or sFallbackTitle).strip().lower())
-    sName = re.sub(r"[^a-z0-9._-]", "-", sName)
-    sName = re.sub(r"-+", "-", sName).strip("-._")
+    Goals:
+      - Preserve the title's natural readability when seen in File
+        Explorer (where the user actually views output). That means
+        keeping original capitalization and keeping spaces between
+        words rather than replacing them with dashes. Word-separator
+        style chosen by the original page title is preserved.
+      - Strip only the characters Windows forbids in folder names:
+        < > : " / \\ | ? * and control characters. Trailing dots and
+        spaces are also illegal at the end of a folder name.
+      - Avoid Windows reserved device names (CON, PRN, AUX, NUL,
+        COM1..COM9, LPT1..LPT9).
+      - Cap length at iMaxTitleLen.
+
+    Returns a string. Always returns a non-empty name; falls back to
+    sFallbackTitle for empty or pathologically-bad input.
+    """
+    sName = ""
+    sBase = ""
+
+    sBase = str(sTitle or sFallbackTitle).strip()
+    # Remove characters that Windows forbids in file/folder names.
+    # Keep spaces, alphanumerics, and most punctuation including dashes,
+    # underscores, dots, parentheses, brackets that are not in the
+    # forbidden set, etc. Original capitalization is preserved.
+    sName = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "", sBase)
+    # Collapse runs of whitespace to a single space (so a title with
+    # internal newlines or tabs doesn't produce multi-space gaps).
+    sName = re.sub(r"\s+", " ", sName).strip()
+    # Strip trailing dots and spaces -- both illegal in Windows folder
+    # names. Keep stripping until clean.
+    while sName.endswith(".") or sName.endswith(" "):
+        sName = sName[:-1]
+    # Reserved device-name check (case-insensitive). If the base name
+    # (before any extension-like suffix) matches, prepend an underscore
+    # to defang it.
+    sCheck = sName.upper().split(".")[0]
+    aReserved = {"CON","PRN","AUX","NUL",
+                 "COM1","COM2","COM3","COM4","COM5","COM6","COM7","COM8","COM9",
+                 "LPT1","LPT2","LPT3","LPT4","LPT5","LPT6","LPT7","LPT8","LPT9"}
+    if sCheck in aReserved: sName = "_" + sName
     if not sName: sName = sFallbackTitle
-    sName = sName[:iMaxTitleLen].strip("-._")
+    # Length cap. Strip any new trailing dots/spaces caused by the cut.
+    sName = sName[:iMaxTitleLen]
+    while sName.endswith(".") or sName.endswith(" "):
+        sName = sName[:-1]
     if not sName: sName = sFallbackTitle
     return sName
 
@@ -1692,12 +3056,13 @@ def parseArguments():
             f"\n"
             f"Output files (in a folder named after each page title):\n"
             f"  report.htm   Accessibility report with headings and links\n"
-            f"  report.csv   Violations as a spreadsheet, one row per issue\n"
             f"  report.xlsx  Excel workbook with summary and full results\n"
             f"  results.json Full raw scan data including all metadata\n"
             f"  page.yaml    ARIA accessibility tree of the page\n"
             f"  page.htm     Saved page source with styles inlined\n"
-            f"  page.png     Full-page screenshot"
+            f"  page.png     Full-page screenshot\n"
+            f"  violations\\  Per-violation element screenshots, linked\n"
+            f"               from the Image column of report.xlsx"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -1716,22 +3081,22 @@ def parseArguments():
     argParser.add_argument("-v", "--version", action="version", version=f"%(prog)s {sProgramVersion}")
     argParser.add_argument("-g", "--gui-mode", dest="bGuiMode", action="store_true",
         help="Show the parameter dialog. GUI mode is also entered automatically when urlCheck is launched without arguments from a GUI shell (File Explorer, Start menu, desktop hotkey).")
-    argParser.add_argument("-o", "--output-dir", dest="sOutputDir", default="",
-        help="Parent directory under which the per-scan output folder is created. Defaults to the current working directory. Created if it does not exist. The per-scan folder is always uniquely named based on the page title.")
+    argParser.add_argument("-o", "--output-folder", dest="sOutputDir", default="",
+        help="Parent folder under which the per-scan output folder is created. Defaults to the current working folder. Created if it does not exist. The per-scan folder is always uniquely named based on the page title.")
     argParser.add_argument("--view-output", dest="bViewOutput", action="store_true",
-        help="After all scans complete, open the parent output directory (the -o directory, or the current working directory) in File Explorer.")
+        help="After all scans complete, open the parent output folder (the -o folder, or the current working folder) in File Explorer.")
     argParser.add_argument("-u", "--use-configuration", dest="bUseConfig", action="store_true",
         help="Load saved settings from %%LOCALAPPDATA%%\\urlCheck\\urlCheck.ini at startup, and write them back on OK in GUI mode. Without this flag urlCheck leaves no filesystem footprint of its own.")
     argParser.add_argument("-l", "--log", dest="bLog", action="store_true",
-        help="Write detailed diagnostics to urlCheck.log in the current working directory (UTF-8 with BOM). Any prior urlCheck.log is deleted at the start of the run, so the file always reflects only the current session.")
+        help="Write detailed diagnostics to urlCheck.log in the current working folder (UTF-8 with BOM). Appends across runs by default; combine with -f / --force to replace the prior log instead.")
     argParser.add_argument("-f", "--force", dest="bForce", action="store_true",
         help="Reuse an existing per-page output folder by emptying its contents and writing a fresh set of files. Without this flag urlCheck skips a url whose per-page output folder already exists, so previous scans are preserved.")
     argParser.add_argument("-i", "--invisible", dest="bInvisible", action="store_true",
         help="Run Microsoft Edge invisibly (the headless browser mode): no visible browser window during the scan.")
     argParser.add_argument("-a", "--authenticate", dest="bAuthenticate", action="store_true",
-        help="When a url's domain is encountered for the first time in this run, pause after the page loads and prompt the user on the console to authenticate (sign in, accept cookies, dismiss popups, etc.) and press Enter to continue. Within the same run, subsequent urls on the same domain reuse the established session without prompting. Forces visible browser mode (overrides --invisible). Honored in CLI mode only at present; in GUI mode the option is recorded but not acted on.")
-    argParser.add_argument("-t", "--temp-profile", dest="bTempProfile", action="store_true",
-        help="With --authenticate, launch Edge against a fresh temporary profile (not your real Edge user profile) and disconnect Playwright's automation channel during the user-interaction pause. Trades saved logins (the user must sign in fresh on every site that requires auth) for stronger anti-detection: the browser appears uncontrolled to the page during user interaction, which can let highly-fingerprinted sites (such as WhatsApp Web) complete navigations that they refuse with the default profile. No effect without --authenticate. The temp directory is removed at end of run.")
+        help="When a url's domain is encountered for the first time in this run, pause after the page loads and prompt the user to authenticate (sign in, accept cookies, dismiss popups, etc.) and press Enter (or click OK in GUI mode) to resume. Within the same run, subsequent urls on the same domain reuse the established session without prompting. Without --main-profile, urlCheck disconnects its automation channel from Edge while the user authenticates and reconnects after, which improves the chance of success against sites that block automated browsers (e.g. WhatsApp Web). With --main-profile, the disconnect pattern is not used (browser security forbids it against your real profile). Forces visible browser mode (overrides --invisible).")
+    argParser.add_argument("-m", "--main-profile", dest="bMainProfile", action="store_true",
+        help="Launch Edge with your real (default) Edge user profile so saved logins, cookies, and session state are available. Without -m, urlCheck launches Edge with a fresh ephemeral profile so the scan is anonymous and your real profile is not exposed to the scanned site. Requires that no Microsoft Edge process is already running, since Edge cannot share a profile across two processes; urlCheck checks at startup and exits gracefully with a message if Edge is running.")
     return argParser.parse_args()
 
 
@@ -1806,12 +3171,12 @@ def getDomainForAuth(sUrl):
     """
     if not sUrl: return None
     try:
-        oParts = urllib.parse.urlsplit(sUrl)
+        splitResult = urllib.parse.urlsplit(sUrl)
     except Exception:
         return None
-    sScheme = (oParts.scheme or "").lower()
+    sScheme = (splitResult.scheme or "").lower()
     if sScheme in ("file", "about", "data", "javascript", ""): return None
-    sHost = (oParts.hostname or "").lower()
+    sHost = (splitResult.hostname or "").lower()
     if not sHost: return None
     return getRegistrableDomain(sHost)
 
@@ -1953,25 +3318,27 @@ def pauseForAuthenticationIfNeeded(page, sUrl, bAuthenticate, bGuiMode):
 def pauseForAuthenticationWithDisconnect(playwrightCtx, sWsEndpoint,
         browser, context, page, sUrl, bAuthenticate, bGuiMode):
     """Disconnect/reconnect variant of pauseForAuthenticationIfNeeded
-    used when --temp-profile (-t) is set together with --authenticate
-    (-a). Differs from the default-profile variant in two ways:
+    used when --authenticate (-a) is set without --main-profile (-m).
+    Differs from the default-profile variant in two ways:
 
     1. Before prompting the user, calls browser.close() to sever
-       Playwright's WebSocket connection to the launched Edge
-       process. The Edge process keeps running (it's owned by the
-       BrowserServer, not by this client connection), so the user
+       Playwright's CDP connection to the launched Edge process.
+       The Edge process keeps running (it's a separate subprocess
+       owned by main(), not by this client connection), so the user
        can interact with the visible window without any automation
        channel attached -- which lets sites that detect CDP-level
        fingerprinting (WhatsApp Web, some banking sites) complete
        navigations they would otherwise refuse.
 
-    2. After the user confirms, reconnects via chromium.connect() to
-       the same WebSocket endpoint, finds the existing context and
-       the page the user was last on, re-applies the navigator.web
-       driver init script to the new context binding, and returns
-       the new (browser, context, page) triple. The caller MUST
-       use the returned triple; the input browser/context/page
-       references become stale during the disconnect.
+    2. After the user confirms, reconnects via
+       chromium.connect_over_cdp() to the same CDP HTTP endpoint
+       (parameter name kept as sWsEndpoint for legacy reasons),
+       finds the existing context and the page the user was last
+       on, re-applies the navigator.webdriver init script to the
+       new context binding, and returns the new (browser, context,
+       page) triple. The caller MUST use the returned triple; the
+       input browser/context/page references become stale during
+       the disconnect.
 
     Returns (browser, context, page) -- a tuple of fresh references
     suitable for the rest of the scan. On the no-prompt-needed path
@@ -2101,7 +3468,7 @@ def pauseForAuthenticationWithDisconnect(playwrightCtx, sWsEndpoint,
     return (browserNew, contextNew, pageNew)
 
 
-def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, sAxeContent="", bForce=False, bAuthenticate=False, bGuiMode=False, bTempProfile=False, playwrightCtx=None, sWsEndpoint=None, lConnHolder=None):
+def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, sAxeContent="", bForce=False, bAuthenticate=False, bGuiMode=False, bMainProfile=False, playwrightCtx=None, sWsEndpoint=None, lConnHolder=None):
     """Run a single-url scan.
 
     Returns:
@@ -2148,11 +3515,13 @@ def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, sAxeContent="
         # popup or redirected to another page, the helper swaps in
         # the most-recently-active page so the scan captures the
         # post-auth content.
-        if bTempProfile and bAuthenticate:
-            # Temp-profile path: disconnect Playwright before
-            # prompting, prompt, reconnect after the user confirms.
-            # Returns a fresh (browser, context, page) triple; the
-            # input references become stale across the disconnect.
+        if bAuthenticate and not bMainProfile:
+            # Temp-profile + disconnect path: sever the CDP
+            # connection before prompting so the page can't detect
+            # active automation, prompt, reconnect via
+            # connect_over_cdp after the user confirms. Returns a
+            # fresh (browser, context, page) triple; the input
+            # references become stale across the disconnect.
             # Update lConnHolder so the caller can pick up the fresh
             # refs for the next url.
             (browser, context, page) = pauseForAuthenticationWithDisconnect(
@@ -2163,6 +3532,12 @@ def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, sAxeContent="
                 lConnHolder[0] = browser
                 lConnHolder[1] = context
         else:
+            # Main-profile-with-auth, or non-auth runs: prompt (or
+            # do nothing) without touching the connection. The
+            # disconnect pattern is not available against the real
+            # Edge profile because Chrome 136+ refuses
+            # --remote-debugging-port against the default user-data
+            # directory.
             page = pauseForAuthenticationIfNeeded(page, sNormalizedUrl,
                 bAuthenticate, bGuiMode)
 
@@ -2211,7 +3586,7 @@ def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, sAxeContent="
             logger.info(f"Skipped (output folder exists, no --force): "
                 f"{sNormalizedUrl} -> {sExistingDir}")
             return "skipped"
-        logger.info(f"Output directory: {pathOutputDir}")
+        logger.info(f"Output folder: {pathOutputDir}")
         logger.info("Running axe-core")
         sAxeSource = getAxeScript(page, sAxeContent)
         ensureSuccess(bool(page.evaluate("() => Boolean(window.axe && window.axe.run)")), "axe-core did not load into the page.")
@@ -2231,8 +3606,8 @@ def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, sAxeContent="
         if not sBrowserVersion:
             try:
                 sUa = str(page.evaluate("navigator.userAgent") or "")
-                oMatch = re.search(r"Edg/(\S+)", sUa)
-                if oMatch: sBrowserVersion = oMatch.group(1)
+                match = re.search(r"Edg/(\S+)", sUa)
+                if match: sBrowserVersion = match.group(1)
             except Exception:
                 pass
 
@@ -2243,6 +3618,7 @@ def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, sAxeContent="
             "inputValue": sInput,
             "navTimeoutMs": iDefaultNavTimeoutMs,
             "normalizedUrl": sNormalizedUrl,
+            "osVersion": getOsVersion(),
             "pageTitle": sPageTitle,
             "pageUrl": str(page.url or sNormalizedUrl),
             "postLoadDelayMs": iDefaultPostLoadDelayMs,
@@ -2253,12 +3629,17 @@ def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, sAxeContent="
             "viewportHeight": iDefaultViewportHeight,
             "viewportWidth": iDefaultViewportWidth,
         }
+        # report.csv was previously written here. As of v1.11.0 it
+        # has been removed: the same row-per-violation data is in
+        # the Results sheet of report.xlsx with proper formatting,
+        # so the CSV duplicated content with inferior presentation.
+        # The lRows list is still computed for use by the HTML
+        # report and the workbook's Results sheet.
         lRows = buildCsvRows(dResults, dMetadata)
-        pathlib.Path(pathOutputDir, sJsonName).write_text(json.dumps({"metadata": dMetadata, "results": dResults}, indent=2, ensure_ascii=False), encoding="utf-8")
-        writeCsv(pathlib.Path(pathOutputDir, sCsvName), lRows)
+        writeTextFile(pathlib.Path(pathOutputDir, sJsonName), json.dumps({"metadata": dMetadata, "results": dResults}, indent=2, ensure_ascii=False))
         logger.info("Capturing page snapshot and screenshot")
         sSnapshot = getPageSnapshot(page, sNormalizedUrl)
-        pathlib.Path(pathOutputDir, sSourceName).write_text(sSnapshot, encoding="utf-8")
+        writeTextFile(pathlib.Path(pathOutputDir, sSourceName), sSnapshot)
         try:
             page.screenshot(path=str(pathlib.Path(pathOutputDir, sScreenshotName)), full_page=bDefaultFullPage, timeout=30000)
         except Exception:
@@ -2269,18 +3650,38 @@ def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, sAxeContent="
         try:
             locatorBody = page.locator("body")
             sYaml = locatorBody.aria_snapshot()
-            pathlib.Path(pathOutputDir, sAccessibilityYamlName).write_text(sYaml, encoding="utf-8-sig")
+            writeTextFile(pathlib.Path(pathOutputDir, sAccessibilityYamlName), sYaml)
         except Exception:
             pass
-        pathlib.Path(pathOutputDir, sReportName).write_text(buildReportHtml(dResults, dMetadata, lRows), encoding="utf-8")
-        writeReportWorkbook(pathlib.Path(pathOutputDir, sReportWorkbookName), dResults, dMetadata, lRows)
-        # User-visible: just url and page title for this scan. Detailed
-        # violation counts go to report.htm/report.csv/report.xlsx and to
-        # the log.
-        print(f"{sNormalizedUrl}")
-        print(f"  Page title: {sPageTitle}")
+        # Compute the per-page accessibility failure rate so it can
+        # be displayed in report.htm and report.xlsx. The denominator
+        # is the saved page.htm size, written above. Smaller is
+        # better; the goal is to track this metric over time.
+        iPageBytes = computePageBytes(pathOutputDir)
+        iImpactNumer = computePageImpactNumerator(dResults)
+        nPageRate = computeAccessibilityFailureRate(iImpactNumer, iPageBytes)
+        # Capture per-violation element screenshots. Saves PNGs to a
+        # 'violations/' subfolder and returns a dict mapping each
+        # captured (ruleId, nodeIndex) to its relative path. Failures
+        # are silent (per project policy) -- nodes whose selectors
+        # don't resolve simply have no entry in the dict.
+        try:
+            dViolationImages = captureViolationImages(page, dResults, pathOutputDir)
+        except Exception:
+            dViolationImages = {}
+        writeTextFile(pathlib.Path(pathOutputDir, sReportName), buildReportHtml(dResults, dMetadata, lRows, nPageRate, iPageBytes, iImpactNumer))
+        writeReportWorkbook(pathlib.Path(pathOutputDir, sReportWorkbookName), dResults, dMetadata, lRows, nPageRate, iPageBytes, iImpactNumer, dViolationImages)
+        # The CLI parent loop prints the URL inline before calling
+        # scanUrl and appends a newline (success), ": skipped" (skip),
+        # or ": <reason>" (failure) afterward. So scanUrl itself
+        # doesn't print anything user-facing -- we'd duplicate that
+        # CLI line. Detailed violation counts go to report.htm /
+        # report.xlsx and to urlCheck.log via buildConsoleSummary.
+        # The GUI mode never prints inline; the end-of-session
+        # summary is built fresh by main() from lScanned / lFailed /
+        # lSkippedExisting and shown in the MessageBox.
         logger.info(buildConsoleSummary(dResults, dMetadata, str(pathOutputDir)))
-        return str(pathOutputDir)
+        return (str(pathOutputDir), sPageTitle)
     finally:
         try:
             if page is not None: page.close()
@@ -2295,42 +3696,18 @@ def styleWorksheet(worksheet):
     sColumnLetter = ""
 
     worksheet.freeze_panes = "A2"
-    worksheet.auto_filter.ref = worksheet.dimensions
     for cell in worksheet["1:1"]:
         cell.font = Font(bold=True, color="FFFFFF")
         cell.fill = PatternFill(fill_type="solid", fgColor="1F4E78")
         cell.alignment = Alignment(vertical="top", wrap_text=True)
-    lWidths = [18, 24, 20, 16, 18, 18, 18, 18, 16, 16, 20, 28, 28, 28, 18, 14, 40, 60, 60]
+    lWidths = [18, 24, 20, 16, 18, 18, 18, 18, 16, 16, 20, 28, 28, 28, 18, 14, 40, 60, 60, 18]
     for iColumnIndex, iWidth in enumerate(lWidths, start=1):
         sColumnLetter = get_column_letter(iColumnIndex)
         worksheet.column_dimensions[sColumnLetter].width = iWidth
     return worksheet.title
 
 
-def writeCsv(pathCsv, lRows):
-    dRow = {}
-    lFieldNames = [
-        "scanTimestampUtc", "pageTitle", "pageUrl", "browserVersion", "axeSource",
-        "outcome", "ruleId", "impact", "description", "help", "helpUrl",
-        "tags", "wcagRefs", "standardsRefs",
-        "instanceCount", "instanceIndex", "path", "snippet", "failureSummary",
-    ]
-    fileCsv = None
-
-    with pathCsv.open("w", newline="", encoding="utf-8") as fileCsv:
-        csvWriter = csv.DictWriter(fileCsv, fieldnames=lFieldNames, quoting=csv.QUOTE_ALL, extrasaction="ignore")
-        csvWriter.writeheader()
-        for dRow in lRows:
-            dOut = dict(dRow)
-            dOut["instanceCount"] = dRow.get("ruleNodeCount", "")
-            dOut["instanceIndex"] = dRow.get("ruleNodeIndex", "")
-            dOut["path"]          = dRow.get("target", "")
-            dOut["snippet"]       = dRow.get("html", "")
-            csvWriter.writerow(dOut)
-    return str(pathCsv)
-
-
-def writeReportWorkbook(pathWorkbook, dResults, dMetadata, lRows):
+def writeReportWorkbook(pathWorkbook, dResults, dMetadata, lRows, nPageRate=0.0, iPageBytes=0, iImpactNumer=0, dViolationImages=None):
     cell = None
     iRow = 0
     iSheetIndex = 0
@@ -2340,6 +3717,7 @@ def writeReportWorkbook(pathWorkbook, dResults, dMetadata, lRows):
     lWcagRows = []
     workbook = None
     worksheet = None
+    if dViolationImages is None: dViolationImages = {}
 
     workbook = openpyxl.Workbook()
     worksheet = workbook.active
@@ -2365,7 +3743,6 @@ def writeReportWorkbook(pathWorkbook, dResults, dMetadata, lRows):
         ["Screenshot file", sScreenshotName],
         ["JSON file", sJsonName],
         ["ARIA tree file", sAccessibilityYamlName],
-        ["CSV file", sCsvName],
         ["Source snapshot file", sSourceName],
         ["HTML report file", sReportName],
         ["Workbook file", sReportWorkbookName],
@@ -2378,7 +3755,6 @@ def writeReportWorkbook(pathWorkbook, dResults, dMetadata, lRows):
     worksheet["A1"].fill = PatternFill(fill_type="solid", fgColor="1F4E78")
     worksheet["B1"].fill = PatternFill(fill_type="solid", fgColor="1F4E78")
     worksheet.freeze_panes = "A2"
-    worksheet.auto_filter.ref = worksheet.dimensions
     for cell in worksheet["B"]: cell.alignment = Alignment(vertical="top", wrap_text=True)
 
     worksheet = workbook.create_sheet("Summary")
@@ -2394,6 +3770,9 @@ def writeReportWorkbook(pathWorkbook, dResults, dMetadata, lRows):
     worksheet.append(["Overview", "Needs Review (instances)", sum(len(dRule.get("nodes", [])) for dRule in dResults.get("incomplete", []))])
     worksheet.append(["Overview", "Passes (rules)", len(dResults.get("passes", []))])
     worksheet.append(["Overview", "Inapplicable (rules)", len(dResults.get("inapplicable", []))])
+    worksheet.append(["Overview", "Page bytes (page.htm)", int(iPageBytes)])
+    worksheet.append(["Overview", "Impact-weighted instance count", int(iImpactNumer)])
+    worksheet.append(["Overview", "Accessibility failure rate (%)", round(nPageRate, 1)])
     for lRow in lImpactRows: worksheet.append(["Impact (failed instances)", str(lRow[0]), int(lRow[1])])
     for lRow in lRuleRows: worksheet.append(["Top rules by instance count", str(lRow[0]), int(lRow[1])])
     for lRow in lWcagRows:
@@ -2407,9 +3786,32 @@ def writeReportWorkbook(pathWorkbook, dResults, dMetadata, lRows):
     styleWorksheet(worksheet)
 
     worksheet = workbook.create_sheet("Results")
-    worksheet.append(["Scan timestamp (UTC)", "Page title", "Page url", "Browser version", "axe-core source", "Outcome", "Rule ID", "Impact", "Description", "Help", "Help url", "Tags", "WCAG criteria", "Standards refs", "Instance count", "Instance index", "Path (CSS selector)", "Snippet (HTML)", "Failure summary"])
+    worksheet.append(["Scan timestamp (UTC)", "Page title", "Page url", "Browser version", "axe-core source", "Outcome", "Rule ID", "Impact", "Description", "Help", "Help url", "Tags", "WCAG criteria", "Standards refs", "Instance count", "Instance index", "Path (CSS selector)", "Snippet (HTML)", "Failure summary", "Image"])
+    iImageColIdx = 20  # 1-based: 20th column == "Image"
     for lRow in lRows:
-        worksheet.append([lRow["scanTimestampUtc"], lRow["pageTitle"], lRow["pageUrl"], lRow["browserVersion"], lRow["axeSource"], lRow["outcome"], lRow["ruleId"], lRow["impact"], lRow["description"], lRow["help"], lRow["helpUrl"], lRow["tags"], lRow["wcagRefs"], lRow["standardsRefs"], lRow["ruleNodeCount"], lRow["ruleNodeIndex"], lRow["target"], lRow["html"], lRow["failureSummary"]])
+        worksheet.append([lRow["scanTimestampUtc"], lRow["pageTitle"], lRow["pageUrl"], lRow["browserVersion"], lRow["axeSource"], lRow["outcome"], lRow["ruleId"], lRow["impact"], lRow["description"], lRow["help"], lRow["helpUrl"], lRow["tags"], lRow["wcagRefs"], lRow["standardsRefs"], lRow["ruleNodeCount"], lRow["ruleNodeIndex"], lRow["target"], lRow["html"], lRow["failureSummary"], ""])
+        # If a screenshot was successfully captured for this
+        # violation node, populate the Image cell as a hyperlink to
+        # the relative file path. Clicking the cell in Excel opens
+        # the PNG in the OS default image viewer. Relative paths
+        # (no drive letter, no scheme) are resolved by Excel
+        # against the workbook's actual location, so the link
+        # survives moving or zipping the page folder.
+        if lRow.get("outcome") == "violations":
+            sRuleId = str(lRow.get("ruleId") or "")
+            iNodeIdx = int(lRow.get("ruleNodeIndex") or 0)
+            sRelPath = dViolationImages.get((sRuleId, iNodeIdx))
+            if sRelPath:
+                # The new row is the last one written; address it
+                # by max_row.
+                cellImage = worksheet.cell(row=worksheet.max_row, column=iImageColIdx)
+                # Display text: just the basename so the user sees
+                # 'image-001.png' rather than 'violations/image-001.png'.
+                # The hyperlink target IS the relative path, which is
+                # what Excel resolves on click.
+                cellImage.value = sRelPath.rsplit("/", 1)[-1]
+                cellImage.hyperlink = sRelPath
+                cellImage.style = "Hyperlink"
     styleWorksheet(worksheet)
 
     worksheet = workbook.create_sheet("Glossary")
@@ -2425,12 +3827,21 @@ def writeReportWorkbook(pathWorkbook, dResults, dMetadata, lRows):
     worksheet["A1"].fill = PatternFill(fill_type="solid", fgColor="1F4E78")
     worksheet["B1"].fill = PatternFill(fill_type="solid", fgColor="1F4E78")
     worksheet.freeze_panes = "A2"
-    worksheet.auto_filter.ref = worksheet.dimensions
     for cell in worksheet["B"]: cell.alignment = Alignment(vertical="top", wrap_text=True)
 
+    # Finalization: apply xlFormat/xlHeaders learnings to every
+    # sheet for consistency with ACR.xlsx. Data-driven column widths
+    # (capped at 50 chars, wrap_text on overflow), vertical-align top,
+    # bold first row with white-on-blue fill, frozen header row, plus
+    # a Title01-style named cell so screen readers announce both row
+    # and column headers as the user navigates. AutoFilter is
+    # deliberately NOT enabled: in JAWS, the surrounding "filter is
+    # off" announcement interferes with reading column headers.
     for iSheetIndex in range(len(workbook.sheetnames)):
         worksheet = workbook[workbook.sheetnames[iSheetIndex]]
-        for iRow in range(2, worksheet.max_row + 1): worksheet.row_dimensions[iRow].height = 30
+        for iRow in range(2, worksheet.max_row + 1): worksheet.row_dimensions[iRow].height = None
+        acrBuilder.applyFormatting(worksheet, iHeaderRow=1, iDataStart=2)
+        acrBuilder.addNamedRangeForCell(workbook, worksheet, worksheet.cell(row=1, column=1), "Title")
     workbook.save(pathWorkbook)
     return str(pathWorkbook)
 
@@ -2610,53 +4021,126 @@ def openFolderInExplorer(sPath):
 class logger:
     """
     Tiny diagnostic logger written to urlCheck.log in CWD when -l / --log is
-    given. UTF-8 with BOM so Notepad opens it correctly. Each session starts
-    with a fresh file -- any prior log is deleted before the new one is
-    opened, so the log only ever contains output from the current run.
+    given. UTF-8 with BOM so Notepad opens it correctly. By default the log
+    is OPENED IN APPEND mode so accumulated history across runs is
+    preserved -- helpful when diagnosing intermittent issues. Pass
+    bReplace=True to start fresh; this is hooked to the -f / --force
+    flag so users who want a clean log per run get it deliberately.
     Open is lazy and silent on failure; a logging error must never sink a
     scan.
     """
     fLog = None
     bEnabled = False
+    sPath = None  # resolved log file path
+    aBuffer = []  # pre-open diagnostic buffer (timestamp, level, msg)
+    bBuffering = True  # collect into aBuffer until open() is called or buffer is dropped
 
     @classmethod
-    def open(cls):
+    def open(cls, bReplace=False, pathDir=None):
         try:
-            # Delete any prior session's log first so the new file contains
-            # only this session's output. unlink may fail if the file does
-            # not exist (FileNotFoundError) -- that's fine; just continue.
-            try:
-                os.unlink(sLogFileName)
-            except FileNotFoundError:
-                pass
-            except Exception:
-                # If unlink fails for some other reason (e.g., another
-                # process has the file open), fall through to open() in
-                # "w" mode, which will truncate. open() may also fail in
-                # that case, and the outer except will mark logger
-                # disabled -- but that's the right outcome: better to lose
-                # logging than to mix old and new content.
-                pass
-            cls.fLog = open(sLogFileName, "w", encoding="utf-8-sig", newline="\n")
-            cls.bEnabled = True
-            cls.info(f"{sProgramName} {sProgramVersion} log opened (previous urlCheck.log deleted)")
+            sLogPath = sLogFileName
+            if pathDir is not None:
+                sLogPath = str(pathlib.Path(pathDir) / sLogFileName)
+            cls.sPath = sLogPath
+            if bReplace:
+                # Replace mode: delete any prior session's log first so
+                # the new file contains only this session's output.
+                # unlink may fail if the file does not exist
+                # (FileNotFoundError) -- that's fine; just continue.
+                try:
+                    os.unlink(sLogPath)
+                except FileNotFoundError:
+                    pass
+                except Exception:
+                    # If unlink fails for some other reason (e.g.,
+                    # another process has the file open), fall through
+                    # to open() in "w" mode, which will truncate.
+                    # open() may also fail, and the outer except will
+                    # mark logger disabled -- the right outcome (better
+                    # to lose logging than mix old and new content).
+                    pass
+                cls.fLog = open(sLogPath, "w", encoding="utf-8-sig", newline="\r\n")
+                cls.bEnabled = True
+                cls.bBuffering = False
+                # Flush any pre-open diagnostics, then write the
+                # log-opened banner. The banner appears BEFORE pre-
+                # open content would be confusing; instead, flush
+                # buffer first so the order matches the time the
+                # events actually occurred.
+                cls._flushBuffer()
+                cls.info(f"{sProgramName} {sProgramVersion} log opened (replaced prior {sLogFileName})")
+            else:
+                # Append mode (default): preserve history across runs.
+                # The first time the file is opened it is created fresh;
+                # subsequent runs append. A blank line is written before
+                # the new session's header to visually separate runs.
+                bExistedBefore = os.path.exists(sLogPath)
+                cls.fLog = open(sLogPath, "a", encoding="utf-8-sig", newline="\r\n")
+                cls.bEnabled = True
+                cls.bBuffering = False
+                if bExistedBefore: cls.fLog.write("\n")
+                cls._flushBuffer()
+                cls.info(f"{sProgramName} {sProgramVersion} log opened (appending)")
         except Exception:
             cls.bEnabled = False
+            cls.bBuffering = False  # give up; drop buffer
+            cls.aBuffer = []
+
+    @classmethod
+    def _flushBuffer(cls):
+        """Write any pre-open buffered diagnostics to the now-open log
+        file. Called by open() after the file is ready. Buffer is
+        cleared so subsequent calls don't re-write."""
+        if cls.fLog is None: return
+        for sStamp, sLevel, sMsg in cls.aBuffer:
+            try: cls.fLog.write(f"[{sStamp}] [{sLevel}] {sMsg}\n")
+            except Exception: pass
+        try: cls.fLog.flush()
+        except Exception: pass
+        cls.aBuffer = []
+
+    @classmethod
+    def discardBuffer(cls):
+        """Discard the pre-open buffer without writing it. Called when
+        we know logging will never happen for this run, so memory can
+        be freed and bBuffering disabled."""
+        cls.aBuffer = []
+        cls.bBuffering = False
 
     @classmethod
     def write(cls, sLevel, sMsg):
         # Internal level-tagged writer. Public level methods (info,
         # warn, error, debug) all funnel through here so the format
         # is uniform and a level filter could be added later in one
-        # place. Silent no-op when the logger is disabled, which is
-        # the case unless the user passed -l / --log.
-        if not cls.bEnabled or cls.fLog is None: return
-        try:
-            sStamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            cls.fLog.write(f"[{sStamp}] [{sLevel}] {sMsg}\n")
-            cls.fLog.flush()
-        except Exception:
-            pass
+        # place. Two paths:
+        #
+        #   1. Logger is enabled (file open): write directly.
+        #   2. Logger is buffering (pre-open): append to aBuffer, to
+        #      be flushed by open() when the file is ready.
+        #
+        # The buffering path exists because urlCheck needs to record
+        # diagnostics before the output folder is known (e.g., GUI
+        # mode hasn't shown the dialog yet, so pathLogDir isn't
+        # final). Without buffering, those diagnostics would either
+        # be lost or land in the wrong folder.
+        sStamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        if cls.bEnabled and cls.fLog is not None:
+            try:
+                cls.fLog.write(f"[{sStamp}] [{sLevel}] {sMsg}\n")
+                cls.fLog.flush()
+            except Exception:
+                pass
+        elif cls.bBuffering:
+            try:
+                cls.aBuffer.append((sStamp, sLevel, sMsg))
+                # Cap the buffer to avoid unbounded growth in extreme
+                # cases (some unforeseen failure mode where the open
+                # never happens). 500 messages is plenty for the
+                # pre-dialog diagnostic phase.
+                if len(cls.aBuffer) > 500:
+                    cls.aBuffer = cls.aBuffer[-500:]
+            except Exception:
+                pass
 
     @classmethod
     def info(cls, sMsg):  cls.write("INFO",  sMsg)
@@ -2754,9 +4238,9 @@ class configManager:
         try:
             if os.path.isdir(sDir) and not os.listdir(sDir):
                 os.rmdir(sDir)
-                logger.info(f"Removed empty configuration directory: {sDir}")
+                logger.info(f"Removed empty configuration folder: {sDir}")
         except Exception as ex:
-            logger.info(f"Could not remove configuration directory {sDir}: {ex}")
+            logger.info(f"Could not remove configuration folder {sDir}: {ex}")
 
     @staticmethod
     def parseFile(sPath):
@@ -2802,9 +4286,9 @@ class configManager:
         if (not getattr(arguments, "sSource", None)) and d.get("source", ""):
             arguments.sSource = d.get("source", "")
 
-        # Output dir: only adopt if the CLI did not pass -o.
-        if not getattr(arguments, "sOutputDir", "") and d.get("output_directory", ""):
-            arguments.sOutputDir = d.get("output_directory", "")
+        # Output folder: only adopt if the CLI did not pass -o.
+        if not getattr(arguments, "sOutputDir", "") and d.get("output_folder", ""):
+            arguments.sOutputDir = d.get("output_folder", "")
 
         # Booleans: only adopt if the CLI did not pass the flag (i.e., it's
         # currently False, the parser default).
@@ -2814,13 +4298,15 @@ class configManager:
             arguments.bInvisible = configManager.getBool(d, "invisible")
         if not getattr(arguments, "bAuthenticate", False):
             arguments.bAuthenticate = configManager.getBool(d, "authenticate")
+        if not getattr(arguments, "bMainProfile", False):
+            arguments.bMainProfile = configManager.getBool(d, "main_profile")
         if not getattr(arguments, "bForce", False):
             arguments.bForce = configManager.getBool(d, "force_replacements")
         if not getattr(arguments, "bLog", False):
             arguments.bLog = configManager.getBool(d, "log_session")
 
     @staticmethod
-    def save(sSource, sOutputDir, bViewOutput, bInvisible, bForce, bLog, bAuthenticate=False):
+    def save(sSource, sOutputDir, bViewOutput, bInvisible, bForce, bLog, bAuthenticate=False, bMainProfile=False):
         sDir = ""
         sPath = ""
 
@@ -2828,22 +4314,1215 @@ class configManager:
         sPath = configManager.getConfigPath()
         try:
             if not os.path.isdir(sDir): os.makedirs(sDir, exist_ok=True)
-            with open(sPath, "w", encoding="utf-8-sig", newline="\n") as fIni:
+            with open(sPath, "w", encoding="utf-8-sig", newline="\r\n") as fIni:
                 fIni.write("; urlCheck configuration\n")
                 fIni.write("; auto-written when Use configuration was checked at OK time.\n")
                 fIni.write("; Delete this file to reset, or click Default settings in the\n")
                 fIni.write("; GUI, which also deletes the file and the urlCheck folder.\n")
                 fIni.write(f"source={sSource or ''}\n")
-                fIni.write(f"output_directory={sOutputDir or ''}\n")
+                fIni.write(f"output_folder={sOutputDir or ''}\n")
                 fIni.write(f"view_output={'1' if bViewOutput else '0'}\n")
                 fIni.write(f"invisible={'1' if bInvisible else '0'}\n")
                 fIni.write(f"authenticate={'1' if bAuthenticate else '0'}\n")
+                fIni.write(f"main_profile={'1' if bMainProfile else '0'}\n")
                 fIni.write(f"force_replacements={'1' if bForce else '0'}\n")
                 fIni.write(f"log_session={'1' if bLog else '0'}\n")
             logger.info(f"Saved configuration to {sPath}")
         except Exception as ex:
             print(f"[WARN] Could not save configuration to {sPath}: {ex}")
             logger.info(f"Could not save configuration: {ex}")
+
+
+
+
+# --- ACR (Accessibility Conformance Report) builder ---
+#
+# Produces ACR.xlsx in the parent output folder, summarizing axe-core
+# results across multiple per-page scans against the WCAG 2.2 success
+# criteria. Each WCAG criterion gets a row showing how many distinct
+# axe rules failed / passed / were incomplete / were inapplicable for
+# that criterion across the included pages, plus a calculated verdict
+# (Calc) and an ACR-terminology mapping (Conformance) suitable for
+# inclusion in a published Accessibility Conformance Report.
+#
+# Architecture: walk the parent output folder for subfolders that
+# contain a results.json, parse each, accumulate per-criterion counts,
+# then render a workbook with one rollup sheet plus one sheet per
+# included page.
+#
+# Source-of-truth rules:
+#   --force set: build ACR.xlsx from ONLY the URLs scanned in this
+#                session (in-memory tracked list; older subfolders are
+#                ignored even if they still contain results.json).
+#   --force unset: build ACR.xlsx from ALL subfolders under the parent
+#                that contain a results.json. The user curates the
+#                workbook by deleting subfolders to exclude their
+#                pages.
+#
+# Calc precedence (per criterion, per page):
+#   1. fail+pass on different rules -> partial
+#   2. fail with no pass            -> fail
+#   3. incomplete or needs-review   -> manual
+#   4. pass with none failing       -> pass
+#   5. only inapplicable            -> na
+#   6. no axe coverage              -> unknown
+#
+# Rollup precedence (worst-result-wins across pages):
+#   any partial OR any (fail+pass) -> partial
+#   any fail (no pass anywhere)    -> fail
+#   any manual                      -> manual
+#   any pass                       -> pass
+#   any na                         -> na
+#   no coverage                     -> unknown
+#
+# ACR terminology mapping (per VPAT 2.5):
+#   pass     -> Supports
+#   partial  -> Partially Supports
+#   fail     -> Does Not Support
+#   manual   -> Incomplete
+#   na       -> Not Applicable
+#   unknown  -> Not Evaluated
+
+class acrBuilder:
+    """
+    Build ACR.xlsx for the urlCheck session.
+
+    Public methods:
+      classmethod buildIfApplicable(arguments, lThisRunPaths) -- driver.
+        lThisRunPaths is a list of pathlib.Path objects pointing to the
+        per-page output folders written during this run. With --force,
+        this list is the ONLY source. Without --force, it's ignored and
+        the parent folder is walked instead.
+    """
+
+    @staticmethod
+    def fnWcagSortKey(sId):
+        """Numeric sort key so 1.10 follows 1.9, not 1.2."""
+        try: return tuple(int(p) for p in sId.split("."))
+        except Exception: return (999,)
+
+    @classmethod
+    def discoverPageFolders(cls, pathParent, lThisRunPaths, bForceMode):
+        """
+        Return a list of (pathFolder, dResults, dMetadata) tuples for
+        every page that should be included in the workbook.
+        """
+        lFound = []
+        lPaths = []
+        if bForceMode:
+            # In --force mode the workbook is built strictly from this
+            # session's tracked outputs.
+            lPaths = list(lThisRunPaths or [])
+        else:
+            # Append-mode: walk the parent for every subfolder that has
+            # a results.json. Sort alphabetically for stable sheet
+            # ordering across runs.
+            for path in sorted(pathParent.iterdir()):
+                if not path.is_dir(): continue
+                if (path / sJsonName).is_file():
+                    lPaths.append(path)
+        for path in lPaths:
+            pathJson = path / sJsonName
+            if not pathJson.is_file(): continue
+            try:
+                d = json.loads(pathJson.read_text(encoding="utf-8"))
+            except Exception as ex:
+                logger.info(f"ACR: skipping {path.name}: cannot parse "
+                    f"{sJsonName}: {ex}")
+                continue
+            dResults = d.get("results") or {}
+            dMetadata = d.get("metadata") or {}
+            lFound.append((path, dResults, dMetadata))
+        return lFound
+
+    @classmethod
+    def axeVersionFromBundle(cls, sAxeSource):
+        """
+        Extract the axe-core version from the bundled axe.min.js source
+        text. Falls back to sFallbackAxeVersion if not found. The
+        version number is used to construct Deque University rule URLs.
+        """
+        if not sAxeSource: return sFallbackAxeVersion
+        sCheck = sAxeSource[:8000]
+        # Common shape: axe.version="4.10.2" or var version="4.10.2"
+        m = re.search(r'(?:axe\.version|version)\s*[=:]\s*["\']([0-9]+\.[0-9]+(?:\.[0-9]+)?)["\']', sCheck)
+        if m:
+            sVer = m.group(1)
+            # Major.minor for Deque URLs
+            aParts = sVer.split(".")
+            if len(aParts) >= 2: return f"{aParts[0]}.{aParts[1]}"
+            return sVer
+        return sFallbackAxeVersion
+
+    @classmethod
+    def criteriaFromTags(cls, lTags):
+        """
+        Given an axe rule's tags (e.g. ["wcag2a","wcag111","cat.text-alternatives"]),
+        return the list of WCAG 2.2 criterion ids the rule applies to
+        (e.g. ["1.1.1"]). A single rule can cover multiple criteria.
+        Tags use the convention wcag<major><minor><sub> with no dots,
+        e.g. wcag111 -> 1.1.1, wcag1410 -> 1.4.10.
+        """
+        lOut = []
+        for sTag in lTags or []:
+            sTag = str(sTag)
+            if not sTag.startswith("wcag"): continue
+            sRest = sTag[4:]
+            # Skip level-only tags like wcag2a, wcag2aa, wcag22aa
+            if not sRest or not sRest[0].isdigit(): continue
+            # Skip combined level tags like wcag22aa
+            if any(ch.isalpha() for ch in sRest): continue
+            # Now sRest is digits like 111, 1410, 2410.
+            # Parse: first digit = principle, second digit = guideline,
+            # remaining digits = criterion (1 or 2 digits).
+            if len(sRest) < 3: continue
+            sCrit = f"{sRest[0]}.{sRest[1]}.{sRest[2:]}"
+            if sCrit in dWcag22 and sCrit not in lOut:
+                lOut.append(sCrit)
+        return lOut
+
+    @classmethod
+    def perPageBuckets(cls, dResults):
+        """
+        Convert one page's axe results into a dict keyed by criterion id
+        with values:
+          {
+            "fail": {rule_id: instance_count, ...},
+            "pass": {rule_id: instance_count, ...},
+            "incomplete": {rule_id: instance_count, ...},
+            "na": {rule_id: instance_count, ...},
+          }
+        Instance count is the length of the rule's nodes array on this
+        page. For inapplicable rules, the instance count is recorded
+        as 1 (the rule itself was tested and found not applicable;
+        nodes is empty by axe's design).
+
+        For pass / incomplete / inapplicable to have accurate instance
+        counts, axe.run must be called with all four resultTypes
+        listed (otherwise axe truncates pass and inapplicable nodes
+        arrays to one entry per rule). See aAxeRunOptions.
+        """
+        d = {}
+        dKeyToBucket = {
+            "violations":   "fail",
+            "passes":       "pass",
+            "incomplete":   "incomplete",
+            "needsReview":  "incomplete",
+            "inapplicable": "na",
+        }
+        for sKey, sBucket in dKeyToBucket.items():
+            for dRule in dResults.get(sKey, []) or []:
+                sRuleId = dRule.get("id") or ""
+                if not sRuleId: continue
+                lTags = dRule.get("tags") or []
+                lCrits = cls.criteriaFromTags(lTags)
+                # Instance count: length of nodes array. For
+                # inapplicable, the array is empty by design; count
+                # the rule itself once.
+                aNodes = dRule.get("nodes") or []
+                iCount = len(aNodes) if aNodes else (1 if sBucket == "na" else 0)
+                if iCount == 0: continue
+                for sCrit in lCrits:
+                    if sCrit not in d:
+                        d[sCrit] = {"fail": {}, "pass": {},
+                                    "incomplete": {}, "na": {}}
+                    if sRuleId in d[sCrit][sBucket]:
+                        d[sCrit][sBucket][sRuleId] += iCount
+                    else:
+                        d[sCrit][sBucket][sRuleId] = iCount
+        return d
+
+    @classmethod
+    def calcVerdict(cls, dBuckets):
+        """
+        Apply Calc precedence to a per-criterion buckets dict.
+        Returns one of: "partial", "fail", "manual", "pass", "na", "unknown".
+
+        Precedence (most specific first):
+          1. partial -- at least one fail AND at least one pass (any
+                        incompletes are additional unfinished work; the
+                        mixed verdict still stands)
+          2. fail    -- at least one fail (no pass anywhere)
+          3. manual  -- at least one incomplete (no fail, no pass)
+          4. pass    -- at least one pass (no fail, no incomplete)
+          5. na      -- only inapplicable
+          6. unknown -- no axe coverage
+        """
+        if not dBuckets: return "unknown"
+        bHasFail = bool(dBuckets["fail"])
+        bHasPass = bool(dBuckets["pass"])
+        bHasIncomplete = bool(dBuckets["incomplete"])
+        bHasNa = bool(dBuckets["na"])
+        if bHasFail and bHasPass: return "partial"
+        if bHasFail: return "fail"
+        if bHasIncomplete: return "manual"
+        if bHasPass: return "pass"
+        if bHasNa: return "na"
+        return "unknown"
+
+    @classmethod
+    def rollupVerdict(cls, lPageBuckets, sCrit):
+        """
+        Compute the rollup verdict across multiple pages for a given
+        criterion. lPageBuckets is a list of per-page bucket dicts (the
+        output of perPageBuckets). Returns the calc verdict string.
+        Worst-result-wins across pages.
+        """
+        bAnyFail = False
+        bAnyPass = False
+        bAnyIncomplete = False
+        bAnyNa = False
+        bAnyCovered = False
+        for d in lPageBuckets:
+            if sCrit not in d: continue
+            bAnyCovered = True
+            b = d[sCrit]
+            if b["fail"]:       bAnyFail = True
+            if b["pass"]:       bAnyPass = True
+            if b["incomplete"]: bAnyIncomplete = True
+            if b["na"]:         bAnyNa = True
+        if not bAnyCovered: return "unknown"
+        if bAnyFail and bAnyPass: return "partial"
+        if bAnyFail:              return "fail"
+        if bAnyIncomplete:        return "manual"
+        if bAnyPass:              return "pass"
+        if bAnyNa:                return "na"
+        return "unknown"
+
+    @classmethod
+    def calcToConformance(cls, sCalc):
+        """Map internal Calc value to VPAT 2.5-style ACR terminology.
+
+        The mapping follows ITI guidance and WCAG 2.0 Understanding
+        Conformance: when no content on the page is subject to a
+        criterion, the criterion IS satisfied (a vacuous truth), so
+        the appropriate term is "Supports", not "Not Applicable".
+        See https://www.w3.org/TR/UNDERSTANDING-WCAG20/conformance.html
+
+        VPAT 2.5 reserves "Not Evaluated" for AAA criteria, but
+        urlCheck uses it more broadly as the honest verdict for
+        criteria where automated testing cannot decide. urlCheck
+        produces a draft ACR; the user is expected to revisit each
+        "Not Evaluated" entry, perform the manual checks listed in
+        the Manual column, and rewrite the Result column with their
+        final verdict before publishing.
+        """
+        d = {
+            "pass":     "Supports",
+            "partial":  "Partially Supports",
+            "fail":     "Does Not Support",
+            "manual":   "Not Evaluated",
+            "na":       "Supports",
+            "unknown":  "Not Evaluated",
+        }
+        return d.get(sCalc, "Not Evaluated")
+
+    @classmethod
+    def aggregateInstances(cls, lPageBuckets, sCrit, sBucket):
+        """
+        Sum instance counts across all pages for the given criterion
+        and bucket. Returns total node-instance count.
+        """
+        iTotal = 0
+        for d in lPageBuckets:
+            if sCrit not in d: continue
+            for sRuleId, iCount in d[sCrit].get(sBucket, {}).items():
+                iTotal += iCount
+        return iTotal
+
+    @classmethod
+    def aggregateAllRules(cls, lPageBuckets, sCrit):
+        """All distinct rule ids that touched the criterion across all
+        pages, in any bucket."""
+        sAll = set()
+        for d in lPageBuckets:
+            if sCrit not in d: continue
+            for sBucket in ("fail", "pass", "incomplete", "na"):
+                for sRuleId in d[sCrit].get(sBucket, {}):
+                    sAll.add(sRuleId)
+        return sorted(sAll)
+
+    @classmethod
+    def pagesByVerdict(cls, lPageBuckets, lPageNames, sCrit):
+        """
+        Return a dict { 'fail': [...], 'partial': [...], 'manual': [...] }
+        of sheet-name lists for the criterion, where each list contains
+        the page names whose per-page Calc landed in that bucket.
+
+        lPageBuckets and lPageNames are parallel lists. Pages with calc
+        of pass / na / unknown are not listed (they're not actionable
+        in the rollup's Conformance cell).
+        """
+        dOut = {"fail": [], "partial": [], "manual": []}
+        for dB, sName in zip(lPageBuckets, lPageNames):
+            buckets = dB.get(sCrit) or {}
+            if not buckets: continue
+            sCalc = cls.calcVerdict(buckets)
+            if sCalc in dOut:
+                dOut[sCalc].append(sName)
+        for k in dOut: dOut[k].sort()
+        return dOut
+
+    @classmethod
+    def captureExistingRemarks(cls, pathWorkbook):
+        """
+        If ACR.xlsx already exists, capture the user-editable Result
+        and Remarks columns from Sheet 1 (keyed by criterion id) so
+        they survive regeneration. Returns dict { sCrit: (sResult, sRemarks) }.
+        """
+        dCaptured = {}
+        if not pathWorkbook.is_file(): return dCaptured
+        try:
+            # Open WITHOUT data_only so HYPERLINK formulas are
+            # readable as raw text. data_only=True returns None for
+            # formula cells unless Excel has cached results, which
+            # openpyxl-written files do not have.
+            wb = openpyxl.load_workbook(str(pathWorkbook))
+        except Exception as ex:
+            logger.info(f"ACR: cannot read existing {pathWorkbook.name} "
+                f"to preserve user edits: {ex}")
+            return dCaptured
+        sName = "Conformance Report"
+        if sName not in wb.sheetnames:
+            wb.close()
+            return dCaptured
+        ws = wb[sName]
+        # Find Result and Remarks column indices from header row.
+        # Also accept the legacy "Notes" header for upgraded workbooks.
+        iResult = -1
+        iRemarks = -1
+        iCrit = -1
+        for iCol, cell in enumerate(ws[1], 1):
+            sVal = (cell.value or "").strip() if cell.value else ""
+            if sVal == "Result": iResult = iCol
+            elif sVal in ("Remarks", "Notes"): iRemarks = iCol
+            elif sVal == "Criterion": iCrit = iCol
+        if iCrit < 0:
+            wb.close()
+            return dCaptured
+        for row in ws.iter_rows(min_row=2):
+            sCritCell = ""
+            sResult = ""
+            sRemarks = ""
+            for cell in row:
+                if cell.column == iCrit and cell.value:
+                    s = str(cell.value).strip()
+                    if s.startswith("="):
+                        m = re.search(r'HYPERLINK\s*\(\s*"[^"]*"\s*,\s*"([^"]*)"\s*\)', s, re.IGNORECASE)
+                        if m: s = m.group(1)
+                    sCritCell = s.split()[0] if s else ""
+                elif cell.column == iResult and cell.value:
+                    sResult = str(cell.value).strip()
+                elif cell.column == iRemarks and cell.value:
+                    sRemarks = str(cell.value).strip()
+            if sCritCell and (sResult or sRemarks):
+                dCaptured[sCritCell] = (sResult, sRemarks)
+        wb.close()
+        return dCaptured
+
+    @classmethod
+    def writeGlossarySheet(cls, wb):
+        """
+        Write a Glossary sheet at the end of the workbook with key
+        terms and links the user might want when reading the report.
+
+        Sections (separated by blank rows), ordered axe -> urlCheck ->
+        WCAG -> misc:
+          1. Outcome Categories (axe-core)
+          2. urlCheck Calc Values
+          3. VPAT 2.5 Conformance Terms
+          4. WCAG Accessibility Principles
+          5. WCAG Conformance Levels
+          6. Additional Resources
+
+        Each section is its own contiguous data region with two
+        columns (Term, Definition). Each section's "Term" header
+        cell (the column-header cell of that region) is named
+        Title02 / Title03 / etc. so screen readers announce both
+        the column header and the row label as the user navigates
+        within that section.
+        """
+        ws = wb.create_sheet(title="Glossary")
+        iRow = 1
+        aHeaderRows = []  # list of row numbers of "Term" header cells
+
+        def fnSection(sHeader, lEntries):
+            nonlocal iRow
+            # Section heading (above the data region, decorative).
+            ws.cell(row=iRow, column=1, value=sHeader)
+            iRow += 1
+            # Data region begins here. The first row is the column-
+            # header row (Term, Definition). Track this row so the
+            # named-range pass can attach a Title<NN> name to it.
+            aHeaderRows.append(iRow)
+            ws.cell(row=iRow, column=1, value="Term")
+            ws.cell(row=iRow, column=2, value="Definition")
+            iRow += 1
+            for sTerm, sDefn in lEntries:
+                ws.cell(row=iRow, column=1, value=sTerm)
+                # If the definition is a bare URL, set both the
+                # cell text AND the cell's native hyperlink property.
+                # A real Excel hyperlink (as opposed to a HYPERLINK
+                # formula) is recognized by screen readers as a link
+                # element, and renders with the standard link
+                # appearance. The native hyperlink approach is more
+                # accessible than the formula approach because:
+                # (a) JAWS announces native hyperlink cells as links;
+                # (b) the link is followable by Enter or Ctrl+Click
+                #     without Excel needing to evaluate a formula.
+                cell = ws.cell(row=iRow, column=2)
+                if (sDefn.startswith("http://") or sDefn.startswith("https://")) and " " not in sDefn:
+                    cell.value = sDefn
+                    cell.hyperlink = sDefn
+                    # Apply Excel's built-in Hyperlink style so the
+                    # cell renders blue and underlined, matching the
+                    # visual convention users expect.
+                    cell.style = "Hyperlink"
+                else:
+                    cell.value = sDefn
+                iRow += 1
+            iRow += 1  # blank row between sections
+
+        fnSection("Outcome Categories (axe-core)", [
+            ("Fail",
+             "An axe rule found one or more failing instances on the page."),
+            ("Pass",
+             "An axe rule confirmed at least one passing instance."),
+            ("Incomplete",
+             "An axe rule could not definitively decide; manual review needed."),
+            ("Inapplicable",
+             "An axe rule was tested but no relevant content existed on the page."),
+        ])
+
+        fnSection("urlCheck Calc Values", [
+            ("fail",
+             "At least one rule instance fails, with no passes on the same criterion."),
+            ("pass",
+             "At least one rule instance passes, with no fails or incompletes."),
+            ("partial",
+             "At least one rule instance fails AND at least one passes for the same criterion."),
+            ("manual",
+             "At least one incomplete result, with no fails or passes; manual testing is required."),
+            ("na",
+             "All rule instances are inapplicable to the page."),
+            ("unknown",
+             "No automated rules apply to this criterion. Default before the page has been scanned."),
+        ])
+
+        fnSection("VPAT 2.5 Conformance Terms", [
+            ("Supports",
+             "The functionality of the product has at least one method that meets the criterion without known defects, or meets with equivalent facilitation."),
+            ("Partially Supports",
+             "Some functionality of the product does not meet the criterion."),
+            ("Does Not Support",
+             "The majority of product functionality does not meet the criterion."),
+            ("Not Applicable",
+             "The criterion is not relevant to the product."),
+            ("Incomplete",
+             "Manual review is required to reach a conformance verdict."),
+            ("Not Evaluated",
+             "The product has not been evaluated against the criterion. May only be used in WCAG Level AAA criteria."),
+        ])
+
+        fnSection("WCAG Accessibility Principles", [
+            ("Perceivable",
+             "Information and user interface components must be presentable to users in ways they can perceive."),
+            ("Operable",
+             "User interface components and navigation must be operable."),
+            ("Understandable",
+             "Information and the operation of the user interface must be understandable."),
+            ("Robust",
+             "Content must be robust enough that it can be interpreted reliably by a wide variety of user agents, including assistive technology."),
+        ])
+
+        fnSection("WCAG Conformance Levels", [
+            ("Level A",
+             "Minimum level of accessibility conformance. Removes the most significant barriers."),
+            ("Level AA",
+             "Addresses the major and most common accessibility barriers; commonly required by laws and procurement standards."),
+            ("Level AAA",
+             "Highest and most comprehensive level. Some content may not be able to satisfy all AAA criteria."),
+        ])
+
+        fnSection("Additional Resources", [
+            ("WCAG 2.2 Quick Reference",
+             "https://www.w3.org/WAI/WCAG22/quickref/"),
+            ("Understanding WCAG 2.2",
+             "https://www.w3.org/WAI/WCAG22/Understanding/"),
+            ("Deque University rule reference",
+             "https://dequeuniversity.com/rules/axe/"),
+            ("WebAIM",
+             "https://webaim.org/"),
+            ("ITI VPAT (Voluntary Product Accessibility Template)",
+             "https://www.itic.org/policy/accessibility/vpat"),
+            ("Section 508",
+             "https://www.section508.gov/"),
+        ])
+
+        # The Glossary's row 1 is a section heading (not a column
+        # header), so applyFormatting with iHeaderRow=1 would bold it
+        # white-on-blue along with all the data. We deliberately call
+        # applyFormatting only for column-width sizing, then re-style
+        # each section's "Term/Definition" header row separately.
+        cls.applyFormatting(ws, iHeaderRow=1, iDataStart=2)
+        # Apply white-on-blue header styling to each section's header
+        # row, and attach a Title<NN> named range to each section's
+        # "Term" cell so screen readers correctly announce headers
+        # as the user navigates within that section.
+        for iHdrRow in aHeaderRows:
+            for iCol in (1, 2):
+                cell = ws.cell(row=iHdrRow, column=iCol)
+                cell.font = Font(bold=True, color="FFFFFF")
+                cell.fill = PatternFill(fill_type="solid", fgColor="1F4E78")
+                cell.alignment = Alignment(vertical="top", wrap_text=True)
+            cls.addNamedRangeForCell(wb, ws, ws.cell(row=iHdrRow, column=1), "Title")
+        # Section-heading cells (the rows above each header row, with
+        # text like "WCAG Accessibility Principles") should NOT be
+        # styled as if they were data; restore plain bold formatting.
+        for iHdrRow in aHeaderRows:
+            iSectHeadingRow = iHdrRow - 1
+            if iSectHeadingRow < 1: continue
+            cell = ws.cell(row=iSectHeadingRow, column=1)
+            cell.font = Font(bold=True)
+            cell.fill = PatternFill(fill_type=None)
+            cell.alignment = Alignment(vertical="top")
+
+    @classmethod
+    def safeSheetName(cls, sBase, lExisting):
+        """Sanitize a folder name for use as a sheet name. Excel sheet
+        names are limited to 31 characters and may not contain
+        : \\ / ? * [ ]. The folder name (already a sanitized page
+        title) is reused directly; if it exceeds 31 chars or if a
+        prior sheet has the same name, suffix with _2, _3, etc."""
+        sClean = re.sub(r'[:\\/?*\[\]]', '_', sBase or "Page")
+        sClean = sClean[:31]
+        if sClean and sClean not in lExisting: return sClean
+        # Disambiguate
+        for iSuffix in range(2, 1000):
+            sSuffix = f"_{iSuffix}"
+            sTry = (sClean[:31 - len(sSuffix)]) + sSuffix
+            if sTry not in lExisting: return sTry
+        return (sClean[:30] or "Page")
+
+    @classmethod
+    def applyFormatting(cls, ws, iHeaderRow=1, iDataStart=2, bSingleLineRows=False):
+        """
+        Apply the xlFormat.vbs-derived formatting to a worksheet:
+        bold first row with white-on-blue fill, vertical-align top
+        everywhere, per-column data-driven width capped at 50, wrap
+        text on columns over the cap, frozen header row. AutoFilter
+        is deliberately not enabled: in JAWS, the surrounding "filter
+        is off" announcement on every cell interferes with reading
+        column headers.
+
+        When bSingleLineRows is True, each data row is given an
+        explicit fixed height of one line (~15 points) so that multi-
+        line cells show only their first line by default. Excel
+        honors the explicit height even when wrap_text is True;
+        wrapped content remains in the cell but overflows below the
+        visible area until the user expands the row. This is the
+        idiom used for Sheet 1 (Conformance Report) and per-URL
+        sheets so the user sees one row = one line of summary.
+
+        Idempotent: safe to call after data is written.
+        """
+        if ws.max_row < iHeaderRow: return
+        iCols = ws.max_column
+        if iCols < 1: return
+        # Header row: bold, white-on-blue
+        for iCol in range(1, iCols + 1):
+            cell = ws.cell(row=iHeaderRow, column=iCol)
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = PatternFill(fill_type="solid", fgColor="1F4E78")
+            cell.alignment = Alignment(vertical="top", wrap_text=True)
+        # Compute per-column max content length and cap widths.
+        iCapWidth = 50
+        for iCol in range(1, iCols + 1):
+            iMaxLen = 0
+            for iRow in range(iHeaderRow, ws.max_row + 1):
+                v = ws.cell(row=iRow, column=iCol).value
+                if v is None: continue
+                # Multi-line cells: longest line determines width.
+                aLines = str(v).split("\n")
+                for sLine in aLines:
+                    if len(sLine) > iMaxLen: iMaxLen = len(sLine)
+            iWidth = min(iMaxLen + 2, iCapWidth)
+            if iWidth < 6: iWidth = 6
+            ws.column_dimensions[get_column_letter(iCol)].width = iWidth
+            # Wrap text on columns at the cap (where overflow likely)
+            bWrap = (iMaxLen + 2) > iCapWidth
+            for iRow in range(iDataStart, ws.max_row + 1):
+                cell = ws.cell(row=iRow, column=iCol)
+                cell.alignment = Alignment(vertical="top", wrap_text=bWrap)
+        # Single-line row-height enforcement: each data row is fixed
+        # to one line of content; multi-line cells overflow
+        # invisibly below until the user expands the row.
+        if bSingleLineRows:
+            for iRow in range(iDataStart, ws.max_row + 1):
+                ws.row_dimensions[iRow].height = 15
+        # Freeze header
+        ws.freeze_panes = ws.cell(row=iDataStart, column=1).coordinate
+
+    @classmethod
+    def addNamedRangeForCell(cls, wb, ws, cell, sStem):
+        """
+        Apply the xlHeaders.vbs technique: name a specific column-
+        header cell with a unique <stem>NN identifier so screen
+        readers (JAWS in particular) announce both the column header
+        and the row label as the user navigates within the data
+        region. Pass the actual cell that is the column header (the
+        top-left cell of a contiguous data region's header row),
+        not always row 1 column 1 of the sheet.
+
+        Stem is "Title" when both column headers (row 1) and row
+        labels (column 1) are present. The Glossary's multi-section
+        layout uses one named cell per section; the per-URL and
+        rollup sheets each have a single region.
+        """
+        from openpyxl.workbook.defined_name import DefinedName
+        # Find next free name with this stem.
+        iSeq = 1
+        while True:
+            sName = f"{sStem}{iSeq:02d}"
+            if sName not in wb.defined_names: break
+            iSeq += 1
+        sRef = f"'{ws.title}'!${cell.column_letter}${cell.row}"
+        wb.defined_names[sName] = DefinedName(name=sName, attr_text=sRef)
+
+    @classmethod
+    def writePerUrlSheet(cls, wb, sSheetName, dPageBuckets, dMetadata,
+                         sAxeVer, lOrderedCrits):
+        """
+        Write a per-URL diagnostic sheet.
+
+        Columns:
+          1. Criterion        (HYPERLINK; format "1.1.1 Non-text Content (A)")
+          2. Summary          (≤50 chars one-sentence summary)
+          3. Calc             (pass / fail / partial / manual / na / unknown)
+          4. Fail             (multi-line: "rule-id N" per line, alpha order)
+          5. Pass             (same)
+          6. Incomplete       (same)
+          7. Inapplicable     (same)
+
+        N is the node-instance count for that rule on this page.
+        Per-URL sheets are diagnostic; no Conformance / Result / Notes
+        columns. The page identification (title and URL) is in rows
+        above the header row.
+        """
+        ws = wb.create_sheet(title=sSheetName)
+        sPageTitle = str(dMetadata.get("pageTitle") or "")
+        sPageUrl = str(dMetadata.get("pageUrl") or "")
+        ws.cell(row=1, column=1, value=f"Page: {sPageTitle}")
+        ws.cell(row=2, column=1, value=f"URL: {sPageUrl}")
+        iHeaderRow = 4
+        iDataStart = iHeaderRow + 1
+        aHeaders = ["Criterion", "Summary", "Calc",
+                    "Fail", "Pass", "Incomplete", "Inapplicable"]
+        for iCol, sH in enumerate(aHeaders, 1):
+            ws.cell(row=iHeaderRow, column=iCol, value=sH)
+        iRow = iDataStart
+        # Mapping from header column to bucket key.
+        aBucketCols = [("fail", 4), ("pass", 5), ("incomplete", 6), ("na", 7)]
+        for sCrit in lOrderedCrits:
+            d = dWcag22[sCrit]
+            sCritText = f"{sCrit} {d['name']} ({d['level']})"
+            sQuickRef = sWcagQuickRefBase + "#" + d["fragment"]
+            cell = ws.cell(row=iRow, column=1)
+            cell.value = f'=HYPERLINK("{sQuickRef}","{sCritText}")'
+            ws.cell(row=iRow, column=2, value=dWcag22Summary.get(sCrit, ""))
+            buckets = dPageBuckets.get(sCrit) or {}
+            sCalc = cls.calcVerdict(buckets) if buckets else "unknown"
+            ws.cell(row=iRow, column=3, value=sCalc)
+            for sBucket, iCol in aBucketCols:
+                d2 = buckets.get(sBucket, {}) if buckets else {}
+                aLines = [f"{sRid} {iCount}" for sRid, iCount in sorted(d2.items())]
+                ws.cell(row=iRow, column=iCol, value="\n".join(aLines))
+            iRow += 1
+        cls.applyFormatting(ws, iHeaderRow=iHeaderRow, iDataStart=iDataStart, bSingleLineRows=True)
+        ws.freeze_panes = ws.cell(row=iDataStart, column=1).coordinate
+        cls.addNamedRangeForCell(wb, ws, ws.cell(row=iHeaderRow, column=1), "Title")
+
+    @classmethod
+    def writeRollupSheet(cls, wb, lPageBuckets, lPageNames, lOrderedCrits, dCapturedRemarks):
+        """
+        Write Sheet 1 (the Accessibility Conformance Report rollup).
+
+        Columns:
+          1. Criterion    HYPERLINK; format "1.1.1 Non-text Content (A)"
+          2. Summary      single-sentence summary
+          3. Conformance  multi-line:
+                          line 1: VPAT 2.5 verdict (Supports/Partially
+                          Supports/Does Not Support/Not Evaluated).
+                          When the verdict is not "Supports",
+                          subsequent lines list the per-page sheet
+                          names where this criterion was not supported
+                          ("Not supported:" header) and where it could
+                          not be evaluated ("Not evaluated:" header).
+          4. Manual       numbered manual-test steps
+          5. Result       user-editable; blank by default
+          6. Remarks      user-editable; first line auto-generated
+                          "Axe: fail N, pass N, incomplete N, inapplicable N"
+
+        lPageNames is parallel to lPageBuckets and contains the
+        sheet names (truncated and disambiguated to <=31 chars) that
+        the per-URL sheets will be given. Used to build the page
+        lists in the Conformance cell.
+        """
+        sName = "Conformance Report"
+        if wb.worksheets and wb.active.title in ("Sheet", "Sheet1"):
+            ws = wb.active
+            ws.title = sName
+        else:
+            ws = wb.create_sheet(title=sName, index=0)
+        iHeaderRow = 1
+        iDataStart = 2
+        aHeaders = ["Criterion", "Summary", "Conformance",
+                    "Manual", "Result", "Remarks"]
+        for iCol, sH in enumerate(aHeaders, 1):
+            ws.cell(row=iHeaderRow, column=iCol, value=sH)
+        iRow = iDataStart
+        for sCrit in lOrderedCrits:
+            d = dWcag22[sCrit]
+            sCritText = f"{sCrit} {d['name']} ({d['level']})"
+            sQuickRef = sWcagQuickRefBase + "#" + d["fragment"]
+            cell = ws.cell(row=iRow, column=1)
+            cell.value = f'=HYPERLINK("{sQuickRef}","{sCritText}")'
+            ws.cell(row=iRow, column=2, value=dWcag22Summary.get(sCrit, ""))
+
+            sCalc = cls.rollupVerdict(lPageBuckets, sCrit)
+            sConformance = cls.calcToConformance(sCalc)
+            # Build the multi-line Conformance cell. Line 1 is the
+            # verdict; if any pages have Calc fail/partial they are
+            # listed under "Not supported:"; if any have Calc manual
+            # they are listed under "Not evaluated:". Pages with pass
+            # / na / unknown are not listed (not actionable).
+            dPages = cls.pagesByVerdict(lPageBuckets, lPageNames, sCrit)
+            aLines = [sConformance]
+            aNotSupported = sorted(set(dPages["fail"] + dPages["partial"]))
+            aNotEvaluated = dPages["manual"]
+            if aNotSupported:
+                aLines.append("Not supported:")
+                aLines.extend(aNotSupported)
+            if aNotEvaluated:
+                aLines.append("Not evaluated:")
+                aLines.extend(aNotEvaluated)
+            ws.cell(row=iRow, column=3, value="\n".join(aLines))
+
+            sChecks = "\n".join(f"{i}. {sStep}" for i, sStep in enumerate(d["checks"], 1))
+            ws.cell(row=iRow, column=4, value=sChecks)
+            # Restore captured user edits if present
+            sResult, sRemarks = dCapturedRemarks.get(sCrit, ("", ""))
+            ws.cell(row=iRow, column=5, value=sResult)
+            # Remarks first line auto-generated: instance counts in
+            # axe-context labeling. Append captured user remarks below.
+            iFail = cls.aggregateInstances(lPageBuckets, sCrit, "fail")
+            iPass = cls.aggregateInstances(lPageBuckets, sCrit, "pass")
+            iInc = cls.aggregateInstances(lPageBuckets, sCrit, "incomplete")
+            iNa = cls.aggregateInstances(lPageBuckets, sCrit, "na")
+            sAuto = f"Axe: fail {iFail}, pass {iPass}, incomplete {iInc}, inapplicable {iNa}"
+            sRemarksCell = sAuto
+            if sRemarks:
+                sExisting = sRemarks
+                m = re.match(r'^Axe: fail \d+, pass \d+, incomplete \d+, (?:in|not )?applicable \d+\n?', sExisting)
+                if not m: m = re.match(r'^fail \d+, pass \d+, incomplete \d+, (?:in|not )?applicable \d+\n?', sExisting)
+                if m: sExisting = sExisting[m.end():]
+                if sExisting.strip():
+                    sRemarksCell = sAuto + "\n" + sExisting
+            ws.cell(row=iRow, column=6, value=sRemarksCell)
+            iRow += 1
+        cls.applyFormatting(ws, iHeaderRow=iHeaderRow, iDataStart=iDataStart, bSingleLineRows=True)
+        cls.addNamedRangeForCell(wb, ws, ws.cell(row=iHeaderRow, column=1), "Title")
+        return ws
+
+    @classmethod
+    def writeDocx(cls, pathParent, lFolders, lPageBuckets, lPageNames, lOrderedCrits, dtRunStart=None):
+        """
+        Generate ACR.docx, a narrative companion to ACR.xlsx.
+
+        The DOCX is informed by report.htm's information architecture
+        but adapted for ACR purposes: per-criterion focus rather than
+        per-rule focus. Sections:
+
+          1. Title and metadata (date, run start time, axe version,
+             pages count, aggregate accessibility failure rate)
+          2. Overview
+          3. Pages Analyzed (with per-page accessibility failure rate)
+          4. Conformance Summary (counts by verdict)
+          5. Criteria Requiring Attention (every non-Supports row)
+          6. Methodology
+          7. Resources
+
+        Uses python-docx (pure-Python, bundles cleanly with PyInstaller).
+        Word is NOT required to be installed. Generated fresh on every
+        run; user edits to a prior DOCX are not preserved.
+
+        dtRunStart is the wall-clock run-start datetime; if None the
+        current time is used. Falling back to current time means an
+        ACR regenerated from a prior session won't have the original
+        scan time, just when the rebuild ran -- but that's the
+        honest answer in the regen case.
+        """
+        try:
+            import docx
+            from docx.shared import Pt, Inches
+            from docx.enum.text import WD_ALIGN_PARAGRAPH
+        except ImportError:
+            logger.info("ACR: python-docx not available; skipping ACR.docx")
+            return
+
+        # Extract the axe-core version, browser version, and OS
+        # version from per-page metadata. Each results.json
+        # includes axeSource (e.g. "axe-core 4.10.3"), browserVersion
+        # (Edge build number), and osVersion (e.g. "Windows 11"). We
+        # take the most-recent values; if the user scanned across
+        # different machines or browser updates mid-session, the
+        # values reported reflect the LAST page scanned. If no
+        # pages have a particular field yet, fall back to safe
+        # defaults.
+        sAxeVersion = ""
+        sBrowserVersion = ""
+        sOsVersion = ""
+        for path, dResults, dMetadata in lFolders:
+            sAxe = str(dMetadata.get("axeSource") or "")
+            if sAxe: sAxeVersion = sAxe
+            sBrV = str(dMetadata.get("browserVersion") or "")
+            if sBrV: sBrowserVersion = sBrV
+            sOsV = str(dMetadata.get("osVersion") or "")
+            if sOsV: sOsVersion = sOsV
+        if not sAxeVersion: sAxeVersion = f"axe-core {sFallbackAxeVersion}"
+        if not sOsVersion: sOsVersion = getOsVersion()
+
+        # Compute aggregate accessibility failure rate across all
+        # included pages. Sum-of-numerators / sum-of-denominators is
+        # mathematically equivalent to a size-weighted mean of per-
+        # page rates: bigger pages get proportionally more weight.
+        iTotalNumer = 0
+        iTotalBytes = 0
+        lPerPageRates = []  # parallel to lFolders, holds (sName, nRate)
+        for (path, dResults, dMetadata), sSheetName in zip(lFolders, lPageNames):
+            iN = computePageImpactNumerator(dResults)
+            iB = computePageBytes(path)
+            iTotalNumer += iN
+            iTotalBytes += iB
+            lPerPageRates.append((sSheetName,
+                                   computeAccessibilityFailureRate(iN, iB)))
+        nAggregateRate = computeAccessibilityFailureRate(iTotalNumer, iTotalBytes)
+
+        d = docx.Document()
+        # Tighten default style: smaller font, single-spacing
+        styleNormal = d.styles["Normal"]
+        styleNormal.font.name = "Calibri"
+        styleNormal.font.size = Pt(11)
+
+        # ---- Section 1: Title and metadata ----
+        h = d.add_heading(level=0)
+        h.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        h.add_run("Accessibility Conformance Report")
+        sStart = (dtRunStart or datetime.datetime.now()).strftime("%Y-%m-%d %H:%M:%S")
+        d.add_paragraph(
+            f"Generated by {sProgramName} {sProgramVersion}"
+        ).alignment = WD_ALIGN_PARAGRAPH.CENTER
+        d.add_paragraph(
+            f"Run started: {sStart}"
+        ).alignment = WD_ALIGN_PARAGRAPH.CENTER
+        d.add_paragraph(
+            f"Testing engine: {sAxeVersion}"
+        ).alignment = WD_ALIGN_PARAGRAPH.CENTER
+        if sBrowserVersion:
+            d.add_paragraph(
+                f"Browser: Microsoft Edge {sBrowserVersion}"
+            ).alignment = WD_ALIGN_PARAGRAPH.CENTER
+        if sOsVersion:
+            d.add_paragraph(
+                f"Operating system: {sOsVersion}"
+            ).alignment = WD_ALIGN_PARAGRAPH.CENTER
+        d.add_paragraph(
+            f"Pages analyzed: {len(lFolders)}"
+        ).alignment = WD_ALIGN_PARAGRAPH.CENTER
+        if lFolders and iTotalBytes > 0:
+            d.add_paragraph(
+                f"Aggregate accessibility failure rate: {nAggregateRate:.1f}%"
+            ).alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+        # ---- Section 2: Overview ----
+        d.add_heading("Overview", level=1)
+        if lFolders:
+            d.add_paragraph(
+                f"This report summarizes accessibility conformance of "
+                f"{len(lFolders)} web {('page' if len(lFolders) == 1 else 'pages')} "
+                f"to WCAG 2.2, based on automated testing with axe-core and "
+                f"manual-test guidance. The report follows the conventions "
+                f"of the ITI Voluntary Product Accessibility Template (VPAT) "
+                f"version 2.5, where each WCAG success criterion is assigned "
+                f"one of: Supports, Partially Supports, Does Not Support, "
+                f"Not Applicable, or Not Evaluated."
+            )
+            d.add_paragraph(
+                f"This d is a draft generated by automation. It is "
+                f"intended as a starting point for the human reviewer, who "
+                f"is expected to verify each criterion's verdict (especially "
+                f"those marked Not Evaluated), perform the manual checks "
+                f"recommended in ACR.xlsx, and produce a final published "
+                f"ACR in a separate working folder."
+            )
+        else:
+            d.add_paragraph(
+                f"No pages have been scanned yet. ACR.xlsx contains the "
+                f"manual-test instructions for all 86 WCAG 2.2 success "
+                f"criteria, ready for the user to fill in once pages are "
+                f"scanned."
+            )
+
+        # ---- Section 3: Pages Analyzed ----
+        if lFolders:
+            d.add_heading("Pages Analyzed", level=1)
+            d.add_paragraph(
+                f"The following {len(lFolders)} {('page was' if len(lFolders) == 1 else 'pages were')} "
+                f"included in this report. Each page has its own diagnostic "
+                f"sheet in ACR.xlsx; the sheet name is a sanitized form of "
+                f"the title shortened to fit Excel's 31-character tab limit. "
+                f"The accessibility failure rate after each entry is the "
+                f"page's impact-weighted violation density (lower is better; "
+                f"see the Methodology section for how it is computed)."
+            )
+            dRateBySheet = dict(lPerPageRates)
+            for (path, dResults, dMetadata), sSheetName in zip(lFolders, lPageNames):
+                sPageTitle = str(dMetadata.get("pageTitle") or "(untitled)")
+                sPageUrl = str(dMetadata.get("pageUrl") or "")
+                nRate = dRateBySheet.get(sSheetName, 0.0)
+                p = d.add_paragraph(style="List Bullet")
+                p.add_run(f"{sPageTitle}").bold = True
+                if sPageUrl:
+                    p.add_run(f" ({sPageUrl})")
+                p.add_run(f" — rate: {nRate:.1f}%")
+
+        # ---- Section 4: Conformance Summary ----
+        d.add_heading("Conformance Summary", level=1)
+        # Tally each criterion's rollup verdict
+        dCounts = {"Supports": 0, "Partially Supports": 0,
+                   "Does Not Support": 0, "Not Evaluated": 0}
+        for sCrit in lOrderedCrits:
+            sCalc = cls.rollupVerdict(lPageBuckets, sCrit)
+            sConf = cls.calcToConformance(sCalc)
+            if sConf in dCounts: dCounts[sConf] += 1
+            else: dCounts[sConf] = 1
+        d.add_paragraph(
+            f"Of the {len(lOrderedCrits)} WCAG 2.2 success criteria evaluated:"
+        )
+        for sTerm in ("Supports", "Partially Supports",
+                      "Does Not Support", "Not Evaluated"):
+            iN = dCounts.get(sTerm, 0)
+            p = d.add_paragraph(style="List Bullet")
+            p.add_run(f"{sTerm}: ").bold = True
+            p.add_run(f"{iN} {('criterion' if iN == 1 else 'criteria')}")
+
+        # ---- Section 5: Criteria Requiring Attention ----
+        # Every criterion whose Conformance is not "Supports".
+        d.add_heading("Criteria Requiring Attention", level=1)
+        aAttention = []
+        for sCrit in lOrderedCrits:
+            sCalc = cls.rollupVerdict(lPageBuckets, sCrit)
+            sConf = cls.calcToConformance(sCalc)
+            if sConf != "Supports":
+                aAttention.append((sCrit, sConf, sCalc))
+        if not aAttention:
+            d.add_paragraph(
+                "All evaluated criteria are marked Supports. Note that some "
+                "criteria may be marked Supports because the criterion is "
+                "satisfied vacuously when no relevant content exists on the "
+                "page. See per-criterion details in ACR.xlsx."
+            )
+        else:
+            d.add_paragraph(
+                f"{len(aAttention)} {'criterion needs' if len(aAttention) == 1 else 'criteria need'} "
+                f"further attention. For each, see the corresponding row in "
+                f"ACR.xlsx for the full Calc precedence, contributing axe "
+                f"rules, manual-test steps, and per-page diagnostic results."
+            )
+            for sCrit, sConf, sCalc in aAttention:
+                dC = dWcag22[sCrit]
+                p = d.add_paragraph()
+                p.add_run(f"{sCrit} {dC['name']} ({dC['level']}): ").bold = True
+                p.add_run(f"{sConf}.")
+                # Add the page lists
+                dPages = cls.pagesByVerdict(lPageBuckets, lPageNames, sCrit)
+                aNotSupp = sorted(set(dPages["fail"] + dPages["partial"]))
+                aNotEval = dPages["manual"]
+                if aNotSupp:
+                    pp = d.add_paragraph()
+                    pp.add_run("Not supported: ").italic = True
+                    pp.add_run(", ".join(aNotSupp))
+                if aNotEval:
+                    pp = d.add_paragraph()
+                    pp.add_run("Not evaluated: ").italic = True
+                    pp.add_run(", ".join(aNotEval))
+
+        # ---- Section 6: Methodology ----
+        d.add_heading("Methodology", level=1)
+        d.add_paragraph(
+            f"{sProgramName} runs axe-core in Microsoft Edge against each "
+            f"target page, then aggregates the raw results into ACR.xlsx "
+            f"using a layered Calc precedence:"
+        )
+        for sLine in [
+            "partial: at least one rule instance fails AND at least one passes for the same criterion",
+            "fail: at least one rule instance fails (no pass)",
+            "manual: at least one incomplete result (no fail or pass)",
+            "pass: at least one pass (no fail or incomplete)",
+            "na: only inapplicable rules touched the criterion",
+            "unknown: no axe rules apply to the criterion",
+        ]:
+            p = d.add_paragraph(style="List Bullet")
+            p.add_run(sLine)
+        d.add_paragraph(
+            "Calc values are then mapped to ACR conformance terms: pass and "
+            "na become Supports (the criterion is satisfied, vacuously when "
+            "no relevant content exists, per WCAG 2.0 Understanding "
+            "Conformance); partial becomes Partially Supports; fail becomes "
+            "Does Not Support; manual and unknown become Not Evaluated. The "
+            "VPAT 2.5 standard reserves Not Evaluated for AAA criteria; "
+            f"{sProgramName} uses it more broadly because automated testing "
+            f"cannot decide outside its scope, and the user is expected to "
+            f"complete manual testing before publishing the ACR."
+        )
+        d.add_paragraph(
+            "Counts in the Remarks column are by node instance: one DOM "
+            "element flagged by an axe rule equals one instance. So three "
+            "image elements lacking alt text produce 'fail 3' for criterion "
+            "1.1.1, even though all three failures come from the same "
+            "image-alt rule."
+        )
+        d.add_heading("Accessibility failure rate", level=2)
+        d.add_paragraph(
+            f"For each scanned page, {sProgramName} computes an "
+            f"impact-weighted violation density called the accessibility "
+            f"failure rate. The numerator weights each violation instance "
+            f"by impact level (minor 1, moderate 2, serious 3, critical 4) "
+            f"and sums across all rules. The denominator is the byte size "
+            f"of the saved page source (page.htm). The result is multiplied "
+            f"by a tuning constant ({iAccessibilityRateScale}) so the "
+            f"output reads naturally as a percent: typical pages land below "
+            f"100%, with most well under that, while a heavily problematic "
+            f"page can exceed 100%. The percent framing is purely for "
+            f"display readability; the underlying quantity is "
+            f"impact-weighted violation instances per byte of page source."
+        )
+        d.add_paragraph(
+            f"For a page set, the aggregate rate is computed by summing "
+            f"per-page numerators and per-page denominators before the "
+            f"final division. This is a size-weighted view of the page "
+            f"set: bigger pages contribute proportionally more, which "
+            f"correctly reflects that they have more content with more "
+            f"chances for users to encounter violations."
+        )
+        d.add_paragraph(
+            f"Lower is better. The metric is intended to be tracked over "
+            f"time: as the page owner remediates accessibility issues, "
+            f"the rate should drop from one scan session to the next. "
+            f"Accessibility is a journey, not a destination."
+        )
+
+        # ---- Section 7: Resources ----
+        d.add_heading("Resources", level=1)
+        for sLabel, sUrl in [
+            ("WCAG 2.2 Quick Reference", "https://www.w3.org/WAI/WCAG22/quickref/"),
+            ("Understanding WCAG 2.2", "https://www.w3.org/WAI/WCAG22/Understanding/"),
+            ("Deque University rule reference", "https://dequeuniversity.com/rules/axe/"),
+            ("WebAIM", "https://webaim.org/"),
+            ("ITI VPAT", "https://www.itic.org/policy/accessibility/vpat"),
+            ("Section 508", "https://www.section508.gov/"),
+        ]:
+            p = d.add_paragraph(style="List Bullet")
+            p.add_run(f"{sLabel}: ").bold = True
+            p.add_run(sUrl)
+
+        # Save. Same case-enforcement as the XLSX.
+        pathDocx = pathParent / sAcrDocxName
+        for child in pathParent.iterdir():
+            if child.is_file() and child.name.lower() == sAcrDocxName.lower() and child.name != sAcrDocxName:
+                try: child.unlink()
+                except Exception as ex: logger.info(f"ACR: cannot remove case-variant {child.name}: {ex}")
+        d.save(str(pathDocx))
+        logger.info(f"ACR: wrote {pathDocx}")
+
+    @classmethod
+    def buildIfApplicable(cls, arguments, lThisRunPaths, dtRunStart=None):
+        """
+        Driver: build ACR.xlsx in the parent output folder if there is
+        anything to report. Called at end of session from main().
+
+        dtRunStart is the wall-clock time the run was launched
+        (datetime). It's surfaced in ACR.docx metadata header so
+        users can correlate a draft ACR with a specific scan session.
+        """
+        try:
+            pathParent = pathlib.Path(arguments.sOutputDir).resolve() if arguments.sOutputDir else pathlib.Path.cwd()
+            pathParent.mkdir(parents=True, exist_ok=True)
+            pathWorkbook = pathParent / sAcrWorkbookName
+            bForceMode = bool(getattr(arguments, "bForce", False))
+            lFolders = cls.discoverPageFolders(pathParent, lThisRunPaths, bForceMode)
+            # Capture user edits before regeneration (only meaningful
+            # in append mode; --force is the explicit "start fresh"
+            # gesture and discards prior edits)
+            dCaptured = cls.captureExistingRemarks(pathWorkbook) if not bForceMode else {}
+            # Compute per-page buckets (empty when no pages)
+            lPageBuckets = []
+            for path, dResults, dMetadata in lFolders:
+                lPageBuckets.append(cls.perPageBuckets(dResults))
+            # Order criteria by numeric sort
+            lOrderedCrits = sorted(dWcag22.keys(), key=cls.fnWcagSortKey)
+            # Build workbook. Even with zero pages, Sheet 1
+            # (Conformance Report) is written with all 86 criteria
+            # showing "Not Evaluated" so the user has manual-test
+            # checks to start with, and the Glossary follows. This
+            # makes ACR.xlsx useful as a blank starting template even
+            # before any page has been scanned.
+            wb = openpyxl.Workbook()
+            # Pre-compute the per-URL sheet names so the rollup's
+            # Conformance cell can reference them in its "Not
+            # supported" / "Not evaluated" page lists. The names are
+            # the same ones the per-URL sheets will get (truncated and
+            # disambiguated to fit Excel's 31-char limit), so the user
+            # can match a name in a Conformance cell to a sheet tab.
+            lUsedNames = ["Conformance Report"]
+            lPageNames = []
+            for path, dResults, dMetadata in lFolders:
+                sName = cls.safeSheetName(path.name, lUsedNames)
+                lUsedNames.append(sName)
+                lPageNames.append(sName)
+            cls.writeRollupSheet(wb, lPageBuckets, lPageNames, lOrderedCrits, dCaptured)
+            # Per-URL sheets, in the same order as lPageNames
+            for ((path, dResults, dMetadata), dBuckets, sName) in zip(lFolders, lPageBuckets, lPageNames):
+                cls.writePerUrlSheet(wb, sName, dBuckets, dMetadata,
+                                     "", lOrderedCrits)
+            # Glossary
+            cls.writeGlossarySheet(wb)
+            # Delete any prior workbook with a case-variant name on
+            # Windows. The file system is case-insensitive but case-
+            # preserving: if "acr.xlsx" already exists from a prior
+            # run, wb.save("ACR.xlsx") writes to the existing file and
+            # keeps the lowercase casing. Removing it first lets the
+            # new write create the file with the desired casing.
+            for child in pathParent.iterdir():
+                if child.is_file() and child.name.lower() == sAcrWorkbookName.lower() and child.name != sAcrWorkbookName:
+                    try: child.unlink()
+                    except Exception as ex: logger.info(f"ACR: cannot remove case-variant {child.name}: {ex}")
+            wb.save(str(pathWorkbook))
+            logger.info(f"ACR: wrote {pathWorkbook} ({len(lFolders)} pages, "
+                f"{len(lOrderedCrits)} criteria)")
+            # Generate the companion narrative DOCX. Same scope rules
+            # as the XLSX (this-session vs walk-parent depending on
+            # --force). Same case-enforcement strategy.
+            try:
+                cls.writeDocx(pathParent, lFolders, lPageBuckets, lPageNames, lOrderedCrits, dtRunStart=dtRunStart)
+            except Exception as ex:
+                logger.info(f"ACR: DOCX generation failed: {ex}")
+                try: logger.info(traceback.format_exc())
+                except Exception: pass
+        except Exception as ex:
+            logger.info(f"ACR: failed to write {sAcrWorkbookName}: {ex}")
+            try: logger.info(traceback.format_exc())
+            except Exception: pass
 
 
 # --- GUI dialog (Python.NET / WinForms) ---
@@ -3138,6 +5817,7 @@ def showGuiDialog(arguments):
     bInitView = bool(getattr(arguments, "bViewOutput", False))
     bInitInvisible = bool(getattr(arguments, "bInvisible", False))
     bInitAuth = bool(getattr(arguments, "bAuthenticate", False))
+    bInitMain = bool(getattr(arguments, "bMainProfile", False))
     bInitForce = bool(getattr(arguments, "bForce", False))
     bInitLog = bool(getattr(arguments, "bLog", False))
     bInitUseCfg = bool(getattr(arguments, "bUseConfig", False))
@@ -3197,7 +5877,7 @@ def showGuiDialog(arguments):
     # --- Row 2: Output directory ---
     y += iLayoutTextHeight + iLayoutRowGap
     lblOut = Label()
-    lblOut.Text = "&Output directory:"
+    lblOut.Text = "&Output folder:"
     lblOut.AutoSize = False
     lblOut.Location = Point(iLayoutLeft, y + 3)
     lblOut.Size = Size(iLayoutLabelWidth, iLayoutTextHeight)
@@ -3209,7 +5889,7 @@ def showGuiDialog(arguments):
     txtOut.Location = Point(iTextX, y)
     txtOut.Size = Size(iTextW, iLayoutTextHeight)
     txtOut.TabIndex = 2
-    txtOut.AccessibleName = "Output directory"
+    txtOut.AccessibleName = "Output folder"
     frm.Controls.Add(txtOut)
 
     btnBrowseOut = Button()
@@ -3224,58 +5904,81 @@ def showGuiDialog(arguments):
     # The program-specific option appears alone above the common
     # option grid so the layout reads consistently with 2htm and
     # extCheck: program-specific first, common options after.
+    #
+    # Row order (top to bottom, left then right): Authenticate
+    # credentials + Main profile (browser-session pair),
+    # Invisible mode + Force replacements (run-mode pair),
+    # View output + Log session (output pair), Use configuration
+    # alone (settings persistence). Tab order matches reading order.
     y += iLayoutTextHeight + iLayoutRowGap * 2
     iChkW = (iFormW - iLayoutLeft - iLayoutRight) // 2
-    chkInvisible = CheckBox()
-    chkInvisible.Text = "&Invisible mode"
-    chkInvisible.Checked = bInitInvisible
-    chkInvisible.Location = Point(iLayoutLeft, y)
-    chkInvisible.Size = Size(iChkW, iLayoutTextHeight)
-    chkInvisible.TabIndex = 4
-    frm.Controls.Add(chkInvisible)
 
+    # --- Row 3: Authenticate credentials + Main profile (browser-session pair) ---
     chkAuth = CheckBox()
     chkAuth.Text = "&Authenticate credentials"
     chkAuth.Checked = bInitAuth
-    chkAuth.Location = Point(iLayoutLeft + iChkW, y)
+    chkAuth.Location = Point(iLayoutLeft, y)
     chkAuth.Size = Size(iChkW, iLayoutTextHeight)
-    chkAuth.TabIndex = 5
+    chkAuth.TabIndex = 4
     frm.Controls.Add(chkAuth)
 
-    # --- Row 4: Force replacements + View output (common 2x2 grid, top row) ---
+    chkMain = CheckBox()
+    chkMain.Text = "&Main profile"
+    chkMain.Checked = bInitMain
+    chkMain.Location = Point(iLayoutLeft + iChkW, y)
+    chkMain.Size = Size(iChkW, iLayoutTextHeight)
+    chkMain.TabIndex = 5
+    frm.Controls.Add(chkMain)
+
+    # --- Row 4: Invisible mode + Force replacements (run-mode pair) ---
     y += iLayoutTextHeight + iLayoutRowGap
+    chkInvisible = CheckBox()
+    chkInvisible.Text = "&Invisible mode"
+    # Both Invisible mode and Authenticate credentials are
+    # toggleable independently. If both end up checked at OK time,
+    # urlCheck treats --authenticate as overriding --invisible (an
+    # auth prompt requires a visible browser); the override is
+    # logged so the user sees the resolution. Matches CLI behavior.
+    chkInvisible.Checked = bInitInvisible
+    chkInvisible.Location = Point(iLayoutLeft, y)
+    chkInvisible.Size = Size(iChkW, iLayoutTextHeight)
+    chkInvisible.TabIndex = 6
+    frm.Controls.Add(chkInvisible)
+
     chkForce = CheckBox()
     chkForce.Text = "&Force replacements"
     chkForce.Checked = bInitForce
-    chkForce.Location = Point(iLayoutLeft, y)
+    chkForce.Location = Point(iLayoutLeft + iChkW, y)
     chkForce.Size = Size(iChkW, iLayoutTextHeight)
-    chkForce.TabIndex = 6
+    chkForce.TabIndex = 7
     frm.Controls.Add(chkForce)
 
+    # --- Row 5: View output + Log session (output pair) ---
+    y += iLayoutTextHeight + iLayoutRowGap
     chkView = CheckBox()
     chkView.Text = "&View output"
     chkView.Checked = bInitView
-    chkView.Location = Point(iLayoutLeft + iChkW, y)
+    chkView.Location = Point(iLayoutLeft, y)
     chkView.Size = Size(iChkW, iLayoutTextHeight)
-    chkView.TabIndex = 7
+    chkView.TabIndex = 8
     frm.Controls.Add(chkView)
 
-    # --- Row 5: Log session + Use configuration (common 2x2 grid, bottom row) ---
-    y += iLayoutTextHeight + iLayoutRowGap
     chkLog = CheckBox()
     chkLog.Text = "&Log session"
     chkLog.Checked = bInitLog
-    chkLog.Location = Point(iLayoutLeft, y)
+    chkLog.Location = Point(iLayoutLeft + iChkW, y)
     chkLog.Size = Size(iChkW, iLayoutTextHeight)
-    chkLog.TabIndex = 8
+    chkLog.TabIndex = 9
     frm.Controls.Add(chkLog)
 
+    # --- Row 6: Use configuration alone (settings persistence) ---
+    y += iLayoutTextHeight + iLayoutRowGap
     chkUseCfg = CheckBox()
     chkUseCfg.Text = "&Use configuration"
     chkUseCfg.Checked = bInitUseCfg
-    chkUseCfg.Location = Point(iLayoutLeft + iChkW, y)
+    chkUseCfg.Location = Point(iLayoutLeft, y)
     chkUseCfg.Size = Size(iChkW, iLayoutTextHeight)
-    chkUseCfg.TabIndex = 9
+    chkUseCfg.TabIndex = 10
     frm.Controls.Add(chkUseCfg)
 
     # --- Bottom row: Help, Defaults on the left; OK, Cancel on the right ---
@@ -3284,7 +5987,7 @@ def showGuiDialog(arguments):
     btnHelp.Text = "&Help"
     btnHelp.Location = Point(iLayoutLeft, y)
     btnHelp.Size = Size(iLayoutButtonWidth, iLayoutButtonHeight)
-    btnHelp.TabIndex = 10
+    btnHelp.TabIndex = 11
     btnHelp.UseVisualStyleBackColor = True
     frm.Controls.Add(btnHelp)
 
@@ -3292,7 +5995,7 @@ def showGuiDialog(arguments):
     btnDefaults.Text = "&Default settings"
     btnDefaults.Location = Point(iLayoutLeft + iLayoutButtonWidth + iLayoutGap, y)
     btnDefaults.Size = Size(iLayoutButtonWidth, iLayoutButtonHeight)
-    btnDefaults.TabIndex = 11
+    btnDefaults.TabIndex = 12
     btnDefaults.UseVisualStyleBackColor = True
     frm.Controls.Add(btnDefaults)
 
@@ -3301,7 +6004,7 @@ def showGuiDialog(arguments):
     btnOk.DialogResult = DialogResult.OK
     btnOk.Location = Point(iFormW - iLayoutRight - 2 * iLayoutButtonWidth - iLayoutGap, y)
     btnOk.Size = Size(iLayoutButtonWidth, iLayoutButtonHeight)
-    btnOk.TabIndex = 12
+    btnOk.TabIndex = 13
     btnOk.UseVisualStyleBackColor = True
     frm.Controls.Add(btnOk)
 
@@ -3310,7 +6013,7 @@ def showGuiDialog(arguments):
     btnCancel.DialogResult = DialogResult.Cancel
     btnCancel.Location = Point(iBtnX, y)
     btnCancel.Size = Size(iLayoutButtonWidth, iLayoutButtonHeight)
-    btnCancel.TabIndex = 13
+    btnCancel.TabIndex = 14
     btnCancel.UseVisualStyleBackColor = True
     frm.Controls.Add(btnCancel)
 
@@ -3335,23 +6038,30 @@ def showGuiDialog(arguments):
             f"or local file paths one per line. The list file may have any "
             f"extension; urlCheck verifies it is plain text by inspecting "
             f"its contents.\r\n\r\n"
-            f"Output directory: parent directory under which the per-scan "
+            f"Output folder: parent folder under which the per-scan "
             f"folders are written. Blank means the current working "
-            f"directory.\r\n\r\n"
+            f"folder.\r\n\r\n"
             f"Options:\r\n"
-            f"  Invisible mode - run Edge with no visible browser window\r\n"
+            f"  Invisible mode - run Edge with no visible browser window. If both Invisible mode and Authenticate credentials are checked, Authenticate credentials wins (an auth prompt requires a visible browser); the override is logged.\r\n"
             f"  Authenticate credentials - when a url's domain is "
             f"encountered for the first time in this run, pause after "
             f"the page loads so the user can sign in / accept cookies / "
-            f"dismiss popups, then press Enter on the console to "
-            f"continue. Forces a visible browser. CLI-only at present.\r\n"
+            f"dismiss popups, then press Enter (or click OK) to resume. "
+            f"Overrides Invisible mode if both are set.\r\n"
+            f"  Main profile - launch Edge with your real (default) "
+            f"profile so saved logins, cookies, and session state are "
+            f"available. Without it, urlCheck uses a fresh temporary "
+            f"profile so the scan is anonymous. Requires that no "
+            f"Microsoft Edge process is already running; if Edge is "
+            f"running, the dialog shows a message asking you to close "
+            f"Edge and submit again.\r\n"
             f"  Force replacements - reuse an existing per-page output "
             f"folder (emptying its contents and writing a fresh set of "
             f"files) instead of skipping the url\r\n"
-            f"  View output - open the parent output directory in File "
+            f"  View output - open the parent output folder in File "
             f"Explorer when all scans are done\r\n"
             f"  Log session - write urlCheck.log (replacing any prior log) "
-            f"in the current working directory\r\n"
+            f"in the current working folder\r\n"
             f"  Use configuration - remember these settings for next time "
             f"in %LOCALAPPDATA%\\urlCheck\\urlCheck.ini\r\n\r\n"
             f"Press Cancel to exit without scanning.\r\n\r\n"
@@ -3413,7 +6123,7 @@ def showGuiDialog(arguments):
         logger.info(f"Choose output clicked; calling SHBrowseForFolder at {sInitial!r}")
         try:
             sChosen = browseForFolderViaShell(
-                "Choose the parent directory under which the per-scan "
+                "Choose the parent folder under which the per-scan "
                 "output folder will be created.",
                 sInitial)
         except Exception as ex:
@@ -3432,6 +6142,7 @@ def showGuiDialog(arguments):
         txtOut.Text = ""
         chkInvisible.Checked = False
         chkAuth.Checked = False
+        chkMain.Checked = False
         chkForce.Checked = False
         chkView.Checked = False
         chkLog.Checked = False
@@ -3480,12 +6191,44 @@ def showGuiDialog(arguments):
                 os.makedirs(sOutCandidate, exist_ok=True)
             except Exception as ex:
                 MessageBox.Show(
-                    f"Could not create directory:\r\n{sOutCandidate}\r\n\r\n{ex}",
+                    f"Could not create folder:\r\n{sOutCandidate}\r\n\r\n{ex}",
                     sProgramName,
                     MessageBoxButtons.OK, MessageBoxIcon.Warning)
                 frm.DialogResult = DialogResult.None_
                 txtOut.Focus()
                 return
+        # If Main profile is checked, refuse to proceed when another
+        # Edge process is running. Edge cannot share its profile
+        # directory across two processes; attempting to launch
+        # against an in-use profile produces a confusing error
+        # downstream. Better to surface this here, in the dialog,
+        # so the user can close all Edge windows and re-submit the
+        # dialog -- without restarting urlCheck. We capture the
+        # control that had focus when OK was triggered (which may
+        # have been the OK button, or any other dialog control,
+        # since pressing Enter on most controls triggers the
+        # AcceptButton) and restore focus there after the message
+        # box is dismissed -- the user can press Enter again from
+        # wherever they were once Edge is closed.
+        if bool(chkMain.Checked) and isEdgeRunning():
+            controlPriorFocus = None
+            try: controlPriorFocus = frm.ActiveControl
+            except Exception: pass
+            MessageBox.Show(
+                "Microsoft Edge is currently running. urlCheck "
+                "cannot proceed because Main profile requires "
+                "exclusive access to your Edge profile, which Edge "
+                "does not share across processes. Please close all "
+                "Edge windows (right-click the Edge taskbar icon "
+                "and choose Close window, or quit Edge from its "
+                "menu), then submit this dialog again to retry.",
+                f"{sProgramName} - Edge is running",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            frm.DialogResult = DialogResult.None_
+            try:
+                if controlPriorFocus is not None: controlPriorFocus.Focus()
+            except Exception: pass
+            return
         # sKind is 'urls' or 'listfile' -- both are valid; let the dialog close.
 
     btnBrowseTarget.Click += EventHandler(fnPickFile)
@@ -3511,6 +6254,7 @@ def showGuiDialog(arguments):
     arguments.sOutputDir = (txtOut.Text or "").strip()
     arguments.bInvisible = bool(chkInvisible.Checked)
     arguments.bAuthenticate = bool(chkAuth.Checked)
+    arguments.bMainProfile = bool(chkMain.Checked)
     arguments.bForce = bool(chkForce.Checked)
     arguments.bViewOutput = bool(chkView.Checked)
     arguments.bLog = bool(chkLog.Checked)
@@ -3641,6 +6385,10 @@ def main():
     lUrls = []
     sInput = ""
     sNormalizedUrl = ""
+    # Capture wall-clock start time for the run, including a friendly
+    # display string. Used in ACR.docx metadata header so the user
+    # can correlate a generated report with a specific scan session.
+    dtRunStart = datetime.datetime.now()
 
     arguments = None
     browser = None
@@ -3678,13 +6426,13 @@ def main():
     if isinstance(arguments.sSource, list):
         arguments.sSource = " ".join(arguments.sSource).strip()
 
-    # Open the log file early so the GUI-detection diagnostics can be
-    # captured in it. The log is only opened when -l / --log was given on
-    # the command line; saved-configuration log preference is honored later
-    # in the run, after configuration loading. To debug the auto-detection
-    # specifically, run with -l from cmd.exe and again from the desktop
-    # shortcut (after editing it to include -l), then compare the two logs.
-    if arguments.bLog: logger.open()
+    # Logging strategy: the logger buffers all info/warn/error/debug
+    # messages until logger.open() is called with the final pathLogDir.
+    # We open the log AFTER config-load and (for GUI mode) AFTER the
+    # dialog has set arguments.sOutputDir, so the log file lands in
+    # the correct output folder. The buffer holds early diagnostics
+    # (Python version, GUI auto-detection, etc.) which are then
+    # flushed to the log file in the order they occurred.
     logger.info(f"{sProgramName} {sProgramVersion} starting")
     logger.info(f"Python: {sys.version.split(chr(10))[0]}")
     logger.info(f"Architecture: {struct.calcsize('P') * 8}-bit "
@@ -3696,7 +6444,7 @@ def main():
         # directory and we can record the bundle's pid for cross-reference.
         logger.info(f"Bundle: _MEIPASS={getattr(sys, '_MEIPASS', '')}; "
             f"pid={os.getpid()}")
-    logger.info(f"Working directory: {os.getcwd()}")
+    logger.info(f"Working folder: {os.getcwd()}")
     logger.info(f"argv: {sys.argv}")
 
     # Auto-detect GUI launch via GetConsoleProcessList (primary) with parent-
@@ -3725,8 +6473,6 @@ def main():
         arguments.bUseConfig = True
     if arguments.bUseConfig:
         configManager.loadInto(arguments)
-        # Honor saved log preference even if -l wasn't passed.
-        if arguments.bLog and not logger.bEnabled: logger.open()
 
     # In GUI mode, present the dialog before any other work. The user's
     # choices replace whatever came from CLI and config.
@@ -3735,8 +6481,6 @@ def main():
             logger.info("User cancelled the dialog")
             logger.close()
             return 0
-        # The user may have toggled Log session in the dialog.
-        if arguments.bLog and not logger.bEnabled: logger.open()
         # If the user left Use configuration checked, persist their values.
         if arguments.bUseConfig:
             configManager.save(
@@ -3746,11 +6490,13 @@ def main():
                 arguments.bInvisible,
                 arguments.bForce,
                 arguments.bLog,
-                bAuthenticate=bool(getattr(arguments, "bAuthenticate", False)))
+                bAuthenticate=bool(getattr(arguments, "bAuthenticate", False)),
+                bMainProfile=bool(getattr(arguments, "bMainProfile", False)))
         logger.info(f"After dialog: input={arguments.sSource!r} "
             f"outputDir={arguments.sOutputDir!r} "
             f"invisible={arguments.bInvisible} "
             f"authenticate={bool(getattr(arguments, 'bAuthenticate', False))} "
+            f"mainProfile={bool(getattr(arguments, 'bMainProfile', False))} "
             f"force={arguments.bForce} "
             f"viewOutput={arguments.bViewOutput} "
             f"log={arguments.bLog} useConfig={arguments.bUseConfig}")
@@ -3765,12 +6511,23 @@ def main():
             pathBaseDir = pathlib.Path(arguments.sOutputDir).expanduser()
             pathBaseDir.mkdir(parents=True, exist_ok=True)
         except Exception as ex:
-            sErr = f"Output directory '{arguments.sOutputDir}' could not be created: {ex}"
+            sErr = f"Output folder '{arguments.sOutputDir}' could not be created: {ex}"
             print(sErr)
             if bGuiMode: showFinalGuiMessage(sErr, f"{sProgramName} - Error")
             return 1
     else:
         pathBaseDir = pathlib.Path.cwd()
+
+    # Open the log file now that pathBaseDir is final. This is the
+    # ONLY logger.open call site in main(); buffered diagnostics from
+    # earlier in the run are flushed to the file in their original
+    # order. The log file lands in pathBaseDir alongside ACR.xlsx
+    # and the per-page subfolders. If bLog is False, discard the
+    # buffer to free memory and stop further buffering.
+    if arguments.bLog:
+        logger.open(bReplace=bool(getattr(arguments, "bForce", False)), pathDir=pathBaseDir)
+    else:
+        logger.discardBuffer()
 
     logger.info(f"Output base: {pathBaseDir}")
     logger.info(f"Target: {arguments.sSource}")
@@ -3781,15 +6538,16 @@ def main():
     # controls so the user can map a logged run to the dialog state.
     lHeaderParams = [
         ("Source urls",        str(arguments.sSource or "(none)")),
-        ("Output directory",   str(pathBaseDir)),
+        ("Output folder",      str(pathBaseDir)),
         ("Force replacements", str(bool(arguments.bForce)).lower()),
         ("Invisible mode",     str(bool(arguments.bInvisible)).lower()),
         ("Authenticate credentials", str(bool(getattr(arguments, "bAuthenticate", False))).lower()),
+        ("Main profile",  str(bool(getattr(arguments, "bMainProfile", False))).lower()),
         ("View output",        str(bool(arguments.bViewOutput)).lower()),
         ("Use configuration",  str(bool(arguments.bUseConfig)).lower()),
         ("Log session",        str(bool(arguments.bLog)).lower()),
         ("GUI mode",           str(bool(bGuiMode)).lower()),
-        ("Working directory",  os.getcwd()),
+        ("Working folder",     os.getcwd()),
         ("Command line",       " ".join(sys.argv)),
     ]
     logger.header(sProgramName, sProgramVersion, lHeaderParams)
@@ -3870,9 +6628,9 @@ def main():
         # hung. Print to stdout in CLI mode; GUI mode already shows
         # its own progress dialog so an additional console line
         # would be invisible there.
-        if not bGuiMode:
-            print("Launching Edge...")
-            sys.stdout.flush()
+        # The user-visible "Launching Edge..." message is printed by
+        # urlCheck.cmd before invoking the .exe; we keep it in the log
+        # for diagnostic purposes only.
         logger.info("Launching Edge...")
         with sync_playwright() as playwrightCtx:
             browserType = playwrightCtx.chromium
@@ -3898,21 +6656,145 @@ def main():
             # cannot find it, surface a friendly message rather than a
             # raw Python traceback.
             bAuthEnabled = bool(getattr(arguments, "bAuthenticate", False))
-            bTempProfile = bool(getattr(arguments, "bTempProfile", False))
+            bMainProfile = bool(getattr(arguments, "bMainProfile", False))
             bHeadless = bool(arguments.bInvisible)
             if bAuthEnabled and bHeadless:
                 logger.info("--authenticate overrides --invisible; "
                     "launching Edge with a visible window.")
                 bHeadless = False
-            if bTempProfile and not bAuthEnabled:
-                logger.info("--temp-profile has no effect without "
-                    "--authenticate; ignoring.")
-                bTempProfile = False
 
             browser = None
             context = None
 
-            if bAuthEnabled and bTempProfile:
+            if bMainProfile:
+                # When -m is set, launch Edge in PERSISTENT-CONTEXT mode
+                # against the user's real Edge profile so saved logins,
+                # cookies, and session state are available. This is what
+                # makes "I'm already logged into Facebook in my normal
+                # Edge" actually work in the urlCheck-driven session --
+                # an ephemeral Playwright launch would start with an
+                # empty profile and trigger anti-automation heuristics
+                # (often presenting a blank page after the user signs in).
+                #
+                # Edge cannot run two instances against the same profile
+                # at once, so we check first and surface a clear error
+                # before trying. This applies whether or not -a is also
+                # set: -m's defining property is that the real profile
+                # is used, which on Windows requires no other msedge.exe
+                # process to be active.
+                if isEdgeRunning():
+                    sErr = (
+                        "Microsoft Edge is currently running. urlCheck "
+                        "needs exclusive access to your Edge profile when "
+                        "--main-profile is set so it can use your saved "
+                        "logins. Please close all Edge windows (right-"
+                        "click the Edge taskbar icon and choose Close "
+                        "window, or quit Edge from its menu) and try "
+                        "again.")
+                    print(sErr)
+                    logger.info("Edge already running; aborting -m launch.")
+                    if bGuiMode:
+                        sys.stdout = streamOriginalOut
+                        sys.stderr = streamOriginalErr
+                        showFinalGuiMessage(capture.getvalue(),
+                            f"{sProgramName} - Edge is running")
+                    logger.close()
+                    return 1
+                sUserDataDir = getEdgeUserDataDir()
+                if not sUserDataDir:
+                    sErr = ("Could not locate the Microsoft Edge user-"
+                        "data folder under "
+                        "%LOCALAPPDATA%\\Microsoft\\Edge\\User Data. "
+                        "urlCheck cannot use your Edge profile for "
+                        "authenticated scans.")
+                    print(sErr)
+                    logger.info("Edge user-data dir not found; "
+                        "aborting -a launch.")
+                    if bGuiMode:
+                        sys.stdout = streamOriginalOut
+                        sys.stderr = streamOriginalErr
+                        showFinalGuiMessage(capture.getvalue(),
+                            f"{sProgramName} - Edge profile not found")
+                    logger.close()
+                    return 1
+                logger.info(f"Launching Edge with persistent context: "
+                    f"user_data_dir={sUserDataDir}")
+                # Suppress Playwright's --enable-automation default
+                # switch. That switch triggers the visible "Microsoft
+                # Edge is being controlled by automated test
+                # software" infobar AND sets navigator.webdriver=true.
+                # Removing it via ignore_default_args silences the
+                # infobar.
+                #
+                # Pass chromium_sandbox=True so Playwright does NOT
+                # add --no-sandbox to the command line. By default
+                # Playwright disables the sandbox (chromium_sandbox=
+                # False), which causes Edge to display an "unsupported
+                # command-line flag: --no-sandbox" warning bar. With
+                # the sandbox enabled (the same default Edge uses for
+                # normal user browsing), no warning bar appears AND
+                # the browser is more secure.
+                #
+                # Override navigator.webdriver via add_init_script
+                # after the context launches. The override runs on
+                # every new document before any site JavaScript can
+                # read it, producing navigator.webdriver=undefined
+                # without using a command-line flag (which would
+                # itself trigger the "unsupported flag" warning).
+                # This is needed because Playwright still passes
+                # --remote-debugging-port internally (its IPC
+                # channel), and per the MDN spec, navigator.web
+                # driver is set whenever --enable-automation,
+                # --headless, or --remote-debugging-port is in
+                # effect.
+                #
+                # Note: as of Edge/Chromium 136 (April 2025) the
+                # security model refuses --remote-debugging-port
+                # against the default user-data directory, so a
+                # literal "disconnect from CDP and reconnect" pattern
+                # is not available when running against the user's
+                # real Edge profile. The init-script approach
+                # achieves the practical goal (sites stop refusing
+                # the session because of automation fingerprinting)
+                # without needing CDP disconnect/reconnect mechanics.
+                try:
+                    context = browserType.launch_persistent_context(
+                        sUserDataDir,
+                        channel=sBrowserChannel,
+                        headless=bHeadless,
+                        args=lArgs,
+                        ignore_default_args=["--enable-automation"],
+                        chromium_sandbox=True,
+                        bypass_csp=True,
+                        ignore_https_errors=bDefaultIgnoreHttpsErrors,
+                        user_agent=sUserAgent,
+                        viewport={"width": iDefaultViewportWidth,
+                            "height": iDefaultViewportHeight})
+                    # Silently override navigator.webdriver before any
+                    # site JS runs. The 'configurable: true' allows
+                    # later test pages (including the user's actual
+                    # target site) to redefine it without TypeError.
+                    context.add_init_script(
+                        "Object.defineProperty(navigator, 'webdriver', "
+                        "{get: () => undefined, configurable: true});")
+                except Exception as ex:
+                    sErr = (
+                        f"Could not launch Microsoft Edge with your "
+                        f"profile: {ex}\n\n"
+                        "If Edge is still running, close all Edge "
+                        "windows and try again. If the problem persists, "
+                        "you can run urlCheck without --authenticate to "
+                        "use a fresh Edge profile (no saved logins).")
+                    print(sErr)
+                    logger.info(f"Persistent-context launch failed: {ex}")
+                    if bGuiMode:
+                        sys.stdout = streamOriginalOut
+                        sys.stderr = streamOriginalErr
+                        showFinalGuiMessage(capture.getvalue(),
+                            f"{sProgramName} - Edge launch failed")
+                    logger.close()
+                    return 1
+            elif bAuthEnabled:
                 # When -a -t is set, launch msedge.exe ourselves as a
                 # subprocess against a fresh temporary profile and use
                 # Playwright's chromium.connect_over_cdp() to attach.
@@ -3964,7 +6846,7 @@ def main():
                     sTempUserDataDir = tempfile.mkdtemp(prefix="urlCheck-tmp-profile-")
                 except Exception as ex:
                     sErr = (f"Could not create temporary profile "
-                        f"directory: {ex}")
+                        f"folder: {ex}")
                     print(sErr)
                     logger.info(sErr)
                     if bGuiMode:
@@ -4056,131 +6938,6 @@ def main():
                             f"{sProgramName} - CDP connect failed")
                     logger.close()
                     return 1
-            elif bAuthEnabled:
-                # When -a is set, launch Edge in PERSISTENT-CONTEXT mode
-                # against the user's real Edge profile so saved logins,
-                # cookies, and session state are available. This is what
-                # makes "I'm already logged into Facebook in my normal
-                # Edge" actually work in the urlCheck-driven session --
-                # an ephemeral Playwright launch would start with an
-                # empty profile and trigger anti-automation heuristics
-                # (often presenting a blank page after the user signs in).
-                #
-                # Edge cannot run two instances against the same profile
-                # at once, so we check first and surface a clear error
-                # before trying.
-                if isEdgeRunning():
-                    sErr = (
-                        "Microsoft Edge is currently running. urlCheck "
-                        "needs exclusive access to your Edge profile when "
-                        "--authenticate is set so it can use your saved "
-                        "logins. Please close all Edge windows (right-"
-                        "click the Edge taskbar icon and choose Close "
-                        "window, or quit Edge from its menu) and try "
-                        "again.")
-                    print(sErr)
-                    logger.info("Edge already running; aborting -a launch.")
-                    if bGuiMode:
-                        sys.stdout = streamOriginalOut
-                        sys.stderr = streamOriginalErr
-                        showFinalGuiMessage(capture.getvalue(),
-                            f"{sProgramName} - Edge is running")
-                    logger.close()
-                    return 1
-                sUserDataDir = getEdgeUserDataDir()
-                if not sUserDataDir:
-                    sErr = ("Could not locate the Microsoft Edge user-"
-                        "data directory under "
-                        "%LOCALAPPDATA%\\Microsoft\\Edge\\User Data. "
-                        "urlCheck cannot use your Edge profile for "
-                        "authenticated scans.")
-                    print(sErr)
-                    logger.info("Edge user-data dir not found; "
-                        "aborting -a launch.")
-                    if bGuiMode:
-                        sys.stdout = streamOriginalOut
-                        sys.stderr = streamOriginalErr
-                        showFinalGuiMessage(capture.getvalue(),
-                            f"{sProgramName} - Edge profile not found")
-                    logger.close()
-                    return 1
-                logger.info(f"Launching Edge with persistent context: "
-                    f"user_data_dir={sUserDataDir}")
-                # Suppress Playwright's --enable-automation default
-                # switch. That switch triggers the visible "Microsoft
-                # Edge is being controlled by automated test
-                # software" infobar AND sets navigator.webdriver=true.
-                # Removing it via ignore_default_args silences the
-                # infobar.
-                #
-                # Pass chromium_sandbox=True so Playwright does NOT
-                # add --no-sandbox to the command line. By default
-                # Playwright disables the sandbox (chromium_sandbox=
-                # False), which causes Edge to display an "unsupported
-                # command-line flag: --no-sandbox" warning bar. With
-                # the sandbox enabled (the same default Edge uses for
-                # normal user browsing), no warning bar appears AND
-                # the browser is more secure.
-                #
-                # Override navigator.webdriver via add_init_script
-                # after the context launches. The override runs on
-                # every new document before any site JavaScript can
-                # read it, producing navigator.webdriver=undefined
-                # without using a command-line flag (which would
-                # itself trigger the "unsupported flag" warning).
-                # This is needed because Playwright still passes
-                # --remote-debugging-port internally (its IPC
-                # channel), and per the MDN spec, navigator.web
-                # driver is set whenever --enable-automation,
-                # --headless, or --remote-debugging-port is in
-                # effect.
-                #
-                # Note: as of Edge/Chromium 136 (April 2025) the
-                # security model refuses --remote-debugging-port
-                # against the default user-data directory, so a
-                # literal "disconnect from CDP and reconnect" pattern
-                # is not available when running against the user's
-                # real Edge profile. The init-script approach
-                # achieves the practical goal (sites stop refusing
-                # the session because of automation fingerprinting)
-                # without needing CDP disconnect/reconnect mechanics.
-                try:
-                    context = browserType.launch_persistent_context(
-                        sUserDataDir,
-                        channel=sBrowserChannel,
-                        headless=bHeadless,
-                        args=lArgs,
-                        ignore_default_args=["--enable-automation"],
-                        chromium_sandbox=True,
-                        bypass_csp=True,
-                        ignore_https_errors=bDefaultIgnoreHttpsErrors,
-                        user_agent=sUserAgent,
-                        viewport={"width": iDefaultViewportWidth,
-                            "height": iDefaultViewportHeight})
-                    # Silently override navigator.webdriver before any
-                    # site JS runs. The 'configurable: true' allows
-                    # later test pages (including the user's actual
-                    # target site) to redefine it without TypeError.
-                    context.add_init_script(
-                        "Object.defineProperty(navigator, 'webdriver', "
-                        "{get: () => undefined, configurable: true});")
-                except Exception as ex:
-                    sErr = (
-                        f"Could not launch Microsoft Edge with your "
-                        f"profile: {ex}\n\n"
-                        "If Edge is still running, close all Edge "
-                        "windows and try again. If the problem persists, "
-                        "you can run urlCheck without --authenticate to "
-                        "use a fresh Edge profile (no saved logins).")
-                    print(sErr)
-                    logger.info(f"Persistent-context launch failed: {ex}")
-                    if bGuiMode:
-                        sys.stdout = streamOriginalOut
-                        sys.stderr = streamOriginalErr
-                        showFinalGuiMessage(capture.getvalue(),
-                            f"{sProgramName} - Edge launch failed")
-                    logger.close()
-                    return 1
             else:
                 # Non-auth runs: ephemeral launch with a fresh profile.
                 # This is the original behavior for -a-not-set runs and
@@ -4225,6 +6982,7 @@ def main():
             lScanned = []        # URLs that scanned successfully
             lFailed = []         # list of (sUrl, sReason)
             lSkippedExisting = []  # URLs whose output folder already exists
+            lThisRunPaths = []   # per-page output folder paths (used by ACR builder)
             for sUrl in lUrls:
                 iUrlIndex += 1
                 # lUrls is already a list of normalized targets regardless of
@@ -4249,21 +7007,33 @@ def main():
                         sAxeContent, bForce=bool(arguments.bForce),
                         bAuthenticate=bool(getattr(arguments, "bAuthenticate", False)),
                         bGuiMode=bGuiMode,
-                        bTempProfile=bTempProfile,
+                        bMainProfile=bMainProfile,
                         playwrightCtx=playwrightCtx,
                         sWsEndpoint=sWsEndpoint,
                         lConnHolder=lConnHolder)
-                    # If the temp-profile auth-disconnect path
-                    # replaced our browser/context inside scanUrl,
-                    # pick up the fresh references for the next url.
-                    if bTempProfile:
+                    # If the disconnect/reconnect path replaced our
+                    # browser/context inside scanUrl, pick up the
+                    # fresh references for the next url. The
+                    # disconnect path runs only when -a is set
+                    # without -m (temp-profile auth runs).
+                    if bAuthEnabled and not bMainProfile:
                         browser = lConnHolder[0]
                         context = lConnHolder[1]
                     if vResult == "skipped":
                         lSkippedExisting.append(sNormalizedUrl)
                         if not bGuiMode: print(": skipped (output folder exists, use -f to overwrite)")
                     else:
-                        lScanned.append(sNormalizedUrl)
+                        # scanUrl returns (pathStr, sPageTitle) on success.
+                        sPathScanned = ""
+                        sTitleScanned = ""
+                        if isinstance(vResult, tuple) and len(vResult) == 2:
+                            sPathScanned, sTitleScanned = vResult
+                        elif isinstance(vResult, str):
+                            sPathScanned = vResult
+                        lScanned.append((sNormalizedUrl, sTitleScanned))
+                        if sPathScanned:
+                            try: lThisRunPaths.append(pathlib.Path(sPathScanned))
+                            except Exception: pass
                         if not bGuiMode: print()
                 except Exception as ex:
                     sReason = firstLine(str(ex))
@@ -4280,19 +7050,27 @@ def main():
 
             # ---- Structured results summary ----
             #
-            # Three sections, each printed only when non-zero.
-            # Singular "url" if count == 1; plural "urls" otherwise.
-            # In CLI mode the URLs were already printed inline during
-            # the loop, so the per-URL list under each header is
-            # suppressed (it would just repeat). In GUI mode the
-            # captured stdout is the final MessageBox, so include
-            # the lists there.
+            # Three sections, each printed only when non-zero. In CLI
+            # mode the URLs were already printed inline during the
+            # loop, so the per-URL list under each header is omitted
+            # (it would just repeat). In GUI mode the captured stdout
+            # becomes the final MessageBox, so include the lists
+            # there. The format used in GUI mode for the scanned
+            # list co-locates page title and URL on each line, so
+            # the user can see what was scanned at a glance:
+            #
+            #   Checked 2 urls:
+            #   Home Page - American Council of the Blind -- http://acb.org
+            #   Home Page - National Federation of the Blind -- http://nfb.org
 
             if iScanned > 0:
                 print()
-                print(f"Scanned {iScanned} {'url' if iScanned == 1 else 'urls'}:")
+                sScannedHeader = "Checked" if bGuiMode else "Scanned"
+                print(f"{sScannedHeader} {iScanned} {'url' if iScanned == 1 else 'urls'}:")
                 if bGuiMode:
-                    for s in lScanned: print(s)
+                    for sUrlS, sTitleS in lScanned:
+                        if sTitleS: print(f"{sTitleS} -- {sUrlS}")
+                        else:       print(sUrlS)
             if iFailed > 0:
                 print()
                 print(f"Failed to scan {iFailed} {'url' if iFailed == 1 else 'urls'}:")
@@ -4353,6 +7131,13 @@ def main():
             sCaptured = capture.getvalue()
             sTitle = f"{sProgramName} - Results" if iErrorCount == 0 else f"{sProgramName} - Completed with errors"
             showFinalGuiMessage(sCaptured if sCaptured else "Done. No output.", sTitle)
+
+        # Write the session-level Accessibility Conformance Report.
+        # See acrBuilder for the source-of-truth rules: --force uses
+        # only this run's output paths; otherwise walk the parent for
+        # all subfolders containing a results.json.
+        try: acrBuilder.buildIfApplicable(arguments, lThisRunPaths, dtRunStart=dtRunStart)
+        except NameError: pass  # lThisRunPaths may not be defined on early-exit paths
 
         logger.info(f"Done. {iUrlTotal - iErrorCount} of {iUrlTotal} scanned. {iErrorCount} error(s).")
         logger.close()

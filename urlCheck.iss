@@ -1,4 +1,4 @@
-; =====================================================================
+﻿; =====================================================================
 ; urlCheck installer script for Inno Setup 6.x
 ;
 ; Compile with the Inno Setup IDE (ISCC.exe) to produce urlCheck_setup.exe.
@@ -25,7 +25,7 @@
 ; =====================================================================
 
 #define sAppName       "urlCheck"
-#define sAppVersion    "1.10.0"
+#define sAppVersion    "1.11.0"
 #define sAppPublisher  "Jamal Mazrui"
 #define sAppUrl        "https://github.com/JamalMazrui/urlCheck"
 #define sAppExeName    "urlCheck.exe"

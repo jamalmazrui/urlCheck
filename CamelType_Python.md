@@ -1,4 +1,4 @@
-# Camel Type: Python Coding Guidelines
+﻿# Camel Type: Python Coding Guidelines
 
 Camel Type is a coding style optimized for screen reader productivity and systematic readability. The following rules apply to Python 3.
 
