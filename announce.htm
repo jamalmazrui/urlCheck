@@ -188,12 +188,11 @@
 <h1 class="title">urlCheck Announce</h1>
 </header>
 <h1 id="urlcheck-release-notes">urlCheck Release Notes</h1>
-<p>Project home: <a href="https://github.com/JamalMazrui/urlCheck"
+<p><strong>Copyright:</strong> © 2026 Jamal Mazrui — Released under the
+<a href="https://opensource.org/license/mit/">MIT License</a>
+<strong>Project home:</strong> <a
+href="https://github.com/JamalMazrui/urlCheck"
 class="uri">https://github.com/JamalMazrui/urlCheck</a></p>
-<p><code>urlCheck</code> is free, open-source software released under
-the MIT License. Anyone is welcome to download and use it. The only
-requirement is a modern version of Windows; nothing else needs to be
-installed.</p>
 <h2 id="version-1.11.0">Version 1.11.0</h2>
 <h3 id="whats-new">What’s new</h3>
 <ul>
@@ -547,5 +546,83 @@ source/build/installer scripts live in the GitHub repository.</li>
 <li>The “Launch urlCheck now” checkbox on the final page reminds the
 user that the desktop hotkey is Alt+Ctrl+U.</li>
 </ul>
+<h2 id="about-the-companion-accessibility-tools">About the companion
+accessibility tools</h2>
+<p><code>urlCheck</code>, <code>extCheck</code>, and <code>2htm</code>
+are a small family of free, MIT-licensed Windows command-line tools
+written by Jamal Mazrui and shared on GitHub. Each is distributed as a
+single-file, independent binary executable that runs without an
+installation step, without a runtime dependency, and without anything in
+the registry.</p>
+<ul>
+<li><a
+href="https://github.com/JamalMazrui/urlCheck"><code>urlCheck</code></a>
+— drives Microsoft Edge through Playwright and runs axe-core on each
+page, producing per-page reports plus a session-level Accessibility
+Conformance Report (<code>ACR.xlsx</code> and <code>ACR.docx</code>)
+covering all 86 WCAG 2.2 success criteria.</li>
+<li><a
+href="https://github.com/JamalMazrui/extCheck"><code>extCheck</code></a>
+— checks the accessibility of <code>.docx</code>, <code>.xlsx</code>,
+<code>.pptx</code>, and <code>.md</code> files, writing per-file CSV
+reports of issues found by an extensible rule registry.</li>
+<li><a href="https://github.com/JamalMazrui/2htm"><code>2htm</code></a>
+— converts Office documents and other text formats to clean, accessible
+HTML using Microsoft’s own conversion engines, with options for plain
+text and image stripping.</li>
+</ul>
+<p>The three programs share a deliberately consistent interface and a
+set of friendly features intended to make them equally usable for the
+typical Windows user (working through a GUI dialog) and for developers
+automating tasks (working through the command line). Because the same
+options are available either way, the same scan or conversion can be
+reproduced from a script or scheduled task exactly as it was performed
+by hand.</p>
+<p>Common features:</p>
+<ul>
+<li><strong>Fully accessible CLI and GUI</strong>, following platform
+conventions for accessible interfaces. Every GUI control has a unique
+mnemonic hotkey; tab order is logical; status, progress, and result
+messages are announced consistently to screen readers; help text is
+available in both modes.</li>
+<li><strong>Equivalent CLI and GUI behavior.</strong> Every option
+exposed by one mode is exposed by the other, with the same spelling and
+the same defaults.</li>
+<li><strong>Familiar across the family.</strong> The three programs use
+the same control names, dialog layout, and command-line flag spellings
+wherever the underlying concept is the same. A user who has learned one
+is immediately at home in the other two — no re-learning.</li>
+<li><strong>Optional installer for users who prefer a Windows-native
+install flow.</strong> Each program ships with a small Inno Setup
+installer (<code>&lt;program&gt;_setup.exe</code>) that puts the
+executable in Program Files, registers a global desktop hotkey (mnemonic
+to the program name: Alt+Ctrl+U for urlCheck, Alt+Ctrl+2 for 2htm,
+Alt+Ctrl+X for extCheck), adds a Start Menu entry, and installs the
+documentation. Users who prefer no installer can run the executable
+directly from the .zip.</li>
+<li><strong>Multiple sources in a single command.</strong> A single
+invocation accepts any number of files, wildcards, folders, URLs, or
+list files, processed sequentially.</li>
+<li><strong>Opt-in configuration recall.</strong> When checked, the
+program remembers the most recent dialog values to a configuration file
+under <code>%LOCALAPPDATA%</code>, so a frequent task is one click away
+on the next run.</li>
+<li><strong>Real-time progress in CLI mode; structured summary in GUI
+mode.</strong> The console shows files and URLs as they are processed,
+with a short error reason on failure; the GUI message box at the end of
+the session shows a categorized list of what was completed, failed, or
+skipped.</li>
+<li><strong>Force-replacement and skip-existing behavior.</strong> By
+default, prior outputs are preserved and re-runs skip work already done.
+A force flag overrides this for a clean re-run.</li>
+<li><strong>Optional session log.</strong> A diagnostic log can be
+written next to the program’s outputs for after-the-fact review.</li>
+</ul>
+<p>All three are released under the <a
+href="https://opensource.org/license/mit/">MIT license</a> — a short,
+permissive open-source license that permits use, modification, and
+redistribution for any purpose, including commercial use, with the only
+requirement being that the original copyright notice and license text
+are preserved in copies of the software.</p>
 </body>
 </html>

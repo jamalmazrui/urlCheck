@@ -7,22 +7,13 @@ description: "Accessibility Checker for Web Pages"
 # urlCheck
 
 **Author:** Jamal Mazrui
-**License:** MIT
+**Copyright:** © 2026 Jamal Mazrui
+**License:** [MIT](https://opensource.org/license/mit/)
 **Project home:** <https://github.com/JamalMazrui/urlCheck>
-
-`urlCheck` is free, open-source software released under the [MIT License](https://opensource.org/licenses/MIT). Anyone is welcome to download and use it, study its source code, and adapt it. The only requirement is a modern version of Windows; nothing else needs to be installed.
-
-`urlCheck` is one of three companion accessibility tools by Jamal Mazrui:
-
-- **2htm** — convert documents (Word, Excel, PowerPoint, PDF, Markdown) to accessible HTML
-- **extCheck** — check Office and Markdown files for accessibility problems
-- **urlCheck** — check web pages for accessibility problems
-
-The three tools share a common command-line and GUI layout, so learning one makes the others easy to pick up.
 
 `urlCheck` is a Windows tool that checks web pages for accessibility problems. It opens each page in Microsoft Edge, runs the [axe-core](https://github.com/dequelabs/axe-core) testing engine, and saves a set of output files in a new folder named after the page title.
 
-Like its companion tools, `urlCheck` runs in two modes: a **GUI mode** (a small parameter dialog launched by double-clicking the program, pressing its desktop hotkey, or running with `-g`) and a **command-line mode** (any other invocation, suitable for batch files and pipelines). Both modes accept the same options.
+Like its companion tools `2htm` and `extCheck` (see the Announce file for a description of the family), `urlCheck` runs in two modes: a **GUI mode** (a small parameter dialog launched by double-clicking the program, pressing its desktop hotkey, or running with `-g`) and a **command-line mode** (any other invocation, suitable for batch files and pipelines). Both modes accept the same options.
 
 ---
 

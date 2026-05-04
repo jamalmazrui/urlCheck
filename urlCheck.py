@@ -1,4 +1,5 @@
-﻿import argparse, ctypes, datetime, html, io, json, os, pathlib, platform, re, shutil, signal, struct, subprocess, sys, tempfile, time, traceback, urllib.error, urllib.parse, urllib.request
+﻿# Copyright (c) 2026 Jamal Mazrui — MIT License — https://github.com/JamalMazrui/urlCheck
+import argparse, ctypes, datetime, html, io, json, os, pathlib, platform, re, shutil, signal, struct, subprocess, sys, tempfile, time, traceback, urllib.error, urllib.parse, urllib.request
 
 import openpyxl
 from openpyxl.styles import Alignment, Font, PatternFill
