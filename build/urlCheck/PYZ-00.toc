@@ -1,4 +1,4 @@
-('C:\\urlCheck\\build\\urlCheck\\PYZ-00.pyz',
+('c:\\urlCheck\\build\\urlCheck\\PYZ-00.pyz',
  [('PyInstaller',
    'C:\\Users\\Jamal\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\__init__.py',
    'PYMODULE'),
