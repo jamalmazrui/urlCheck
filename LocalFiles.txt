@@ -1,0 +1,26 @@
+﻿# LocalFiles.txt -- what belongs to urlCheck on this disk, but never in the repository.
+#
+# tidy keeps these where they are, and writes each line into .gitignore
+# as never pushed. One path or pattern a line; a trailing slash means a folder.
+
+# The build environment, PyInstaller's scratch, the built program and the
+# installer: all made by buildUrlCheck, none of them authored.
+.venv/
+exec/
+urlCheck_setup.exe
+work/
+
+# One log per run of anything.
+logs/
+
+# Private notes, and what tidy moves aside.
+notes/
+
+# Written by every build from version.txt, which lives only on this machine.
+version.py
+version.txt
+
+# The release scripts belong to the separate tagRelease project and stay out
+# of every repository.
+scripts/release.cmd
+scripts/release.ps1

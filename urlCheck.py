@@ -5,6 +5,15 @@ import openpyxl
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 from playwright.sync_api import sync_playwright
+from homer import inix, lbcnet, log, paths
+
+# version.py is written by buildUrlCheck.cmd from version.txt on every build,
+# so the running program reports the number the installer and the release
+# carry. Run from source without a build, the program says 0.0.0.
+try:
+    from version import sVersion as sBuiltVersion
+except ImportError:
+    sBuiltVersion = "0.0.0"
 
 # pythonnet (the `clr` module that bridges into the .NET Framework) is imported
 # lazily inside showGuiDialog and showFinalGuiMessage so the CLI path has no
@@ -25,16 +34,6 @@ iDefaultNavTimeoutMs = 60000
 iDefaultPostLoadDelayMs = 1500
 iDefaultViewportHeight = 1440
 iDefaultViewportWidth = 1600
-iLayoutButtonHeight = 26
-iLayoutButtonWidth = 130
-iLayoutFormWidth = 600
-iLayoutGap = 7
-iLayoutLabelWidth = 130
-iLayoutLeft = 12
-iLayoutRight = 12
-iLayoutRowGap = 11
-iLayoutTextHeight = 23
-iLayoutTop = 12
 iMaxTitleLen = 80
 iNetworkIdleTimeoutMs = 8000
 # Extra delay applied AFTER the user confirms the --authenticate
@@ -45,13 +44,19 @@ iNetworkIdleTimeoutMs = 8000
 # a half-rendered DOM and produce a misleadingly empty report.
 iAuthPostConfirmSettleDelayMs = 4000
 
+# Constants added with the move to the Homer Development Kit take the c_ prefix
+# Camel Type now asks for; the older ones above and below keep their names.
+c_sConfigSection = "Settings"
+c_sGitHubOwner = "JamalMazrui"
+c_sLegacyConfigFileName = "urlCheck.ini"
+
 sAccessibilityInsightsUrl = "https://accessibilityinsights.io/docs/web/overview/"
 sAccessibilityYamlName = "page.yaml"
 sAcrDocxName = "ACR.docx"
 sAcrWorkbookName = "ACR.xlsx"
 sBrowserChannel = "msedge"
 sConfigDirName = "urlCheck"
-sConfigFileName = "urlCheck.ini"
+sConfigFileName = "urlCheck.inix"
 sDequeRuleUrlBase = "https://dequeuniversity.com/rules/axe"
 sFallbackAxeVersion = "4.10"
 sFallbackTitle = "untitled-page"
@@ -59,13 +64,13 @@ sJsonName = "results.json"
 sLogFileName = "urlCheck.log"
 sMsAccessibilityUrl = "https://learn.microsoft.com/accessibility/"
 sProgramName = "urlCheck"
-sProgramVersion = "1.11.0"
+sProgramVersion = sBuiltVersion
 sReportName = "report.htm"
 sReportWorkbookName = "report.xlsx"
 sScreenshotName = "page.png"
 sSourceName = "page.htm"
 sUsage = "Usage: urlCheck [options] <url, domain, local html file, or url-list text file>"
-sUserAgent = "urlCheck/1.11.0 (+Playwright Python + axe-core)"
+sUserAgent = f"urlCheck/{sBuiltVersion} (+Playwright Python + axe-core)"
 sWcagBaseUrl = "https://www.w3.org/WAI/WCAG22/Understanding/"
 sWcagQuickRefBase = "https://www.w3.org/WAI/WCAG22/quickref/"
 
@@ -3087,9 +3092,9 @@ def parseArguments():
     argParser.add_argument("--view-output", dest="bViewOutput", action="store_true",
         help="After all scans complete, open the parent output folder (the -o folder, or the current working folder) in File Explorer.")
     argParser.add_argument("-u", "--use-configuration", dest="bUseConfig", action="store_true",
-        help="Load saved settings from %%LOCALAPPDATA%%\\urlCheck\\urlCheck.ini at startup, and write them back on OK in GUI mode. Without this flag urlCheck leaves no filesystem footprint of its own.")
+        help="Load saved settings from %%LOCALAPPDATA%%\\urlCheck\\configs\\urlCheck.inix at startup, and write them back on OK in GUI mode. Without this flag no settings are saved.")
     argParser.add_argument("-l", "--log", dest="bLog", action="store_true",
-        help="Write detailed diagnostics to urlCheck.log in the current working folder (UTF-8 with BOM). Appends across runs by default; combine with -f / --force to replace the prior log instead.")
+        help="Also write the diagnostics to urlCheck.log in the output folder (UTF-8 with BOM). Appends across runs by default; combine with -f / --force to replace the prior log instead. A session log is always kept in %%LOCALAPPDATA%%\\urlCheck\\logs whether or not this is given.")
     argParser.add_argument("-f", "--force", dest="bForce", action="store_true",
         help="Reuse an existing per-page output folder by emptying its contents and writing a fresh set of files. Without this flag urlCheck skips a url whose per-page output folder already exists, so previous scans are preserved.")
     argParser.add_argument("-i", "--invisible", dest="bInvisible", action="store_true",
@@ -4021,7 +4026,12 @@ def openFolderInExplorer(sPath):
 
 class logger:
     """
-    Tiny diagnostic logger written to urlCheck.log in CWD when -l / --log is
+    Diagnostic logger. EVERY line also goes to the session log that
+    homer.log keeps in %LOCALAPPDATA%\\urlCheck\\logs, one file per run,
+    whatever the options -- so a failure always leaves a record. The rest
+    of this description is about the optional copy.
+
+    The optional copy is urlCheck.log in the output folder, written when -l / --log is
     given. UTF-8 with BOM so Notepad opens it correctly. By default the log
     is OPENED IN APPEND mode so accumulated history across runs is
     preserved -- helpful when diagnosing intermittent issues. Pass
@@ -4125,6 +4135,7 @@ class logger:
         # final). Without buffering, those diagnostics would either
         # be lost or land in the wrong folder.
         sStamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        log.line(f"[{sStamp}] [{sLevel}] {sMsg}")
         if cls.bEnabled and cls.fLog is not None:
             try:
                 cls.fLog.write(f"[{sStamp}] [{sLevel}] {sMsg}\n")
@@ -4162,8 +4173,11 @@ class logger:
         info/warn/error/debug.
 
         lParams is a list of (label, value) tuples; the caller controls
-        the order in which parameters appear.
+        the order in which parameters appear. The session log gets the
+        same settings as key-value lines.
         """
+        log.section("Settings")
+        for sLabel, sValue in (lParams or []): log.keyValue(sLabel, sValue)
         if not cls.bEnabled or cls.fLog is None: return
         try:
             cls.fLog.write(f"=== {sName} {sVersion} ===\n")
@@ -4202,66 +4216,71 @@ class logger:
         cls.bEnabled = False
 
 
-# --- Config manager (opt-in, INI under %LOCALAPPDATA%\urlCheck) ---
+# --- Config manager (opt-in, .inix under %LOCALAPPDATA%\urlCheck\configs) ---
 
 class configManager:
     """
-    Persists user preferences to %LOCALAPPDATA%\\urlCheck\\urlCheck.ini, but
-    only when the user opts in via -u / --use-configuration or via the GUI
-    checkbox. Without opt-in urlCheck leaves no filesystem footprint of its
-    own beyond the per-scan output folders the user explicitly asks for.
+    Persists user preferences to %LOCALAPPDATA%\\urlCheck\\configs\\urlCheck.inix,
+    but only when the user opts in via -u / --use-configuration or via the GUI
+    checkbox. homer.paths decides the folder and homer.inix reads and writes
+    the file, keeping any comment a person adds.
+
+    Settings from before the move to the kit, in %LOCALAPPDATA%\\urlCheck\\
+    urlCheck.ini, are read when no .inix exists yet, and the old file is
+    removed the first time the new one is saved, so nothing is lost.
     """
+
+    # The .inix key for each setting, and the key the old .ini used.
+    lKeys = [("Authenticate", "authenticate"), ("ForceReplacements", "force_replacements"),
+             ("Invisible", "invisible"), ("LogSession", "log_session"),
+             ("MainProfile", "main_profile"), ("OutputFolder", "output_folder"),
+             ("Source", "source"), ("ViewOutput", "view_output")]
 
     @staticmethod
     def getConfigDir():
-        sLocal = os.environ.get("LOCALAPPDATA", "") or os.path.expanduser("~")
-        return os.path.join(sLocal, sConfigDirName)
+        return paths.configs()
 
     @staticmethod
     def getConfigPath():
         return os.path.join(configManager.getConfigDir(), sConfigFileName)
 
     @staticmethod
+    def getLegacyPath():
+        return os.path.join(paths.userFolder(), c_sLegacyConfigFileName)
+
+    @staticmethod
     def configExists():
-        try: return os.path.isfile(configManager.getConfigPath())
+        try: return os.path.isfile(configManager.getConfigPath()) or os.path.isfile(configManager.getLegacyPath())
         except Exception: return False
 
     @staticmethod
     def eraseAll():
-        sDir = configManager.getConfigDir()
-        sPath = configManager.getConfigPath()
-        try:
-            if os.path.isfile(sPath):
-                os.remove(sPath)
-                logger.info(f"Deleted configuration file: {sPath}")
-        except Exception as ex:
-            logger.info(f"Could not delete configuration file {sPath}: {ex}")
-        try:
-            if os.path.isdir(sDir) and not os.listdir(sDir):
-                os.rmdir(sDir)
-                logger.info(f"Removed empty configuration folder: {sDir}")
-        except Exception as ex:
-            logger.info(f"Could not remove configuration folder {sDir}: {ex}")
+        sPath = ""
+        for sPath in [configManager.getConfigPath(), configManager.getLegacyPath()]:
+            try:
+                if os.path.isfile(sPath):
+                    os.remove(sPath)
+                    logger.info(f"Deleted configuration file: {sPath}")
+            except Exception as ex:
+                logger.info(f"Could not delete configuration file {sPath}: {ex}")
 
     @staticmethod
     def parseFile(sPath):
+        """The settings as a dictionary keyed by the .inix names, lowercased."""
         d = {}
-        sLine = ""
-        sLineRaw = ""
-        with open(sPath, "r", encoding="utf-8-sig") as fIni:
-            for sLineRaw in fIni:
-                sLine = sLineRaw.strip()
-                if not sLine: continue
-                if sLine.startswith(";") or sLine.startswith("#"): continue
-                if sLine.startswith("[") and sLine.endswith("]"): continue
-                iEq = sLine.find("=")
-                if iEq <= 0: continue
-                d[sLine[:iEq].strip().lower()] = sLine[iEq + 1:].strip()
-        return d
+        dLegacy = {}
+        sKey = ""
+        sLegacy = ""
+        section = None
+        for section in inix.read(sPath):
+            for sKey, sValue in section.asDictionary().items(): d[sKey.strip().lower()] = sValue.strip()
+        # An old .ini used snake_case names; map them onto the new ones.
+        dLegacy = {sLegacy: sKey.lower() for sKey, sLegacy in configManager.lKeys}
+        return {dLegacy.get(sKey, sKey): sValue for sKey, sValue in d.items()}
 
     @staticmethod
     def getBool(d, sKey):
-        s = (d.get(sKey, "") or "").strip().lower()
+        s = (d.get(sKey.lower(), "") or "").strip().lower()
         return s in ("1", "true", "yes", "on")
 
     @staticmethod
@@ -4276,62 +4295,66 @@ class configManager:
         sPath = ""
 
         sPath = configManager.getConfigPath()
+        if not os.path.isfile(sPath): sPath = configManager.getLegacyPath()
         if not os.path.isfile(sPath): return
         try:
             d = configManager.parseFile(sPath)
         except Exception as ex:
             print(f"[WARN] Could not read configuration from {sPath}: {ex}")
+            log.exception(ex)
             return
+        logger.info(f"Read configuration from {sPath}")
 
         # Source: only adopt the saved value if the CLI provided no positional.
         if (not getattr(arguments, "sSource", None)) and d.get("source", ""):
             arguments.sSource = d.get("source", "")
 
         # Output folder: only adopt if the CLI did not pass -o.
-        if not getattr(arguments, "sOutputDir", "") and d.get("output_folder", ""):
-            arguments.sOutputDir = d.get("output_folder", "")
+        if not getattr(arguments, "sOutputDir", "") and d.get("outputfolder", ""):
+            arguments.sOutputDir = d.get("outputfolder", "")
 
         # Booleans: only adopt if the CLI did not pass the flag (i.e., it's
         # currently False, the parser default).
         if not getattr(arguments, "bViewOutput", False):
-            arguments.bViewOutput = configManager.getBool(d, "view_output")
+            arguments.bViewOutput = configManager.getBool(d, "ViewOutput")
         if not getattr(arguments, "bInvisible", False):
-            arguments.bInvisible = configManager.getBool(d, "invisible")
+            arguments.bInvisible = configManager.getBool(d, "Invisible")
         if not getattr(arguments, "bAuthenticate", False):
-            arguments.bAuthenticate = configManager.getBool(d, "authenticate")
+            arguments.bAuthenticate = configManager.getBool(d, "Authenticate")
         if not getattr(arguments, "bMainProfile", False):
-            arguments.bMainProfile = configManager.getBool(d, "main_profile")
+            arguments.bMainProfile = configManager.getBool(d, "MainProfile")
         if not getattr(arguments, "bForce", False):
-            arguments.bForce = configManager.getBool(d, "force_replacements")
+            arguments.bForce = configManager.getBool(d, "ForceReplacements")
         if not getattr(arguments, "bLog", False):
-            arguments.bLog = configManager.getBool(d, "log_session")
+            arguments.bLog = configManager.getBool(d, "LogSession")
 
     @staticmethod
     def save(sSource, sOutputDir, bViewOutput, bInvisible, bForce, bLog, bAuthenticate=False, bMainProfile=False):
-        sDir = ""
+        dValues = {}
+        lHeader = []
         sPath = ""
 
-        sDir = configManager.getConfigDir()
         sPath = configManager.getConfigPath()
+        dValues = {"Authenticate": bAuthenticate, "ForceReplacements": bForce, "Invisible": bInvisible,
+                   "LogSession": bLog, "MainProfile": bMainProfile, "OutputFolder": sOutputDir or "",
+                   "Source": sSource or "", "ViewOutput": bViewOutput}
         try:
-            if not os.path.isdir(sDir): os.makedirs(sDir, exist_ok=True)
-            with open(sPath, "w", encoding="utf-8-sig", newline="\r\n") as fIni:
-                fIni.write("; urlCheck configuration\n")
-                fIni.write("; auto-written when Use configuration was checked at OK time.\n")
-                fIni.write("; Delete this file to reset, or click Default settings in the\n")
-                fIni.write("; GUI, which also deletes the file and the urlCheck folder.\n")
-                fIni.write(f"source={sSource or ''}\n")
-                fIni.write(f"output_folder={sOutputDir or ''}\n")
-                fIni.write(f"view_output={'1' if bViewOutput else '0'}\n")
-                fIni.write(f"invisible={'1' if bInvisible else '0'}\n")
-                fIni.write(f"authenticate={'1' if bAuthenticate else '0'}\n")
-                fIni.write(f"main_profile={'1' if bMainProfile else '0'}\n")
-                fIni.write(f"force_replacements={'1' if bForce else '0'}\n")
-                fIni.write(f"log_session={'1' if bLog else '0'}\n")
+            if not os.path.isfile(sPath):
+                lHeader = ["; urlCheck settings, written when Use configuration is checked at OK.",
+                           "; Delete this file to reset, or press Default settings in the dialog.",
+                           "[" + c_sConfigSection + "]"]
+                inix.write(sPath, inix.parseLines(lHeader))
+            for sKey, vValue in dValues.items():
+                if isinstance(vValue, bool): vValue = "Yes" if vValue else "No"
+                inix.setValue(sPath, c_sConfigSection, sKey, str(vValue))
             logger.info(f"Saved configuration to {sPath}")
+            if os.path.isfile(configManager.getLegacyPath()):
+                os.remove(configManager.getLegacyPath())
+                logger.info(f"Removed the old {c_sLegacyConfigFileName}; its settings are now in {sPath}")
         except Exception as ex:
             print(f"[WARN] Could not save configuration to {sPath}: {ex}")
             logger.info(f"Could not save configuration: {ex}")
+            log.exception(ex)
 
 
 
@@ -5875,646 +5898,316 @@ def showGuiDialog(arguments):
     Show the urlCheck parameter dialog. Mutates `arguments` in place with the
     user's chosen values. Returns True on OK, False on Cancel.
 
-    Layout mirrors 2htm:
-      Row 1: "Source urls:"                  [textbox]   [Browse source]
-      Row 2: "Output directory:"             [textbox]   [Choose output]
-      Row 3: [x] Invisible mode             [x] View output
-      Row 4: [x] Log session                [x] Use configuration
-      Row 5: [Help] [Default settings]                  [OK] [Cancel]
+    THE DIALOG IS THE KIT'S C# LbcDialog, loaded from Homer.dll through
+    homer.lbcnet -- the same class urlFido, bookFido, extCheck and 2htm build
+    their dialogs with. One control per row in tab order, each field's label
+    just before it so the label names it, a band where a field and the button
+    that fills it share a row. Lbc supplies, with no code here, Control+Enter
+    for OK from any control, Shift+F1 for a field's tip, F7 for a list of the
+    dialog's controls, the editing keys of every text field, and the Help
+    button (F1), which lists each field with its tip and ends with the version
+    check. F11 is claimed below. Guide opens the full guide, and Default
+    settings clears the fields; both return to the dialog with the rest as it
+    was, as does an OK that the checks below send back.
     """
+    Homer = lbcnet.load()
+    if Homer is None:
+        print("[ERROR] The dialog needs Homer.dll, which was not found or would not load. "
+              "The session log names where it looked.")
+        return False
     d = _loadDotNetForms()
-    logger.info(f"showGuiDialog: _loadDotNetForms returned: {'ok' if d is not None else 'NONE (pythonnet missing?)'}")
     if d is None: return False
-
-    # Pull names out of the namespace dict for readability.
-    Application = d["Application"]
-    Button = d["Button"]
-    CheckBox = d["CheckBox"]
-    ContentAlignment = d["ContentAlignment"]
     DialogResult = d["DialogResult"]
     EventHandler = d["EventHandler"]
-    FolderBrowserDialog = d["FolderBrowserDialog"]
-    Form = d["Form"]
-    FormBorderStyle = d["FormBorderStyle"]
-    FormStartPosition = d["FormStartPosition"]
     Keys = d["Keys"]
-    Label = d["Label"]
     MessageBox = d["MessageBox"]
     MessageBoxButtons = d["MessageBoxButtons"]
     MessageBoxDefaultButton = d["MessageBoxDefaultButton"]
     MessageBoxIcon = d["MessageBoxIcon"]
     OpenFileDialog = d["OpenFileDialog"]
-    Point = d["Point"]
-    Size = d["Size"]
-    SystemFonts = d["SystemFonts"]
-    TextBox = d["TextBox"]
-
-    # Log .NET / pythonnet diagnostics so the GUI environment is
-    # self-documenting in the log file.
     try:
         environment = d["DotNetEnvironment"]
         logger.info(f".NET runtime: Version={environment.Version} "
             f"OSVersion={environment.OSVersion} Is64Bit={environment.Is64BitProcess}")
     except Exception as ex:
         logger.info(f".NET diagnostics unavailable: {ex}")
-
-    # Set the calling thread to the single-threaded apartment (STA) COM
-    # model. WinForms common dialogs -- OpenFileDialog, FolderBrowserDialog,
-    # and the various shell extensions they delegate to -- require an STA
-    # thread. C# WinForms apps get this for free via [STAThread] on Main();
-    # in pythonnet we have to set it explicitly. If this is omitted, the
-    # main dialog usually opens fine, but clicking Browse source or Choose
-    # output deadlocks the COM marshaler and the program appears to lock up.
-    #
-    # SetApartmentState fails with InvalidOperationException if the thread
-    # has already started COM in MTA mode (e.g. by a prior dialog call in
-    # the same process). The wrap-and-log pattern below makes that case
-    # diagnosable in the log without crashing.
     try:
-        thread = d["Thread"].CurrentThread
-        sBefore = str(thread.GetApartmentState())
-        thread.SetApartmentState(d["ApartmentState"].STA)
-        sAfter = str(thread.GetApartmentState())
-        logger.info(f"Thread apartment state: {sBefore} -> {sAfter}")
+        Homer.Elevate.configure(c_sGitHubOwner, sProgramName, sProgramVersion)
     except Exception as ex:
-        logger.info(f"SetApartmentState(STA) failed (continuing): {ex}")
+        logger.info(f"Elevate.configure failed (continuing): {ex}")
 
-    # Enable modern Windows visual styles (Common Controls 6 themed widgets:
-    # rounded buttons, themed scroll bars, etc.) and the GDI+ TextRenderer
-    # for crisper text. Both calls MUST happen before any Form, Button, or
-    # other control is constructed in this AppDomain. WinForms ignores them
-    # otherwise. EnableVisualStyles is also harmless to call repeatedly, so
-    # it is safe even if showGuiDialog is invoked more than once.
-    #
-    # Accessibility note: visual styles are purely cosmetic. The underlying
-    # HWNDs and MSAA / UI Automation properties (control type, name, role,
-    # state) are unchanged, so JAWS and NVDA see the exact same accessibility
-    # tree they would see with the classic theme. If a regression is
-    # observed, comment out these two lines and rebuild.
-    try:
-        d["Application"].EnableVisualStyles()
-        d["Application"].SetCompatibleTextRenderingDefault(False)
-    except Exception: pass
+    # The values the dialog opens with, and keeps between its own returns.
+    sSource = getattr(arguments, "sSource", "") or ""
+    sOutputDir = getattr(arguments, "sOutputDir", "") or ""
+    bAuth = bool(getattr(arguments, "bAuthenticate", False))
+    bForce = bool(getattr(arguments, "bForce", False))
+    bInvisible = bool(getattr(arguments, "bInvisible", False))
+    bLog = bool(getattr(arguments, "bLog", False))
+    bMain = bool(getattr(arguments, "bMainProfile", False))
+    bUseCfg = bool(getattr(arguments, "bUseConfig", False))
+    bView = bool(getattr(arguments, "bViewOutput", False))
 
-    # Initial values from arguments (which may have been pre-loaded from
-    # saved config and/or the command line).
-    sInitTarget = getattr(arguments, "sSource", "") or ""
-    sInitOutDir = getattr(arguments, "sOutputDir", "") or ""
-    bInitView = bool(getattr(arguments, "bViewOutput", False))
-    bInitInvisible = bool(getattr(arguments, "bInvisible", False))
-    bInitAuth = bool(getattr(arguments, "bAuthenticate", False))
-    bInitMain = bool(getattr(arguments, "bMainProfile", False))
-    bInitForce = bool(getattr(arguments, "bForce", False))
-    bInitLog = bool(getattr(arguments, "bLog", False))
-    bInitUseCfg = bool(getattr(arguments, "bUseConfig", False))
-
-    # Layout constants live at module scope as iLayout* (see top of file).
-    # Match extCheck and 2htm exactly so the three dialogs feel like
-    # siblings.
-    iFormW = iLayoutFormWidth
-    iTextX = iLayoutLeft + iLayoutLabelWidth + iLayoutGap
-    iTextW = iFormW - iTextX - iLayoutGap - iLayoutButtonWidth - iLayoutRight
-    iBtnX = iFormW - iLayoutRight - iLayoutButtonWidth
-
-    # Build the form.
-    frm = Form()
-    frm.Text = sProgramName
-    frm.FormBorderStyle = FormBorderStyle.FixedDialog
-    frm.StartPosition = FormStartPosition.CenterScreen
-    frm.MaximizeBox = False
-    frm.MinimizeBox = False
-    frm.ShowInTaskbar = True
-    frm.ClientSize = Size(iFormW, 280)
-    frm.Font = SystemFonts.MessageBoxFont
-
-    # F1 -> Help. KeyPreview lets the form see the keystroke before child
-    # controls consume it. F1 is the standard Windows help shortcut and is
-    # expected by keyboard-driven and screen-reader users.
-    frm.KeyPreview = True
-
-    # --- Row 1: Target ---
-    y = iLayoutTop
-    lblTarget = Label()
-    lblTarget.Text = "&Source urls:"
-    lblTarget.AutoSize = False
-    lblTarget.Location = Point(iLayoutLeft, y + 3)
-    lblTarget.Size = Size(iLayoutLabelWidth, iLayoutTextHeight)
-    lblTarget.TextAlign = ContentAlignment.MiddleLeft
-    frm.Controls.Add(lblTarget)
-
-    txtTarget = TextBox()
-    txtTarget.Text = sInitTarget
-    txtTarget.Location = Point(iTextX, y)
-    txtTarget.Size = Size(iTextW, iLayoutTextHeight)
-    txtTarget.TabIndex = 0
-    # Explicit AccessibleName so JAWS/NVDA announce the field by its
-    # label even when the visual layout doesn't auto-associate.
-    txtTarget.AccessibleName = "Source urls"
-    frm.Controls.Add(txtTarget)
-
-    btnBrowseTarget = Button()
-    btnBrowseTarget.Text = "&Browse source..."
-    btnBrowseTarget.Location = Point(iBtnX, y - 1)
-    btnBrowseTarget.Size = Size(iLayoutButtonWidth, iLayoutButtonHeight)
-    btnBrowseTarget.TabIndex = 1
-    btnBrowseTarget.UseVisualStyleBackColor = True
-    frm.Controls.Add(btnBrowseTarget)
-
-    # --- Row 2: Output directory ---
-    y += iLayoutTextHeight + iLayoutRowGap
-    lblOut = Label()
-    lblOut.Text = "&Output folder:"
-    lblOut.AutoSize = False
-    lblOut.Location = Point(iLayoutLeft, y + 3)
-    lblOut.Size = Size(iLayoutLabelWidth, iLayoutTextHeight)
-    lblOut.TextAlign = ContentAlignment.MiddleLeft
-    frm.Controls.Add(lblOut)
-
-    txtOut = TextBox()
-    txtOut.Text = sInitOutDir
-    txtOut.Location = Point(iTextX, y)
-    txtOut.Size = Size(iTextW, iLayoutTextHeight)
-    txtOut.TabIndex = 2
-    txtOut.AccessibleName = "Output folder"
-    frm.Controls.Add(txtOut)
-
-    btnBrowseOut = Button()
-    btnBrowseOut.Text = "&Choose output..."
-    btnBrowseOut.Location = Point(iBtnX, y - 1)
-    btnBrowseOut.Size = Size(iLayoutButtonWidth, iLayoutButtonHeight)
-    btnBrowseOut.TabIndex = 3
-    btnBrowseOut.UseVisualStyleBackColor = True
-    frm.Controls.Add(btnBrowseOut)
-
-    # --- Row 3: program-specific option row (urlCheck has Invisible) ---
-    # The program-specific option appears alone above the common
-    # option grid so the layout reads consistently with 2htm and
-    # extCheck: program-specific first, common options after.
-    #
-    # Row order (top to bottom, left then right): Authenticate
-    # credentials + Main profile (browser-session pair),
-    # Invisible mode + Force replacements (run-mode pair),
-    # View output + Log session (output pair), Use configuration
-    # alone (settings persistence). Tab order matches reading order.
-    y += iLayoutTextHeight + iLayoutRowGap * 2
-    iChkW = (iFormW - iLayoutLeft - iLayoutRight) // 2
-
-    # --- Row 3: Authenticate credentials + Main profile (browser-session pair) ---
-    chkAuth = CheckBox()
-    chkAuth.Text = "&Authenticate credentials"
-    chkAuth.Checked = bInitAuth
-    chkAuth.Location = Point(iLayoutLeft, y)
-    chkAuth.Size = Size(iChkW, iLayoutTextHeight)
-    chkAuth.TabIndex = 4
-    frm.Controls.Add(chkAuth)
-
-    chkMain = CheckBox()
-    chkMain.Text = "&Main profile"
-    chkMain.Checked = bInitMain
-    chkMain.Location = Point(iLayoutLeft + iChkW, y)
-    chkMain.Size = Size(iChkW, iLayoutTextHeight)
-    chkMain.TabIndex = 5
-    frm.Controls.Add(chkMain)
-
-    # --- Row 4: Invisible mode + Force replacements (run-mode pair) ---
-    y += iLayoutTextHeight + iLayoutRowGap
-    chkInvisible = CheckBox()
-    chkInvisible.Text = "&Invisible mode"
-    # Both Invisible mode and Authenticate credentials are
-    # toggleable independently. If both end up checked at OK time,
-    # urlCheck treats --authenticate as overriding --invisible (an
-    # auth prompt requires a visible browser); the override is
-    # logged so the user sees the resolution. Matches CLI behavior.
-    chkInvisible.Checked = bInitInvisible
-    chkInvisible.Location = Point(iLayoutLeft, y)
-    chkInvisible.Size = Size(iChkW, iLayoutTextHeight)
-    chkInvisible.TabIndex = 6
-    frm.Controls.Add(chkInvisible)
-
-    chkForce = CheckBox()
-    chkForce.Text = "&Force replacements"
-    chkForce.Checked = bInitForce
-    chkForce.Location = Point(iLayoutLeft + iChkW, y)
-    chkForce.Size = Size(iChkW, iLayoutTextHeight)
-    chkForce.TabIndex = 7
-    frm.Controls.Add(chkForce)
-
-    # --- Row 5: View output + Log session (output pair) ---
-    y += iLayoutTextHeight + iLayoutRowGap
-    chkView = CheckBox()
-    chkView.Text = "&View output"
-    chkView.Checked = bInitView
-    chkView.Location = Point(iLayoutLeft, y)
-    chkView.Size = Size(iChkW, iLayoutTextHeight)
-    chkView.TabIndex = 8
-    frm.Controls.Add(chkView)
-
-    chkLog = CheckBox()
-    chkLog.Text = "&Log session"
-    chkLog.Checked = bInitLog
-    chkLog.Location = Point(iLayoutLeft + iChkW, y)
-    chkLog.Size = Size(iChkW, iLayoutTextHeight)
-    chkLog.TabIndex = 9
-    frm.Controls.Add(chkLog)
-
-    # --- Row 6: Use configuration alone (settings persistence) ---
-    y += iLayoutTextHeight + iLayoutRowGap
-    chkUseCfg = CheckBox()
-    chkUseCfg.Text = "&Use configuration"
-    chkUseCfg.Checked = bInitUseCfg
-    chkUseCfg.Location = Point(iLayoutLeft, y)
-    chkUseCfg.Size = Size(iChkW, iLayoutTextHeight)
-    chkUseCfg.TabIndex = 10
-    frm.Controls.Add(chkUseCfg)
-
-    # --- Bottom row: Help, Defaults on the left; OK, Cancel on the right ---
-    y += iLayoutTextHeight + iLayoutRowGap * 2
-    btnHelp = Button()
-    btnHelp.Text = "&Help"
-    btnHelp.Location = Point(iLayoutLeft, y)
-    btnHelp.Size = Size(iLayoutButtonWidth, iLayoutButtonHeight)
-    btnHelp.TabIndex = 11
-    btnHelp.UseVisualStyleBackColor = True
-    frm.Controls.Add(btnHelp)
-
-    btnDefaults = Button()
-    btnDefaults.Text = "&Default settings"
-    btnDefaults.Location = Point(iLayoutLeft + iLayoutButtonWidth + iLayoutGap, y)
-    btnDefaults.Size = Size(iLayoutButtonWidth, iLayoutButtonHeight)
-    btnDefaults.TabIndex = 12
-    btnDefaults.UseVisualStyleBackColor = True
-    frm.Controls.Add(btnDefaults)
-
-    btnOk = Button()
-    btnOk.Text = "OK"
-    btnOk.DialogResult = DialogResult.OK
-    btnOk.Location = Point(iFormW - iLayoutRight - 2 * iLayoutButtonWidth - iLayoutGap, y)
-    btnOk.Size = Size(iLayoutButtonWidth, iLayoutButtonHeight)
-    btnOk.TabIndex = 13
-    btnOk.UseVisualStyleBackColor = True
-    frm.Controls.Add(btnOk)
-
-    btnCancel = Button()
-    btnCancel.Text = "Cancel"
-    btnCancel.DialogResult = DialogResult.Cancel
-    btnCancel.Location = Point(iBtnX, y)
-    btnCancel.Size = Size(iLayoutButtonWidth, iLayoutButtonHeight)
-    btnCancel.TabIndex = 14
-    btnCancel.UseVisualStyleBackColor = True
-    frm.Controls.Add(btnCancel)
-
-    # Wire defaults: Enter -> OK, Esc -> Cancel.
-    frm.AcceptButton = btnOk
-    frm.CancelButton = btnCancel
-
-    # Adjust form height to accommodate the last control plus a margin.
-    frm.ClientSize = Size(iFormW, y + iLayoutButtonHeight + iLayoutTop)
-
-    # --- Event handlers (defined as nested functions so they close over the
-    #     control variables above) ---
-
-    def fnShowHelp():
-        sMsg = (
-            f"{sProgramName} {sProgramVersion} checks one or more web pages "
-            f"for accessibility problems and saves a set of output files in "
-            f"a folder named after each page title.\r\n\r\n"
-            f"Source files: enter one url (https://example.com), or a domain "
-            f"(microsoft.com), or several of either separated by spaces, or "
-            f"the path to a single plain text file that lists urls, domains, "
-            f"or local file paths one per line. The list file may have any "
-            f"extension; urlCheck verifies it is plain text by inspecting "
-            f"its contents.\r\n\r\n"
-            f"Output folder: parent folder under which the per-scan "
-            f"folders are written. Blank means the current working "
-            f"folder.\r\n\r\n"
-            f"Options:\r\n"
-            f"  Invisible mode - run Edge with no visible browser window. If both Invisible mode and Authenticate credentials are checked, Authenticate credentials wins (an auth prompt requires a visible browser); the override is logged.\r\n"
-            f"  Authenticate credentials - when a url's domain is "
-            f"encountered for the first time in this run, pause after "
-            f"the page loads so the user can sign in / accept cookies / "
-            f"dismiss popups, then press Enter (or click OK) to resume. "
-            f"Overrides Invisible mode if both are set.\r\n"
-            f"  Main profile - launch Edge with your real (default) "
-            f"profile so saved logins, cookies, and session state are "
-            f"available. Without it, urlCheck uses a fresh temporary "
-            f"profile so the scan is anonymous. Requires that no "
-            f"Microsoft Edge process is already running; if Edge is "
-            f"running, the dialog shows a message asking you to close "
-            f"Edge and submit again.\r\n"
-            f"  Force replacements - reuse an existing per-page output "
-            f"folder (emptying its contents and writing a fresh set of "
-            f"files) instead of skipping the url\r\n"
-            f"  View output - open the parent output folder in File "
-            f"Explorer when all scans are done\r\n"
-            f"  Log session - write urlCheck.log (replacing any prior log) "
-            f"in the current working folder\r\n"
-            f"  Use configuration - remember these settings for next time "
-            f"in %LOCALAPPDATA%\\urlCheck\\urlCheck.ini\r\n\r\n"
-            f"Press Cancel to exit without scanning.\r\n\r\n"
-            f"Open the full README in your browser?")
-        dialogResult = MessageBox.Show(sMsg, f"{sProgramName} - Help",
-            MessageBoxButtons.YesNo, MessageBoxIcon.Information,
-            MessageBoxDefaultButton.Button2)
-        if dialogResult == DialogResult.Yes: launchReadMe()
-
-    def fnOnKeyDown(sender, args):
-        if args.KeyCode == Keys.F1:
-            args.Handled = True
-            args.SuppressKeyPress = True
-            fnShowHelp()
-
-    def fnPickFile(sender, args):
-        # Pythonnet has a long-standing deadlock when it invokes the modern
-        # (Vista+) IFileOpenDialog COM-shell file picker -- documented in
-        # pythonnet issues #657 and #1286, both unresolved. The fix is to
-        # set AutoUpgradeEnabled = False, which forces the legacy Win32
-        # GetOpenFileName common dialog (comdlg32.dll). It has the older
-        # Windows look but actually works under pythonnet.
-        sCurrent = (txtTarget.Text or "").strip()
-        sInitial = getInitialBrowseDir(sCurrent)
-        logger.info(f"Browse source clicked; opening OpenFileDialog (legacy) at {sInitial!r}")
+    while True:
+        dlg = Homer.LbcDialog(sProgramName, None)
         try:
-            dialog = OpenFileDialog()
-            dialog.AutoUpgradeEnabled = False
-            dialog.Title = "Choose a plain text url list"
-            dialog.Filter = ("Plain text files (*.txt;*.lst;*.md)|*.txt;*.lst;*.md|"
-                           "All files (*.*)|*.*")
-            dialog.FilterIndex = 2  # default to All files; user may have any extension
-            dialog.CheckFileExists = True
-            dialog.RestoreDirectory = True
-            try:
-                dialog.InitialDirectory = sInitial
+            dlg.addBand()
+            tbSource = dlg.addInputBox("&Source urls:", sSource,
+                "One url or domain, several separated by spaces, or the path "
+                "to a plain text file listing urls, domains or local files, "
+                "one per line.")
+            btnBrowse = dlg.addButton("&Browse source...",
+                "Choose a plain text file that lists urls.")
+            dlg.addBand()
+            tbOut = dlg.addInputBox("&Output folder:", sOutputDir,
+                "The folder under which each page's results folder is made. "
+                "Blank means the current folder.")
+            btnChoose = dlg.addButton("&Choose output...",
+                "Choose the output folder.")
+            dlg.endBand()
+            dlg.addSeparator()
+            cbAuth = dlg.addCheckBox("&Authenticate credentials", bAuth,
+                "Pause on each new site so you can sign in or dismiss pop-ups, "
+                "then resume. Wins over Invisible mode.")
+            cbMain = dlg.addCheckBox("&Main profile", bMain,
+                "Use your own Edge profile, with its sign-ins. Edge must be closed.")
+            cbInvisible = dlg.addCheckBox("&Invisible mode", bInvisible,
+                "Run Edge with no visible window.")
+            cbForce = dlg.addCheckBox("&Force replacements", bForce,
+                "Empty and reuse an existing results folder instead of skipping the url.")
+            cbView = dlg.addCheckBox("&View output", bView,
+                "Open the output folder in File Explorer when all scans are done.")
+            cbLog = dlg.addCheckBox("&Log session", bLog,
+                "Also write urlCheck.log in the output folder. A session log is "
+                "always kept in %LOCALAPPDATA%\\urlCheck\\logs.")
+            cbUseCfg = dlg.addCheckBox("&Use configuration", bUseCfg,
+                "Load these settings next time, and save them when you press "
+                "OK, in configs\\urlCheck.inix.")
+
+            def fnPickFile(sender, args):
+                # Pythonnet deadlocks on the modern (Vista+) IFileOpenDialog
+                # shell picker -- pythonnet issues #657 and #1286, both
+                # unresolved. AutoUpgradeEnabled = False forces the legacy
+                # Win32 GetOpenFileName dialog, which works under pythonnet.
+                sInitial = getInitialBrowseDir((tbSource.Text or "").strip())
+                logger.info(f"Browse source clicked; opening OpenFileDialog (legacy) at {sInitial!r}")
+                try:
+                    dialog = OpenFileDialog()
+                    dialog.AutoUpgradeEnabled = False
+                    dialog.Title = "Choose a plain text url list"
+                    dialog.Filter = ("Plain text files (*.txt;*.lst;*.md)|*.txt;*.lst;*.md|"
+                                   "All files (*.*)|*.*")
+                    dialog.FilterIndex = 2  # All files; a list may have any extension
+                    dialog.CheckFileExists = True
+                    dialog.RestoreDirectory = True
+                    try: dialog.InitialDirectory = sInitial
+                    except Exception: pass
+                    dialogResult = dialog.ShowDialog()
+                    logger.info(f"OpenFileDialog returned: {dialogResult}")
+                    if dialogResult == DialogResult.OK:
+                        tbSource.Text = dialog.FileName
+                        logger.info(f"Source set to: {dialog.FileName}")
+                    tbSource.Focus()
+                except Exception as ex:
+                    logger.info(f"OpenFileDialog raised: {ex}")
+                    MessageBox.Show(f"Browse source failed: {ex}",
+                        f"{sProgramName} - Browse error",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning)
+
+            def fnPickFolder(sender, args):
+                # FolderBrowserDialog deadlocks under pythonnet like the
+                # modern file picker (issue #657) and has no
+                # AutoUpgradeEnabled, so the Win32 SHBrowseForFolder is
+                # called directly through ctypes instead.
+                sInitial = getInitialBrowseDir((tbOut.Text or "").strip())
+                logger.info(f"Choose output clicked; calling SHBrowseForFolder at {sInitial!r}")
+                try:
+                    sChosen = browseForFolderViaShell(
+                        "Choose the parent folder under which the per-scan "
+                        "output folder will be created.", sInitial)
+                except Exception as ex:
+                    logger.info(f"SHBrowseForFolder raised: {ex}")
+                    MessageBox.Show(f"Choose output failed: {ex}",
+                        f"{sProgramName} - Browse error",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                    return
+                logger.info(f"SHBrowseForFolder returned: {sChosen!r}")
+                if sChosen:
+                    tbOut.Text = sChosen
+                    logger.info(f"Output dir set to: {sChosen}")
+                tbOut.Focus()
+
+            def fnOnKey(keys):
+                # F11: is there a newer urlCheck on the web? (Elevate sounds
+                # like eleven.) Claimed before any control sees the key. When
+                # the setup program starts, this copy steps aside.
+                if keys != Keys.F11: return False
+                logger.info("F11: checking the web for a newer version")
+                if Homer.Elevate.offer(dlg.form):
+                    logger.info("F11: the setup program was started; closing the dialog")
+                    dlg.form.DialogResult = DialogResult.Cancel
+                    dlg.form.Close()
+                return True
+
+            btnBrowse.Click += EventHandler(fnPickFile)
+            btnChoose.Click += EventHandler(fnPickFolder)
+            dlg.commandKey = lbcnet.keyHandler(fnOnKey)
+
+            logger.info("Showing the Lbc dialog")
+            sButton = dlg.runWithButtons(lbcnet.strings(
+                ["OK", "Guide", "Default settings", "Cancel"])) or ""
+            logger.info(f"Dialog returned: {sButton!r}")
+
+            # Every field is harvested before the dialog goes, so a return to
+            # the dialog keeps whatever else was typed.
+            sSource = (tbSource.Text or "").strip()
+            sOutputDir = (tbOut.Text or "").strip()
+            bAuth = bool(cbAuth.Checked)
+            bForce = bool(cbForce.Checked)
+            bInvisible = bool(cbInvisible.Checked)
+            bLog = bool(cbLog.Checked)
+            bMain = bool(cbMain.Checked)
+            bUseCfg = bool(cbUseCfg.Checked)
+            bView = bool(cbView.Checked)
+        finally:
+            try: dlg.Dispose()
             except Exception: pass
-            dialogResult = dialog.ShowDialog()
-            logger.info(f"OpenFileDialog returned: {dialogResult}")
-            if dialogResult == DialogResult.OK:
-                txtTarget.Text = dialog.FileName
-                logger.info(f"Source set to: {dialog.FileName}")
-        except Exception as ex:
-            logger.info(f"OpenFileDialog raised: {ex}")
-            MessageBox.Show(f"Browse source failed: {ex}",
-                f"{sProgramName} - Browse error",
-                MessageBoxButtons.OK, MessageBoxIcon.Warning)
 
-    def fnPickFolder(sender, args):
-        # FolderBrowserDialog has no AutoUpgradeEnabled property, and the
-        # default shell-COM machinery deadlocks under pythonnet exactly like
-        # the modern OpenFileDialog (issue #657). We sidestep it by calling
-        # the older Win32 SHBrowseForFolder API directly via ctypes -- which
-        # bypasses pythonnet entirely for this dialog and uses the simpler
-        # folder picker that doesn't need the same COM-marshaled callbacks.
-        sCurrent = (txtOut.Text or "").strip()
-        sInitial = getInitialBrowseDir(sCurrent)
-        sChosen = ""
-        logger.info(f"Choose output clicked; calling SHBrowseForFolder at {sInitial!r}")
-        try:
-            sChosen = browseForFolderViaShell(
-                "Choose the parent folder under which the per-scan "
-                "output folder will be created.",
-                sInitial)
-        except Exception as ex:
-            logger.info(f"SHBrowseForFolder raised: {ex}")
-            MessageBox.Show(f"Choose output failed: {ex}",
-                f"{sProgramName} - Browse error",
-                MessageBoxButtons.OK, MessageBoxIcon.Warning)
-            return
-        logger.info(f"SHBrowseForFolder returned: {sChosen!r}")
-        if sChosen:
-            txtOut.Text = sChosen
-            logger.info(f"Output dir set to: {sChosen}")
+        if sButton == "" or sButton.lower() == "cancel":
+            return False
+        if sButton.lower() == "guide":
+            launchReadMe()
+            continue
+        if sButton.lower() == "default settings":
+            sSource = ""
+            sOutputDir = ""
+            bAuth = bForce = bInvisible = bLog = bMain = bUseCfg = bView = False
+            configManager.eraseAll()
+            logger.info("Default settings restored")
+            continue
 
-    def fnDefaults(sender, args):
-        txtTarget.Text = ""
-        txtOut.Text = ""
-        chkInvisible.Checked = False
-        chkAuth.Checked = False
-        chkMain.Checked = False
-        chkForce.Checked = False
-        chkView.Checked = False
-        chkLog.Checked = False
-        chkUseCfg.Checked = False
-        configManager.eraseAll()
-
-    def fnHelpClick(sender, args):
-        fnShowHelp()
-
-    def fnOkClick(sender, args):
-        sCurrent = (txtTarget.Text or "").strip()
-        if not sCurrent:
+        # OK. Each check that fails says why and returns to the dialog.
+        if not sSource:
             MessageBox.Show(
                 "Please enter one or more urls separated by spaces, "
                 "or the path to a plain text file of urls.",
                 f"{sProgramName} - Missing source",
                 MessageBoxButtons.OK, MessageBoxIcon.Warning)
-            txtTarget.Focus()
-            frm.DialogResult = DialogResult.None_
-            return
-        sKind, vDetail = classifyInput(sCurrent)
+            continue
+        sKind, vDetail = classifyInput(sSource)
         if sKind == "error":
-            MessageBox.Show(str(vDetail),
-                f"{sProgramName} - Invalid source",
+            MessageBox.Show(str(vDetail), f"{sProgramName} - Invalid source",
                 MessageBoxButtons.OK, MessageBoxIcon.Warning)
-            txtTarget.Focus()
-            frm.DialogResult = DialogResult.None_
-            return
-        # Output directory validation: if the user specified a directory
-        # that does not exist, prompt to create it (default Yes). On No
-        # or creation failure, keep the dialog open.
-        sOutCandidate = (txtOut.Text or "").strip()
+            continue
+        # An output folder that does not exist yet: offer to make it
+        # (default Yes). No, or a failure, returns to the dialog.
+        sOutCandidate = sOutputDir
         if len(sOutCandidate) >= 2 and sOutCandidate[0] == '"' and sOutCandidate[-1] == '"':
             sOutCandidate = sOutCandidate[1:-1].strip()
         if sOutCandidate and not os.path.isdir(sOutCandidate):
-            dr = MessageBox.Show(
-                f"Create {sOutCandidate}?",
-                sProgramName,
+            dr = MessageBox.Show(f"Create {sOutCandidate}?", sProgramName,
                 MessageBoxButtons.YesNo, MessageBoxIcon.Question,
                 MessageBoxDefaultButton.Button1)
-            if dr != DialogResult.Yes:
-                frm.DialogResult = DialogResult.None_
-                txtOut.Focus()
-                return
+            if dr != DialogResult.Yes: continue
             try:
                 os.makedirs(sOutCandidate, exist_ok=True)
             except Exception as ex:
-                MessageBox.Show(
-                    f"Could not create folder:\r\n{sOutCandidate}\r\n\r\n{ex}",
-                    sProgramName,
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning)
-                frm.DialogResult = DialogResult.None_
-                txtOut.Focus()
-                return
-        # If Main profile is checked, refuse to proceed when another
-        # Edge process is running. Edge cannot share its profile
-        # directory across two processes; attempting to launch
-        # against an in-use profile produces a confusing error
-        # downstream. Better to surface this here, in the dialog,
-        # so the user can close all Edge windows and re-submit the
-        # dialog -- without restarting urlCheck. We capture the
-        # control that had focus when OK was triggered (which may
-        # have been the OK button, or any other dialog control,
-        # since pressing Enter on most controls triggers the
-        # AcceptButton) and restore focus there after the message
-        # box is dismissed -- the user can press Enter again from
-        # wherever they were once Edge is closed.
-        if bool(chkMain.Checked) and isEdgeRunning():
-            controlPriorFocus = None
-            try: controlPriorFocus = frm.ActiveControl
-            except Exception: pass
+                MessageBox.Show(f"Could not create folder:\r\n{sOutCandidate}\r\n\r\n{ex}",
+                    sProgramName, MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                continue
+        # Main profile needs Edge closed: Edge does not share its profile
+        # across processes, and launching against one in use fails later and
+        # confusingly. Saying so here lets the user close Edge and press OK
+        # again without restarting urlCheck.
+        if bMain and isEdgeRunning():
             MessageBox.Show(
                 "Microsoft Edge is currently running. urlCheck "
                 "cannot proceed because Main profile requires "
                 "exclusive access to your Edge profile, which Edge "
                 "does not share across processes. Please close all "
-                "Edge windows (right-click the Edge taskbar icon "
-                "and choose Close window, or quit Edge from its "
-                "menu), then submit this dialog again to retry.",
+                "Edge windows, then press OK in the dialog again.",
                 f"{sProgramName} - Edge is running",
                 MessageBoxButtons.OK, MessageBoxIcon.Warning)
-            frm.DialogResult = DialogResult.None_
-            try:
-                if controlPriorFocus is not None: controlPriorFocus.Focus()
-            except Exception: pass
-            return
-        # sKind is 'urls' or 'listfile' -- both are valid; let the dialog close.
+            continue
 
-    btnBrowseTarget.Click += EventHandler(fnPickFile)
-    btnBrowseOut.Click += EventHandler(fnPickFolder)
-    btnDefaults.Click += EventHandler(fnDefaults)
-    btnHelp.Click += EventHandler(fnHelpClick)
-    btnOk.Click += EventHandler(fnOkClick)
-    # KeyDown takes a different EventHandler<KeyEventArgs>; pythonnet handles
-    # the conversion when the function signature matches. Pass the function
-    # directly rather than wrapping in EventHandler.
-    frm.KeyDown += fnOnKeyDown
-
-    txtTarget.Select()
-    logger.info("Showing dialog (frm.ShowDialog)")
-    dialogResult = frm.ShowDialog()
-    logger.info(f"Dialog returned: {dialogResult}")
-    if dialogResult != DialogResult.OK:
-        frm.Dispose()
-        return False
-
-    # Hand values back into the arguments namespace.
-    arguments.sSource = (txtTarget.Text or "").strip()
-    arguments.sOutputDir = (txtOut.Text or "").strip()
-    arguments.bInvisible = bool(chkInvisible.Checked)
-    arguments.bAuthenticate = bool(chkAuth.Checked)
-    arguments.bMainProfile = bool(chkMain.Checked)
-    arguments.bForce = bool(chkForce.Checked)
-    arguments.bViewOutput = bool(chkView.Checked)
-    arguments.bLog = bool(chkLog.Checked)
-    arguments.bUseConfig = bool(chkUseCfg.Checked)
-    frm.Dispose()
-    return True
+        arguments.sSource = sSource
+        arguments.sOutputDir = sOutputDir
+        arguments.bAuthenticate = bAuth
+        arguments.bForce = bForce
+        arguments.bInvisible = bInvisible
+        arguments.bLog = bLog
+        arguments.bMainProfile = bMain
+        arguments.bUseConfig = bUseCfg
+        arguments.bViewOutput = bView
+        return True
 
 
 def launchReadMe():
     """
-    Opens README.htm next to urlCheck.exe in the user's default browser.
-    Falls back to README.md, then to a polite notice if neither is present.
+    Opens the full guide in the default browser. The Homer layout puts it in
+    help\\urlCheck.htm, beside exec\\ where the program runs, in the installed
+    tree and in the project alike; homer.paths finds that folder. ReadMe.htm
+    at the top is the fallback, then the Markdown forms, then a notice.
     """
-    sExeDir = ""
-    sHtm = ""
-    sMd = ""
+    lsCandidates = []
+    sFolder = ""
     sTarget = ""
 
-    sExeDir = os.path.dirname(sys.executable if getattr(sys, "frozen", False) else os.path.abspath(__file__))
-    sHtm = os.path.join(sExeDir, "README.htm")
-    sMd = os.path.join(sExeDir, "README.md")
-    if os.path.isfile(sHtm): sTarget = sHtm
-    elif os.path.isfile(sMd): sTarget = sMd
+    sFolder = paths.installedFolder()
+    lsCandidates = [os.path.join(sFolder, "help", f"{sProgramName}.htm"), os.path.join(sFolder, "ReadMe.htm"),
+                    os.path.join(sFolder, "help", f"{sProgramName}.md"), os.path.join(sFolder, "ReadMe.md")]
+    for sTarget in lsCandidates:
+        if os.path.isfile(sTarget): break
+    else:
+        sTarget = ""
     if not sTarget:
+        logger.warn(f"No guide found under {sFolder}")
         try:
             d = _loadDotNetForms()
             if d is not None:
                 d["MessageBox"].Show(
-                    "Documentation (README.htm or README.md) was not found in:\r\n\r\n" + sExeDir,
-                    f"{sProgramName} - Documentation not found",
+                    "The guide was not found in:\r\n\r\n" + sFolder,
+                    f"{sProgramName} - Guide not found",
                     d["MessageBoxButtons"].OK, d["MessageBoxIcon"].Warning)
-                return
+                return False
         except Exception:
             pass
-        print(f"[WARN] No README.htm or README.md in {sExeDir}")
-        return
-    try: os.startfile(sTarget)
-    except Exception as ex: print(f"[WARN] Could not open {sTarget}: {ex}")
+        print(f"[WARN] No guide in {sFolder}")
+        return False
+    try:
+        os.startfile(sTarget)
+        return True
+    except Exception as ex:
+        print(f"[WARN] Could not open {sTarget}: {ex}")
+        return False
 
 
 def showFinalGuiMessage(sText, sTitle):
     """
     Shows a captured-stdout message after a GUI-mode scan completes. Short
-    text uses the native MessageBox; long text uses a scrollable read-only
-    multi-line TextBox in a small Form. Mirrors 2htm's showFinalMessage.
+    text uses the native MessageBox; long text an LbcDialog holding only a
+    read-only multi-line field, which fills the dialog, and OK.
     """
-    bLong = False
-    d = None
-
     d = _loadDotNetForms()
     if d is None:
         print(sText)
         return
     bLong = len(sText) > 800 or sText.count("\n") > 15
-    if not bLong:
+    Homer = lbcnet.load() if bLong else None
+    if Homer is None:
         d["MessageBox"].Show(sText or "Done. No output.", sTitle,
             d["MessageBoxButtons"].OK, d["MessageBoxIcon"].Information)
         return
-
-    # Long output: scrollable read-only TextBox in a resizable form.
-    AnchorStyles = d["AnchorStyles"]
-    Button = d["Button"]
-    DialogResult = d["DialogResult"]
-    DockStyle = d["DockStyle"]
-    Font = d["Font"]
-    FontFamily = d["FontFamily"]
-    Form = d["Form"]
-    FormBorderStyle = d["FormBorderStyle"]
-    FormStartPosition = d["FormStartPosition"]
-    Panel = d["Panel"]
-    Point = d["Point"]
-    ScrollBars = d["ScrollBars"]
-    Size = d["Size"]
-    SystemFonts = d["SystemFonts"]
-    TextBox = d["TextBox"]
-
-    frm = Form()
-    frm.Text = sTitle
-    frm.StartPosition = FormStartPosition.CenterScreen
-    frm.ClientSize = Size(700, 480)
-    frm.FormBorderStyle = FormBorderStyle.Sizable
-    frm.MinimizeBox = False
-    frm.MaximizeBox = True
-    frm.ShowInTaskbar = False
-    frm.Font = SystemFonts.MessageBoxFont
-
-    txt = TextBox()
-    txt.Multiline = True
-    txt.ReadOnly = True
-    txt.ScrollBars = ScrollBars.Vertical
-    txt.WordWrap = False
-    txt.Text = sText
-    txt.Dock = DockStyle.Fill
-    try: txt.Font = Font(FontFamily.GenericMonospace, 9.0)
-    except Exception: pass
-    frm.Controls.Add(txt)
-
-    pnl = Panel()
-    pnl.Height = 40
-    pnl.Dock = DockStyle.Bottom
-    frm.Controls.Add(pnl)
-
-    btn = Button()
-    btn.Text = "OK"
-    btn.DialogResult = DialogResult.OK
-    btn.Size = Size(100, 26)
-    btn.Anchor = AnchorStyles.Top | AnchorStyles.Right
-    btn.Location = Point(pnl.ClientSize.Width - btn.Width - 12, 7)
-    pnl.Controls.Add(btn)
-    frm.AcceptButton = btn
-    frm.CancelButton = btn
-
-    frm.ShowDialog()
-    frm.Dispose()
+    dlg = Homer.LbcDialog(sTitle, None)
+    try:
+        tbResults = dlg.addMemo(sText.replace("\r\n", "\n").replace("\n", "\r\n"), None)
+        tbResults.ReadOnly = True
+        # Focus in a multi-line field starts at the top.
+        tbResults.SelectionStart = 0
+        tbResults.SelectionLength = 0
+        dlg.runWithButtons(lbcnet.strings(["OK"]), False)
+    finally:
+        try: dlg.Dispose()
+        except Exception: pass
 
 
 # --- Entry point ---
@@ -6560,6 +6253,13 @@ def main():
     # Resetting the DLL directory to NULL before launching Playwright prevents this.
     if sys.platform == "win32":
         ctypes.windll.kernel32.SetDllDirectoryW(None)
+
+    # ONE SESSION LOG, ALWAYS, before anything can fail: homer.log opens
+    # %LOCALAPPDATA%\\urlCheck\\logs\\urlCheck-yyyyMMdd-HHmmss.log with the
+    # environment already in it, and keeps the latest thirty.
+    log.start(sProgramName)
+    # elevate (F11 and the version section of the dialog's Help box) is the
+    # C# Elevate inside Homer.dll, configured when the dialog first loads it.
 
     cleanPreviousTempDirs()
 
@@ -7232,8 +6932,8 @@ def main():
                 print()
                 print("No urls scanned.")
 
-            if iFailed > 0 and not arguments.bLog and not bGuiMode:
-                print("Re-run with -l to log full error tracebacks to urlCheck.log.")
+            if iFailed > 0 and not bGuiMode:
+                print(f"The full error tracebacks are in {log.sPath}")
 
             # Open the parent output directory once at the end of the run, if
             # requested. This shows the user all per-page subdirectories at
@@ -7291,4 +6991,21 @@ def main():
     return 0 if iErrorCount == 0 else 1
 
 
-if __name__ == "__main__": raise SystemExit(main())
+def runLogged():
+    """main(), with anything it did not catch recorded in the session log."""
+    iCode = 1
+    try:
+        iCode = main()
+    except SystemExit as ex:
+        iCode = ex.code if isinstance(ex.code, int) else 0
+    except BaseException as ex:
+        log.exception(ex)
+        print(f"[ERROR] {ex}")
+        print(f"The session log has the details: {log.sPath}")
+        iCode = 1
+    log.info(f"Exit code {iCode}")
+    log.close()
+    return iCode
+
+
+if __name__ == "__main__": raise SystemExit(runLogged())

@@ -1,0 +1,228 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <meta name="author" content="Jamal Mazrui" />
+  <title>Announce</title>
+  <style>
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Announce</h1>
+<p class="author">Jamal Mazrui</p>
+</header>
+<h1 id="urlcheck-1.12.3">urlCheck 1.12.3</h1>
+<p><code>urlCheck</code> checks web pages for accessibility problems
+with Microsoft Edge and axe-core, and writes a report for each page plus
+a draft Accessibility Conformance Report for all of them. Get it from
+the <a href="https://github.com/JamalMazrui/urlCheck/releases">urlCheck
+releases page</a>.</p>
+<h2 id="what-is-new-in-1.12">What is new in 1.12</h2>
+<ul>
+<li><strong>A dialog like every Homer dialog.</strong> It is built with
+the Homer Lbc classes, the same ones the other Homer Tools use, so
+Control+Enter, Shift+F1, F7 and the Help box work the same everywhere. A
+Guide button opens the full guide.</li>
+<li><strong>Update from inside the program.</strong> Press F11 in the
+dialog to check GitHub for a newer version. If there is one, Enter
+downloads and starts its installer.</li>
+<li><strong>A log of every session.</strong> Each run now keeps its own
+log in <code>%LOCALAPPDATA%\urlCheck\logs</code>, so a problem can be
+explained afterwards even when Log session was off. Log session still
+also writes <code>urlCheck.log</code> beside the results.</li>
+<li><strong>Settings in a readable file.</strong> Use configuration now
+saves to <code>%LOCALAPPDATA%\urlCheck\configs\urlCheck.inix</code>.
+Settings from earlier versions are carried over.</li>
+<li><strong>A tidier installation.</strong> The program is in the
+<code>exec</code> folder and the documents in <code>help</code>, as in
+every Homer Tools program. The installer’s results box comes before
+<code>urlCheck</code> starts, so it is never hidden behind it.</li>
+<li><strong>A full guide and a quick start.</strong> The ReadMe is now a
+one-page quick start; the full guide is <code>help\urlCheck.htm</code>,
+and Help (F1) opens it.</li>
+</ul>
+<p>The full list of changes is in History.</p>
+<h2 id="about-the-companion-accessibility-tools">About the companion
+accessibility tools</h2>
+<p><code>urlCheck</code>, <code>extCheck</code>, and <code>2htm</code>
+are a small family of free, MIT-licensed Windows tools written by Jamal
+Mazrui and shared on GitHub. They share control names, dialog layout and
+command-line spellings wherever the idea is the same, so a person who
+knows one knows the others.</p>
+<ul>
+<li><a href="https://github.com/JamalMazrui/urlCheck">urlCheck</a> —
+checks web pages with Edge and axe-core, producing per-page reports plus
+a session-level Accessibility Conformance Report covering all 86 WCAG
+2.2 success criteria.</li>
+<li><a href="https://github.com/JamalMazrui/extCheck">extCheck</a> —
+checks the accessibility of <code>.docx</code>, <code>.xlsx</code>,
+<code>.pptx</code> and <code>.md</code> files.</li>
+<li><a href="https://github.com/JamalMazrui/2htm">2htm</a> — converts
+Office documents and other formats to clean, accessible HTML.</li>
+</ul>
+<p>Each has a dialog and a command line with the same options, an
+optional installer with a desktop hotkey (Alt+Control+Shift+U for
+<code>urlCheck</code>, Alt+Control+U for its companion
+<code>urlFido</code>, Alt+Control+2 for <code>2htm</code>, Alt+Control+X
+for <code>extCheck</code>), and opt-in recall of the last settings.</p>
+</body>
+</html>

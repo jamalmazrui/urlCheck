@@ -1,0 +1,34 @@
+﻿; accept.inix -- what "done" means for urlCheck, checked by scripts\check.
+; Each [check] runs a command in the project folder; Expect is its exit code
+; and Wants, when given, a string its output must contain.
+
+[check]
+Name   = the help names the configuration switch
+Run    = exec\urlCheck.exe --help
+Expect = 0
+Wants  = --use-configuration
+
+[check]
+Name   = the help names the log folder
+Run    = exec\urlCheck.exe --help
+Expect = 0
+Wants  = urlCheck\logs
+
+[check]
+Name   = the program reports the version the build wrote
+Run    = exec\urlCheck.exe --version
+Expect = 0
+Wants  = urlCheck
+
+[check]
+Name   = the command-line wrapper finds the program in exec
+Run    = urlCheck.cmd --version
+Expect = 0
+Wants  = urlCheck
+
+[check]
+Name   = the installer ships the full guide
+; findstr reads a backslash as an escape even in /c: text, so it is doubled;
+; written singly, the backslash was dropped from the search and it failed.
+Run    = findstr /l /c:"help\\urlCheck.htm" urlCheck_setup.iss
+Expect = 0

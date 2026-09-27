@@ -1,0 +1,742 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <meta name="author" content="Jamal Mazrui" />
+  <meta name="description" content="Accessibility Checker for Web Pages" />
+  <title>urlCheck</title>
+  <style>
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    /* CSS for syntax highlighting */
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">urlCheck</h1>
+<p class="author">Jamal Mazrui</p>
+</header>
+<h1 id="urlcheck-guide">urlCheck Guide</h1>
+<p><strong>Author:</strong> Jamal Mazrui <strong>Copyright:</strong> ©
+2026 Jamal Mazrui <strong>License:</strong> <a
+href="https://opensource.org/license/mit/">MIT</a> <strong>Project
+home:</strong> <a href="https://github.com/JamalMazrui/urlCheck"
+class="uri">https://github.com/JamalMazrui/urlCheck</a></p>
+<p><code>urlCheck</code> is a Windows tool that checks web pages for
+accessibility problems. It opens each page in Microsoft Edge, runs the
+<a href="https://github.com/dequelabs/axe-core">axe-core</a> testing
+engine, and saves a set of output files in a new folder named after the
+page title.</p>
+<p>This is the full guide. For a quick start, see ReadMe. Like its
+companion tools <code>2htm</code> and <code>extCheck</code> (see
+Announce for a description of the family), <code>urlCheck</code> runs in
+two modes: a <strong>GUI mode</strong> (a small parameter dialog
+launched by double-clicking the program, pressing its desktop hotkey, or
+running with <code>-g</code>) and a <strong>command-line mode</strong>
+(any other invocation, suitable for batch files and pipelines). Both
+modes accept the same options.</p>
+<hr />
+<h2 id="what-you-need">What you need</h2>
+<ul>
+<li>Windows 10 or later (64-bit)</li>
+<li>Microsoft Edge (already present on Windows 10/11; urlCheck uses your
+installed Edge directly and does not bundle or download a separate
+browser)</li>
+<li>An internet connection during each scan</li>
+</ul>
+<p>You do <strong>not</strong> need to install Python or .NET
+separately. The installer ships everything <code>urlCheck</code> needs,
+and the .NET Framework 4.8 used by the parameter dialog ships in-box
+with Windows 10 (since version 1903) and Windows 11.</p>
+<hr />
+<h2 id="installing">Installing</h2>
+<p>Download <code>urlCheck_setup.exe</code> from the <a
+href="https://github.com/JamalMazrui/urlCheck/releases">urlCheck
+releases page</a> and run it. It needs administrator rights, because it
+installs for everyone on the computer. The setup wizard:</p>
+<ul>
+<li>Asks for the installation folder the first time (default:
+<code>C:\Program Files\urlCheck</code>). An update goes to the same
+folder without asking.</li>
+<li>Shows a short MIT license summary on the welcome page. The full
+license is installed as <code>License.htm</code>.</li>
+<li>Adds a Start-menu group and a desktop shortcut whose hotkey is
+<strong>Alt+Control+Shift+U</strong>. Pressing
+<strong>Alt+Control+Shift+U</strong> from anywhere in Windows opens the
+<code>urlCheck</code> dialog.</li>
+</ul>
+<p>The last page offers two checkboxes. <strong>Launch urlCheck
+now</strong> is checked; <strong>Open the user guide</strong> is not.
+When you press Finish, a short results box says what was installed and
+where the logs are. <code>urlCheck</code> starts after you close that
+box, so the box is never hidden behind it.</p>
+<p>The program itself is in the <code>exec</code> folder of the
+installation, and this guide and the other documents are in the
+<code>help</code> folder. <code>ReadMe.htm</code> and
+<code>License.htm</code> are at the top.</p>
+<h3 id="updating">Updating</h3>
+<p>In the dialog, press <strong>F11</strong>. <code>urlCheck</code> asks
+GitHub whether a newer version exists. If one does, Yes is the default:
+press Enter and the new setup program is downloaded and started. If you
+already have the newest version, No is the default. If the check fails
+(for example, with no internet connection), a message says so.</p>
+<hr />
+<h2 id="running-urlcheck">Running urlCheck</h2>
+<h3 id="from-the-dialog-easiest">From the dialog (easiest)</h3>
+<p>Launch <code>urlCheck</code> from any of these:</p>
+<ul>
+<li>The desktop shortcut (or its <strong>Alt+Control+Shift+U</strong>
+hotkey)</li>
+<li>The Start-menu shortcut</li>
+<li>Double-clicking <code>urlCheck.exe</code> in the <code>exec</code>
+folder in File Explorer</li>
+</ul>
+<p>The parameter dialog has these controls. Each label has an underlined
+letter that you can press with <strong>Alt</strong> to jump straight to
+that control:</p>
+<ul>
+<li><strong>Source urls</strong> [S] — one url (https://example.com), or
+a domain (microsoft.com), or several of either separated by spaces, or
+the path to a single plain text file that lists urls, domains, or local
+HTML file paths one per line. The list file may have any extension;
+urlCheck verifies it is plain text by inspecting its contents.</li>
+<li><strong>Browse source…</strong> [B] — pick a single source from a
+file picker</li>
+<li><strong>Output folder</strong> [O] — where the output is written.
+Blank means the current working folder.</li>
+<li><strong>Choose output…</strong> [C] — pick the output folder from a
+folder picker</li>
+<li><strong>Invisible mode</strong> [I] — run Edge with no visible
+browser window</li>
+<li><strong>Authenticate credentials</strong> [A] — pause after each
+newly-encountered domain so you can sign in / dismiss cookie banners /
+accept popups, then press Enter (or click OK in GUI mode) to resume the
+scan. By default, urlCheck uses a fresh temporary Edge profile and
+disconnects its automation channel from Edge during the user-interaction
+pause (which improves the chance of success against sites that detect
+active automation, such as WhatsApp Web); to use your real profile
+instead, also check <strong>Main profile</strong>. If both
+<strong>Invisible mode</strong> and <strong>Authenticate
+credentials</strong> are checked, urlCheck overrides Invisible mode at
+run time and launches Edge with a visible window (an auth prompt
+requires a visible browser); the override is logged.</li>
+<li><strong>Main profile</strong> [M] — launch Edge with your real
+(default) Edge user profile so saved logins, cookies, and session state
+are available. Without it, urlCheck uses a fresh temporary profile so
+the scan is anonymous and your real profile is not exposed to the
+scanned site. Independent of <strong>Authenticate credentials</strong>.
+Requires that no Microsoft Edge process is already running, since Edge
+cannot share a profile across two processes. urlCheck checks at startup;
+if Edge is running, the CLI exits with a friendly message and the GUI
+shows a dialog explaining why it cannot proceed and asks you to close
+Edge before submitting again.</li>
+<li><strong>Force replacements</strong> [F] — reuse an existing per-page
+output folder by emptying its contents and writing a fresh set of files.
+Without this, urlCheck skips the url when its per-page output folder
+already exists, preserving previous scan results.</li>
+<li><strong>View output</strong> [V] — open the output folder in File
+Explorer when the run is done</li>
+<li><strong>Log session</strong> [L] — also write
+<code>urlCheck.log</code> in the output folder (or current folder if no
+output folder is set). A session log is always kept in
+<code>%LOCALAPPDATA%\urlCheck\logs</code> either way.</li>
+<li><strong>Use configuration</strong> [U] — load these field values
+from the saved configuration at startup, and save them back when you
+press OK</li>
+<li><strong>Guide</strong> [G] — open this guide in your browser, then
+return to the dialog with everything as it was.</li>
+<li><strong>Help</strong> [H] — list every field with its tip, the
+dialog’s keys, and the version check. F1 also shows Help.</li>
+<li><strong>Default settings</strong> [D] — clear all fields, uncheck
+all boxes, and delete the saved configuration if any</li>
+<li><strong>OK</strong> / <strong>Cancel</strong> — start the run, or
+cancel without running. Enter is OK; Escape is Cancel.</li>
+</ul>
+<p>More keys work anywhere in the dialog: <strong>F1</strong> shows
+Help, <strong>F11</strong> checks the web for a newer version of
+<code>urlCheck</code> (see Updating), <strong>Control+Enter</strong> is
+OK from any control, <strong>Shift+F1</strong> says the tip for the
+field you are on, and <strong>F7</strong> lists the dialog’s controls so
+you can move to one. The dialog is built with the Homer Lbc classes, so
+its text fields also have the Lbc editing keys, which Help lists.</p>
+<p><strong>Default settings</strong> and <strong>Guide</strong> return
+you to the dialog; Default settings first clears the fields and deletes
+any saved configuration. If OK finds a problem, such as a missing source
+or Edge running while Main profile is checked, it says so and returns
+you to the dialog with your entries kept.</p>
+<p><strong>Note on profiles and privacy.</strong> urlCheck’s default — a
+fresh temporary profile — matches the experience of an anonymous member
+of the public visiting a site for the first time. The scan captures and
+analyzes whatever a brand-new visitor would see. Choosing <strong>Main
+profile</strong> is a deliberate departure from that: pages may be
+personalized to your account (recommendations tailored to your history,
+content visible only to you, your name and avatar in the header), and
+the captured page.htm and screenshot may include that personal
+information. If you plan to share or publish the output, review it
+before doing so.</p>
+<p>The Browse source and Choose output pickers open at the folder
+derived from the corresponding text field’s current value when that
+value points to an existing path; otherwise they open at your Documents
+folder. With <strong>Use configuration</strong> checked, those text
+fields are pre-populated from your last session, so the pickers
+naturally pick up where you left off.</p>
+<p>If you press OK with an output folder that does not yet exist,
+urlCheck prompts to create it (default Yes). Choosing No keeps the
+dialog open with focus on the output field so you can correct it.</p>
+<p>When all pages have been processed, a final results dialog summarizes
+what was done.</p>
+<h3 id="from-the-command-line">From the command line</h3>
+<p>Open a Command Prompt in the <code>urlCheck</code> program folder, or
+put that folder on your PATH, and run <code>urlCheck</code> with the
+source as an argument. <code>urlCheck.cmd</code> there runs the program
+in the <code>exec</code> folder.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a># Single URL:</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>urlCheck https:/<span class="at">/example</span>.com</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a># Several URLs:</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>urlCheck https:/<span class="at">/a</span>.com https:/<span class="at">/b</span>.com</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a># URLs from a file:</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>urlCheck urls.txt</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a># Output to a folder:</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>urlCheck *.htm <span class="at">-o</span> reports</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a># View output when done:</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>urlCheck https:/<span class="at">/example</span>.com -<span class="at">-view-output</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a># Open the GUI:</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>urlCheck <span class="at">-g</span></span></code></pre></div>
+<p>When invoked without arguments from a GUI shell (Explorer
+double-click, Start-menu shortcut, desktop hotkey),
+<code>urlCheck</code> shows the dialog automatically. When invoked
+without arguments from a console shell, it prints help and exits. The
+<code>-g</code> flag forces GUI mode regardless.</p>
+<hr />
+<h2 id="command-line-options">Command-line options</h2>
+<ul>
+<li><code>-a</code>, <code>--authenticate</code> — pause on the first
+url of each registrable domain so you can authenticate, then press Enter
+(or click OK) to resume. By default it uses a fresh temporary profile
+and disconnects Playwright during the pause; combine with
+<code>-m</code> to use your real profile (no disconnect). It turns off
+<code>-i</code>.</li>
+<li><code>-f</code>, <code>--force</code> — reuse an existing per-page
+output folder by emptying it and writing a fresh set of files.</li>
+<li><code>-g</code>, <code>--gui-mode</code> — show the parameter
+dialog.</li>
+<li><code>-h</code>, <code>--help</code> — show usage and exit.</li>
+<li><code>-i</code>, <code>--invisible</code> — run Microsoft Edge with
+no visible browser window.</li>
+<li><code>-l</code>, <code>--log</code> — also write
+<code>urlCheck.log</code> (UTF-8 with BOM) in the output folder. It adds
+to the old log unless <code>-f</code> is also given, which replaces
+it.</li>
+<li><code>-m</code>, <code>--main-profile</code> — launch Edge with your
+real (default) Edge profile so saved logins are available. Without
+<code>-m</code>, urlCheck uses a fresh temporary profile so the scan is
+anonymous. No Edge window may be open.</li>
+<li><code>-o &lt;folder&gt;</code>,
+<code>--output-folder &lt;folder&gt;</code> — write output under
+<code>&lt;folder&gt;</code> (made if missing); the default is the
+current folder.</li>
+<li><code>-u</code>, <code>--use-configuration</code> — read saved
+settings from
+<code>%LOCALAPPDATA%\urlCheck\configs\urlCheck.inix</code>.</li>
+<li><code>-v</code>, <code>--version</code> — show the version and
+exit.</li>
+<li><code>--view-output</code> — after the run, open the output folder
+in File Explorer.</li>
+</ul>
+<p>Every option in the GUI corresponds one-to-one with a command-line
+flag, so a workflow prototyped in the dialog can be translated to a
+batch file without surprises.</p>
+<hr />
+<h2 id="supported-sources">Supported sources</h2>
+<p>urlCheck accepts:</p>
+<ul>
+<li>A single url (<code>https://example.com</code> or just
+<code>example.com</code>)</li>
+<li>Several urls separated by spaces</li>
+<li>The path to a plain text file with one url or local HTML file path
+per line; the file may have any extension</li>
+</ul>
+<p>Url-list files are detected automatically by content sniffing, not by
+extension.</p>
+<hr />
+<h2 id="output">Output</h2>
+<p>For each scanned page, urlCheck creates a subfolder whose name is
+based on the page title, adjusted as needed for the file system. Inside
+the folder:</p>
+<ul>
+<li><code>report.htm</code> — human-readable accessibility report (open
+in any browser)</li>
+<li><code>report.xlsx</code> — Excel workbook with separate sheets for
+violations, passes, incomplete, and inapplicable rules. The Results
+sheet has an <strong>Image</strong> column whose cells are clickable
+hyperlinks to per-violation screenshots (see below).</li>
+<li><code>results.json</code> — full structured scan output (metadata +
+axe-core results) for programmatic downstream use</li>
+<li><code>page.yaml</code> — ARIA accessibility tree of the page</li>
+<li><code>page.htm</code> — saved page source with stylesheet hrefs
+preserved</li>
+<li><code>page.png</code> — full-page screenshot</li>
+<li><code>violations/</code> — element-level screenshots, one PNG per
+violation node where the screenshot could be captured (see below)</li>
+</ul>
+<h3 id="per-violation-screenshots">Per-violation screenshots</h3>
+<p>For each rule-violation node found by axe, urlCheck attempts to
+capture an element-level screenshot using the CSS selector axe provides.
+Successful captures are saved as <code>violations/image-001.png</code>,
+<code>violations/image-002.png</code>, etc. The Image column of the
+Results sheet in <code>report.xlsx</code> shows the basename as a
+clickable hyperlink to the relative path; clicking the cell opens the
+PNG in the OS default image viewer.</p>
+<p>The hyperlinks are <strong>relative</strong> (e.g.,
+<code>violations/image-001.png</code>, not absolute paths), so you can
+move, zip, or share the page subfolder freely — the links resolve
+correctly wherever the workbook ends up, as long as the
+<code>violations/</code> subfolder travels with it.</p>
+<p>When axe’s CSS selector cannot be resolved by the browser engine —
+typical cases include shadow-DOM-pierced selectors, hidden or zero-size
+elements, or selectors that match multiple elements — urlCheck silently
+skips that node. The corresponding row of the Results sheet has an empty
+Image cell. There is no warning printed; the assumption is that the user
+looking at a Results sheet sees what was captured and what wasn’t, and
+can use the CSS selector in the <strong>Path</strong> column to find the
+element manually if needed.</p>
+<p>If a per-page folder with the same sanitized title already exists,
+urlCheck skips that url by default — previous scan results are
+preserved. Use <code>--force</code> (or check <strong>Force
+replacements</strong> in the dialog) to instead empty the existing
+folder and replace its contents with a fresh scan. The skip decision is
+made right after the page title is read, before the expensive
+accessibility scan, so re-running urlCheck on a long url list is cheap
+when most pages have already been scanned.</p>
+<p>If <code>--view-output</code> is set, the <strong>parent</strong>
+output folder (the one containing the per-page subfolders) opens in File
+Explorer at the end of the run.</p>
+<h3
+id="accessibility-conformance-report-acr.xlsx-and-acr.docx">Accessibility
+Conformance Report (ACR.xlsx and ACR.docx)</h3>
+<p>At the end of every run, urlCheck writes <code>ACR.xlsx</code> and
+<code>ACR.docx</code> in the parent output folder. Together they form a
+draft Accessibility Conformance Report that aggregates axe-core results
+across pages and maps them to WCAG 2.2 success criteria using standard
+VPAT 2.5 terminology (Supports, Partially Supports, Does Not Support,
+Not Applicable, Not Evaluated).</p>
+<p>The first sheet of <code>ACR.xlsx</code>, <strong>Conformance
+Report</strong>, has one row per WCAG 2.2 criterion (all 86, including
+Level A, AA, and AAA — the obsolete 4.1.1 Parsing is omitted). The
+columns are:</p>
+<ul>
+<li><strong>Criterion</strong> — Criterion number, name, and level,
+e.g., <code>1.1.1 Non-text Content (A)</code>. Hyperlinked to the W3C
+WCAG 2.2 Quick Reference for that criterion.</li>
+<li><strong>Summary</strong> — A single-sentence description of the
+criterion’s intent.</li>
+<li><strong>Conformance</strong> — The derived VPAT 2.5 conformance
+term. The cell is multi-line: line 1 is the verdict (Supports /
+Partially Supports / Does Not Support / Not Evaluated); subsequent lines
+list the page sheet names whose per-page Calc was <code>fail</code> or
+<code>partial</code> under “Not supported:”, and pages whose per-page
+Calc was <code>manual</code> (incomplete) under “Not evaluated:”. Only
+line 1 is visible by default; expand the row to see the page lists.</li>
+<li><strong>Manual</strong> — Numbered manual-test steps for the
+criterion.</li>
+<li><strong>Result</strong> — User-editable. Where the human reviewer
+records the final ACR verdict.</li>
+<li><strong>Remarks</strong> — User-editable. The first line is
+auto-generated with axe-context instance counts:
+<code>Axe: fail N, pass N, incomplete N, inapplicable N</code>. The user
+can append additional remarks below.</li>
+</ul>
+<p>The remaining per-page sheets are diagnostic views, one per scanned
+page, named after each page’s subfolder. Each per-page sheet shows the
+criterion, summary, page-specific Calc verdict (pass / fail / partial /
+manual / na / unknown), and four columns (Fail, Pass, Incomplete,
+Inapplicable) listing the axe rule IDs that produced each outcome on
+that page. Each rule is shown with its instance count (e.g.,
+<code>image-alt 3</code> means three failing image elements).</p>
+<p>The final <strong>Glossary</strong> sheet defines all the terms used
+(axe outcome categories, urlCheck Calc values, VPAT 2.5 conformance
+terms, WCAG principles and levels) and links to relevant external
+resources.</p>
+<p>The companion <code>ACR.docx</code> is a narrative summary with
+sections for Overview, Pages Analyzed, Conformance Summary, Criteria
+Requiring Attention, Methodology, and Resources. It is informed by
+report.htm’s information architecture but adapted to focus on
+per-criterion conformance rather than per-rule diagnostics. Both files
+are draft assets generated by automation; the user is expected to
+manually verify and refine them, especially the Result and Remarks
+columns and any criteria marked Not Evaluated, before publishing the
+final ACR.</p>
+<h4 id="calc-formula-table">Calc formula table</h4>
+<p>The Calc column on per-page sheets uses these formulas:</p>
+<ul>
+<li><strong>partial</strong> — at least one rule instance fails AND at
+least one passes for the same criterion.</li>
+<li><strong>fail</strong> — at least one rule instance fails (no pass on
+the same criterion).</li>
+<li><strong>manual</strong> — at least one incomplete result (no fail,
+no pass).</li>
+<li><strong>pass</strong> — at least one rule instance passes (no fail,
+no incomplete).</li>
+<li><strong>na</strong> — all rule instances are inapplicable to the
+page.</li>
+<li><strong>unknown</strong> — no axe rules apply to this criterion.
+This is the value before a scan.</li>
+</ul>
+<p>The Conformance column on the rollup sheet is derived from the
+per-page Calcs across all included pages (worst-result-wins
+semantics):</p>
+<ul>
+<li>All <code>pass</code> — Supports</li>
+<li>Any <code>pass</code> and any <code>fail</code> — Partially
+Supports</li>
+<li>Any <code>fail</code> (no pass) — Does Not Support</li>
+<li>Any <code>manual</code> (no fail or pass) — Not Evaluated</li>
+<li>Only <code>na</code> everywhere — Supports (vacuously satisfied, per
+WCAG 2.0 Understanding Conformance)</li>
+<li><code>unknown</code> everywhere — Not Evaluated</li>
+</ul>
+<p>Counts are by node instance (one DOM element flagged), summed across
+all included pages. So if 3 image elements lack alt text, axe-core
+reports 3 instances of the <code>image-alt</code> violation, and the
+Remarks line shows <code>fail 3</code> for the matching criterion.</p>
+<p>The “Not Evaluated” term is reserved by VPAT 2.5 for AAA criteria,
+but urlCheck uses it more broadly for cases where automated testing
+cannot reach a verdict. This is defensible because the urlCheck output
+is a <strong>draft</strong> ACR. The user is expected to perform the
+manual checks listed in the Manual column, write a final verdict in the
+Result column, and save the curated workbook in a separate folder before
+publishing.</p>
+<h4 id="workbook-scope">Workbook scope</h4>
+<p>Without <code>--force</code>, urlCheck scopes the report to
+<strong>all</strong> subfolders under the parent that contain a
+<code>results.json</code> — every page that has ever been scanned into
+this output folder. To exclude a page from the report, simply delete its
+subfolder. Your edits to the Result and Remarks columns on the rollup
+sheet are preserved across re-runs (matched by criterion id).</p>
+<p>With <code>--force</code>, urlCheck scopes the report to only the
+URLs scanned in the current session, ignoring older subfolders. This is
+the way to start a fresh ACR.</p>
+<p>If no pages have been scanned yet (or all subfolders are excluded),
+<code>ACR.xlsx</code> is still written: it contains the criterion list
+with manual-test instructions and the Glossary, ready for the user to
+fill in.</p>
+<h4 id="accessibility-failure-rate">Accessibility failure rate</h4>
+<p>Each <code>report.htm</code> per-page report and the
+<code>ACR.docx</code> narrative include an <em>accessibility failure
+rate</em> — a single number that summarizes how well a page (or a page
+set) is doing on automated accessibility checks. It’s defined as:</p>
+<pre><code>rate = 100000 * impactWeightedInstances / pageBytes</code></pre>
+<p>where the numerator is
+<code>1*minor + 2*moderate + 3*serious + 4*critical</code> summed over
+every violation instance on the page, and the denominator is the byte
+size of the saved page source (<code>page.htm</code>). Each impact level
+reflects axe-core’s own severity rating; instances are individual
+flagged DOM elements, not distinct rules.</p>
+<p>The constant <code>100000</code> is tuned so the result reads
+naturally as a percent. <strong>Lower is better.</strong> A clean page
+is well under 1%; a typical problematic page lands in the double digits;
+a truly broken page can exceed 100%. The percent framing is purely a
+display convention to make the number easy to grasp and remember; the
+underlying quantity is impact-weighted violation instances per byte of
+page source, which has no natural ceiling.</p>
+<p>For a page set (the ACR-level rate), urlCheck sums per-page
+numerators and per-page denominators before dividing. This is a
+size-weighted view: bigger pages contribute proportionally more,
+reflecting that they have more content with more places where users
+might encounter violations. The aggregate rate is shown in
+<code>ACR.docx</code>’s metadata header; per-page rates are shown next
+to each page in the Pages Analyzed list and in
+<code>report.xlsx</code>’s Summary sheet.</p>
+<p>The metric is meant to be tracked over time. As the page owner
+remediates issues, the rate should drop from one scan session to the
+next. Accessibility is a journey, not a destination.</p>
+<hr />
+<h2 id="configuration-file">Configuration file</h2>
+<p>When <strong>Use configuration</strong> is checked in the dialog (or
+<code>-u</code> is on the command line), <code>urlCheck</code> reads and
+writes its settings in:</p>
+<pre><code>%LOCALAPPDATA%\urlCheck\configs\urlCheck.inix</code></pre>
+<p>It stores the source field, the output folder, and the option
+checkboxes, one per line under a <code>[Settings]</code> heading, such
+as <code>ViewOutput=Yes</code>. You can edit it in any text editor; a
+comment you add is kept when <code>urlCheck</code> saves.
+<strong>Default settings</strong> in the dialog deletes the file.</p>
+<p>Settings saved by versions before 1.12.0, in
+<code>%LOCALAPPDATA%\urlCheck\urlCheck.ini</code>, are read when there
+is no <code>.inix</code> yet. The old file is removed the first time the
+new one is saved.</p>
+<hr />
+<h2 id="log-files">Log files</h2>
+<p><code>urlCheck</code> always keeps a log of each session, whatever
+the options:</p>
+<pre><code>%LOCALAPPDATA%\urlCheck\logs\urlCheck-yyyyMMdd-HHmmss.log</code></pre>
+<p>Each run gets its own file, named for the moment it started, so
+sorting the folder by name also sorts it by time. The 30 newest are
+kept. A log starts with the version, where the program ran from, the
+Python and Windows versions, the working folder, the command line and
+every setting, then records each page and any error with its full
+traceback. If something goes wrong, zip the <code>logs</code> folder and
+send it.</p>
+<p><strong>Log session</strong> (or <code>-l</code>) additionally writes
+<code>urlCheck.log</code> in the output folder, beside
+<code>ACR.xlsx</code>, so a log can travel with a set of results. It
+adds to the log already there, with a blank line between sessions; add
+<strong>Force replacements</strong> (<code>-f</code>) to replace it
+instead.</p>
+<p>Both logs are UTF-8 with a byte-order mark, so Notepad opens them
+correctly.</p>
+<hr />
+<h2 id="notes">Notes</h2>
+<ul>
+<li>urlCheck reports the violations the <a
+href="https://github.com/dequelabs/axe-core">axe-core</a> engine detects
+automatically. It does not replace manual testing.</li>
+<li>Local files inside a URL list are loaded as HTML regardless of
+extension. urlCheck does not validate file contents before loading; if a
+file is not HTML, Edge may render it unexpectedly. The user is
+responsible for choosing HTML-renderable files.</li>
+<li>urlCheck waits for the page to finish loading and pauses briefly so
+late DOM updates are more likely to settle before the scan runs. Pages
+with very long-running asynchronous content may need a manual
+retry.</li>
+</ul>
+<hr />
+<h2 id="uninstalling">Uninstalling</h2>
+<p>Use Installed apps in Windows Settings, or the Uninstall shortcut in
+the <code>urlCheck</code> Start-menu group. The uninstaller removes the
+program, its logs and its saved settings. It does not touch the output
+folders you made, or any <code>urlCheck.log</code> in them.</p>
+<hr />
+<h2 id="for-developers">For developers</h2>
+<p>How <code>urlCheck</code> is built, released and structured is in
+Developer, in this folder.</p>
+<h2 id="license">License</h2>
+<p>MIT License. See <code>License.htm</code> at the top of the program
+folder.</p>
+</body>
+</html>

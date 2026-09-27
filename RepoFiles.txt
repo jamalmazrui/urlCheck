@@ -1,0 +1,41 @@
+﻿# RepoFiles.txt -- what the urlCheck repository carries.
+#
+# One name per line. tidy writes .gitignore from this list as a whitelist:
+# everything ignored, then exactly these put back. Both the .md and the .htm
+# of every document are named. The scripts are named one by one, never
+# scripts\ wholesale, because release.* sits there and stays out of git.
+
+.gitattributes
+.gitignore
+accept.inix
+buildUrlCheck.cmd
+help/Announce.htm
+help/Announce.md
+help/Developer.htm
+help/Developer.md
+help/History.htm
+help/History.md
+help/Hotkeys.htm
+help/Hotkeys.md
+help/urlCheck.htm
+help/urlCheck.md
+License.htm
+License.md
+LocalFiles.txt
+ReadMe.htm
+ReadMe.md
+RepoFiles.txt
+requirements.txt
+scripts/check.cmd
+scripts/check.py
+scripts/fixEncoding.cmd
+scripts/fixEncoding.py
+scripts/push.cmd
+scripts/tidy.cmd
+scripts/tidy.py
+scripts/unpushed.cmd
+scripts/unpushed.py
+urlCheck.cmd
+urlCheck.ico
+urlCheck.py
+urlCheck_setup.iss

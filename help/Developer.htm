@@ -1,0 +1,311 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <meta name="author" content="Jamal Mazrui" />
+  <title>Developer</title>
+  <style>
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Developer</h1>
+<p class="author">Jamal Mazrui</p>
+</header>
+<h1 id="urlcheck-developer-notes">urlCheck Developer Notes</h1>
+<p>How <code>urlCheck</code> is built, released and laid out. Since
+1.12.0 it is built on the Homer Development Kit (HomerDev), kit 1.43.2
+or later, in <code>C:\HomerDev</code>.</p>
+<h2 id="the-project-folder">The project folder</h2>
+<p><code>C:\urlCheck</code> mirrors the installed tree:</p>
+<ul>
+<li>At the top: <code>urlCheck.py</code> (the whole program),
+<code>buildUrlCheck.cmd</code>, <code>urlCheck_setup.iss</code>,
+<code>urlCheck.cmd</code>, <code>urlCheck.ico</code>,
+<code>requirements.txt</code>, <code>accept.inix</code>,
+<code>RepoFiles.txt</code>, <code>LocalFiles.txt</code>,
+<code>ReadMe</code> and <code>License</code>.</li>
+<li><code>exec</code> — the built <code>urlCheck.exe</code>. Never in
+git.</li>
+<li><code>help</code> — this document and the others:
+<code>urlCheck</code> (the guide), <code>Announce</code>,
+<code>Developer</code>, <code>History</code>, <code>Hotkeys</code>, each
+as <code>.md</code> and <code>.htm</code>.</li>
+<li><code>logs</code> — one log per run of the build or any tool.</li>
+<li><code>scripts</code> — the kit’s tools, refreshed from
+<code>C:\HomerDev\scripts</code> by every build.</li>
+<li><code>.venv</code> and <code>work</code> — the build’s Python
+environment and PyInstaller’s scratch. Never in git.</li>
+</ul>
+<p><code>version.txt</code> holds the version and lives only on this
+machine. The build writes <code>version.py</code> from it, and the
+installer reads it directly.</p>
+<h2 id="the-four-steps">The four steps</h2>
+<ol type="1">
+<li><code>buildUrlCheck</code> — steps the version
+(<code>buildUrlCheck nobump</code> keeps it), builds
+<code>exec\urlCheck.exe</code> with PyInstaller, writes each
+<code>.htm</code> from its <code>.md</code>, puts the project’s files in
+the Homer encoding, checks that the installer ships every file in
+<code>help</code>, and builds <code>urlCheck_setup.exe</code>. Its log
+is <code>logs\urlCheck-build-yyyyMMdd-HHmmss.log</code>.</li>
+<li><code>scripts\push "message"</code> — rewrites the whitelist
+<code>.gitignore</code> from <code>RepoFiles.txt</code>, commits and
+pushes.</li>
+<li><code>scripts\tidy</code> and <code>scripts\tidy --do-it</code> —
+the periodic clean.</li>
+<li><code>scripts\release</code> — runs <code>scripts\check</code>, then
+tags the pushed commit with the version stamped in
+<code>urlCheck_setup.exe</code> and publishes the installer.</li>
+</ol>
+<p>Try the fresh build with <code>urlCheck</code> (the
+<code>urlCheck.cmd</code> at the top runs
+<code>exec\urlCheck.exe</code>) or
+<code>exec\urlCheck.exe -g</code>.</p>
+<h2 id="what-the-build-fetches">What the build fetches</h2>
+<p>Nothing is fetched by hand. The build installs Python 3.13 (64-bit,
+machine-wide) with winget when the <code>py</code> launcher cannot find
+it, makes <code>.venv</code>, and installs <code>requirements.txt</code>
+and PyInstaller there. It installs pandoc and Inno Setup with winget
+when they are missing.</p>
+<p>Edge is not fetched. <code>urlCheck</code> drives the Edge that
+Windows already has, through Playwright’s <code>channel="msedge"</code>,
+and <code>playwright install msedge</code> fails on every machine that
+has Edge.</p>
+<h2 id="the-kits-python-modules">The kit’s Python modules</h2>
+<p><code>urlCheck.py</code> imports four of them:
+<code>from homer import inix, lbcnet, log, paths</code>. They are not
+copied into the project. The build gives PyInstaller
+<code>--paths C:\HomerDev</code> and one <code>--hidden-import</code>
+for each, so <code>urlCheck.exe</code> carries the kit’s current
+code.</p>
+<ul>
+<li><code>homer.log</code> keeps the session log in
+<code>%LOCALAPPDATA%\urlCheck\logs</code>. <code>urlCheck</code>’s own
+<code>logger</code> class writes every line to it as well as to the
+optional <code>urlCheck.log</code>.</li>
+<li><code>homer.paths</code> finds the per-user folders and, from
+<code>exec</code>, the installed folder with its <code>help</code>.</li>
+<li><code>homer.inix</code> reads and writes
+<code>configs\urlCheck.inix</code>.</li>
+<li><code>homer.lbcnet</code> loads <code>Homer.dll</code> and gives the
+dialogs the kit’s C# classes.</li>
+</ul>
+<h2 id="the-dialog-the-kits-c-lbcdialog-from-python">The dialog: the
+kit’s C# LbcDialog, from Python</h2>
+<p>Since 1.12.3 the dialog is not WinForms code of
+<code>urlCheck</code>’s own. It is the kit’s C# <code>LbcDialog</code>,
+the class urlFido, bookFido, extCheck and 2htm use.
+<code>buildHomerDev</code> compiles the kit’s Elevate, Inix, Lbc, Log,
+Paths, Say, Util and Web classes into
+<code>C:\HomerDev\exec\Homer.dll</code>; <code>buildUrlCheck</code>
+(with <code>homerDll=1</code>) bundles that file into
+<code>urlCheck.exe</code>; and <code>homer.lbcnet.load()</code> loads it
+through pythonnet, sets the thread to a single-threaded apartment, and
+returns the <code>Homer</code> namespace. So the dialog has exactly the
+focus order, keys, Help box and version check of the C# apps, and a fix
+to <code>Lbc.cs</code> reaches <code>urlCheck</code> on its next
+build.</p>
+<ul>
+<li><code>showGuiDialog</code> builds an <code>LbcDialog</code>: two
+bands for a field and its button, a separator, the seven checkboxes, and
+<code>runWithButtons</code> with OK, Guide, Default settings and Cancel
+(Lbc adds Help). It loops back to the dialog after Guide, Default
+settings, or an OK that a check sends back: a missing or invalid source,
+an output folder the user declined to create, or Main profile with Edge
+running.</li>
+<li><code>lbcnet.strings()</code> turns a Python list into the .NET
+<code>string[]</code> that <code>runWithButtons</code> takes, and
+<code>lbcnet.keyHandler()</code> turns a Python function into the
+<code>Func&lt;Keys, bool&gt;</code> that <code>commandKey</code> takes.
+F11 is claimed that way and answered by the C# <code>Elevate</code>,
+which also supplies the Help box’s version section.</li>
+<li><code>showFinalGuiMessage</code> shows long results in an
+<code>LbcDialog</code> holding one read-only multi-line field and
+OK.</li>
+<li>The Browse and Choose handlers stay Python: pythonnet deadlocks on
+the modern file and folder pickers, so they use the legacy file dialog
+and <code>SHBrowseForFolder</code> through ctypes.</li>
+</ul>
+<h2 id="coding-style">Coding style</h2>
+<p>Camel Type for Python, as
+<code>C:\HomerDev\help\CamelType_Python.md</code> describes. Constants
+added since the move to the kit carry the <code>c_</code> prefix; older
+ones do not yet.</p>
+<h2 id="pitfalls-already-paid-for">Pitfalls already paid for</h2>
+<ul>
+<li>PyInstaller resolves <code>--icon</code> against the
+<code>.spec</code> file’s folder. The build passes the icon’s full path,
+so the <code>.spec</code> can live in <code>work</code>.</li>
+<li>PyInstaller’s bootloader loads a runtime library it cannot unload,
+so it cannot remove its own <code>_MEI</code> folder at exit.
+<code>urlCheck</code> removes the leftovers of earlier runs at startup,
+and <code>urlCheck.cmd</code> sends the bootloader’s one warning to
+<code>nul</code>.</li>
+<li>pythonnet deadlocks on the modern file and folder pickers, so
+<code>urlCheck</code> uses the legacy file dialog and
+<code>SHBrowseForFolder</code> through ctypes.</li>
+<li>A copy of <code>exec\urlCheck.exe</code> that is running cannot be
+replaced. The build says so and stops; it never closes a program. An
+installed copy may stay open.</li>
+</ul>
+</body>
+</html>
