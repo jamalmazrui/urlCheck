@@ -30,5 +30,7 @@ Wants  = urlCheck
 Name   = the installer ships the full guide
 ; findstr reads a backslash as an escape even in /c: text, so it is doubled;
 ; written singly, the backslash was dropped from the search and it failed.
-Run    = findstr /l /c:"help\\urlCheck.htm" urlCheck_setup.iss
+; The installer ships the guide with the other documents, by "help\*.htm";
+; it never names help\urlCheck.htm, which this looked for until 26 September.
+Run    = findstr /l /c:"help\\*.htm" urlCheck_setup.iss
 Expect = 0
