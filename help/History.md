@@ -7,6 +7,7 @@ author: "Jamal Mazrui"
 
 ## Version 1.12.3 (September 2026)
 
+- **Setup.** The Results box at the end of setup is titled "urlCheck Setup Results", and the finish page uses the Homer wording: the verb first, no "recommended", and "Launch urlCheck (desktop hotkey ...)".
 - **Built with HomerDev 1.43.19.** The build refreshes the kit's tools under their current names, and the ones that call each other now find each other; `scripts\tidy`, `scripts\check` and `scripts\release` carry the day's fixes, among them a release that publishes a draft and confirms it is GitHub's latest.
 - The acceptance check that the installer ships the guide looked for a line the installer never had -- it ships every document in help with one "help\*.htm" line -- and wrote its backslash singly, which findstr reads as an escape. It looks for that line now, with the backslash doubled.
 - **The dialog is built with the Homer Lbc classes**, like every Homer dialog: it is the same C# `LbcDialog` urlFido, bookFido, extCheck and 2htm use, loaded from the kit's `Homer.dll`. The fields, checkboxes and their access keys are unchanged. New with Lbc: Control+Enter is OK from any control, Shift+F1 says a field's tip, F7 lists the controls, the text fields have the Lbc editing keys, and Help lists every field with its tip and ends with the version check. A **Guide** button (Alt+G) opens the full guide and returns to the dialog.
