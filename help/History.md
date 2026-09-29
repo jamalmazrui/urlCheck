@@ -7,6 +7,7 @@ author: "Jamal Mazrui"
 
 ## Version 1.12.3 (September 2026)
 
+- **Built from the kit's exec\\Python.** The Homer modules urlCheck uses are imported by their own names -- `import inix, lbcnet, log, paths` -- from the kit's exec\\Python folder, where they moved from the homer package.
 - **Setup.** The Results box at the end of setup is titled "urlCheck Setup Results", and the finish page uses the Homer wording: the verb first, no "recommended", and "Launch urlCheck (desktop hotkey ...)".
 - **Built with HomerDev 1.43.19.** The build refreshes the kit's tools under their current names, and the ones that call each other now find each other; `scripts\tidy`, `scripts\check` and `scripts\release` carry the day's fixes, among them a release that publishes a draft and confirms it is GitHub's latest.
 - The acceptance check that the installer ships the guide looked for a line the installer never had -- it ships every document in help with one "help\*.htm" line -- and wrote its backslash singly, which findstr reads as an escape. It looks for that line now, with the backslash doubled.

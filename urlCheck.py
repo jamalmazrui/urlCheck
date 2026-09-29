@@ -5,7 +5,7 @@ import openpyxl
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 from playwright.sync_api import sync_playwright
-from homer import inix, lbcnet, log, paths
+import inix, lbcnet, log, paths
 
 # version.py is written by buildUrlCheck.cmd from version.txt on every build,
 # so the running program reports the number the installer and the release
@@ -4027,7 +4027,7 @@ def openFolderInExplorer(sPath):
 class logger:
     """
     Diagnostic logger. EVERY line also goes to the session log that
-    homer.log keeps in %LOCALAPPDATA%\\urlCheck\\logs, one file per run,
+    log keeps in %LOCALAPPDATA%\\urlCheck\\logs, one file per run,
     whatever the options -- so a failure always leaves a record. The rest
     of this description is about the optional copy.
 
@@ -4222,7 +4222,7 @@ class configManager:
     """
     Persists user preferences to %LOCALAPPDATA%\\urlCheck\\configs\\urlCheck.inix,
     but only when the user opts in via -u / --use-configuration or via the GUI
-    checkbox. homer.paths decides the folder and homer.inix reads and writes
+    checkbox. paths decides the folder and inix reads and writes
     the file, keeping any comment a person adds.
 
     Settings from before the move to the kit, in %LOCALAPPDATA%\\urlCheck\\
@@ -5899,7 +5899,7 @@ def showGuiDialog(arguments):
     user's chosen values. Returns True on OK, False on Cancel.
 
     THE DIALOG IS THE KIT'S C# LbcDialog, loaded from Homer.dll through
-    homer.lbcnet -- the same class urlFido, bookFido, extCheck and 2htm build
+    lbcnet -- the same class urlFido, bookFido, extCheck and 2htm build
     their dialogs with. One control per row in tab order, each field's label
     just before it so the label names it, a band where a field and the button
     that fills it share a row. Lbc supplies, with no code here, Control+Enter
@@ -6145,7 +6145,7 @@ def launchReadMe():
     """
     Opens the full guide in the default browser. The Homer layout puts it in
     help\\urlCheck.htm, beside exec\\ where the program runs, in the installed
-    tree and in the project alike; homer.paths finds that folder. ReadMe.htm
+    tree and in the project alike; paths finds that folder. ReadMe.htm
     at the top is the fallback, then the Markdown forms, then a notice.
     """
     lsCandidates = []
@@ -6254,7 +6254,7 @@ def main():
     if sys.platform == "win32":
         ctypes.windll.kernel32.SetDllDirectoryW(None)
 
-    # ONE SESSION LOG, ALWAYS, before anything can fail: homer.log opens
+    # ONE SESSION LOG, ALWAYS, before anything can fail: log opens
     # %LOCALAPPDATA%\\urlCheck\\logs\\urlCheck-yyyyMMdd-HHmmss.log with the
     # environment already in it, and keeps the latest thirty.
     log.start(sProgramName)

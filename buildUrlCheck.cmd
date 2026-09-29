@@ -61,7 +61,7 @@ set "app=urlCheck"
 
 rem ---- SETTINGS: the part an app edits -------------------------------
 rem The oldest kit with everything this build uses.
-set "kitNeeded=1.43.20"
+set "kitNeeded=1.43.22"
 rem The number to start from when version.txt is missing. A newer release
 rem tag, if the repository has one, wins. It is also a floor: a version.txt
 rem holding less is raised to it.
@@ -106,7 +106,12 @@ rem 11, so the stamp comes from PowerShell.
 for /f %%i in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmmss"') do set "sStamp=%%i"
 if not exist "logs" mkdir "logs"
 set "log=%CD%\logs\%app%-build-%sStamp%.log"
-> "%log%" echo %app% build started %DATE% %TIME%
+rem THE START AND END LINES CARRY AN ISO 8601 TIME (HomerDev 1.43.21), with
+rem the UTC offset, from PowerShell rather than %DATE% %TIME%, whose form
+rem follows the regional settings; and they name the event and its result as
+rem every Homer log does.
+for /f "usebackq delims=" %%i in (`powershell -NoProfile -Command "Get-Date -Format 'yyyy-MM-ddTHH:mm:ss.fffzzz'"`) do set "sIso=%%i"
+> "%log%" echo %sIso% INFO  build start app=%app%
 >> "%log%" echo Script: %~f0
 >> "%log%" echo Folder: %CD%
 >> "%log%" echo Command line: %0 %*
@@ -122,9 +127,9 @@ echo Building %app%. The log is %log%
 
 rem ---- the Homer Development Kit -------------------------------------
 set "homerDev="
-if defined HomerDev if exist "%HomerDev%\homer\log.py" set "homerDev=%HomerDev%"
-if not defined homerDev if exist "C:\HomerDev\homer\log.py" set "homerDev=C:\HomerDev"
-if not defined homerDev if exist "%CD%\homer\log.py" set "homerDev=%CD%"
+if defined HomerDev if exist "%HomerDev%\exec\Python\log.py" set "homerDev=%HomerDev%"
+if not defined homerDev if exist "C:\HomerDev\exec\Python\log.py" set "homerDev=C:\HomerDev"
+if not defined homerDev if exist "%CD%\exec\Python\log.py" set "homerDev=%CD%"
 if not defined homerDev (
   echo %app% needs the Homer Development Kit and cannot find it.
   echo Unzip HomerDev.zip into C:\HomerDev, or set the HomerDev environment variable.
@@ -274,8 +279,8 @@ if not exist "exec" mkdir "exec"
 set "workDir=%CD%\work\pyinstaller"
 set "icon="
 if exist "%app%.ico" set "icon=--icon "%CD%\%app%.ico""
-set "hidden=--hidden-import homer"
-for %%M in (!homerModules!) do set "hidden=!hidden! --hidden-import homer.%%M"
+set "hidden="
+for %%M in (!homerModules!) do set "hidden=!hidden! --hidden-import %%M"
 set "homerDllArg="
 if defined homerDll (
   if not exist "!homerDev!\exec\Homer.dll" (
@@ -284,11 +289,11 @@ if defined homerDll (
     goto :failed
   )
   set "homerDllArg=--add-binary "!homerDev!\exec\Homer.dll;.""
-  >> "%log%" echo Bundling !homerDev!\exec\Homer.dll for homer.lbcnet
+  >> "%log%" echo Bundling !homerDev!\exec\Homer.dll for lbcnet
 )
 echo Building exec\%app%.exe, which takes a minute or two
 >> "%log%" echo PyInstaller: !pyiMode! !hidden! !pyiExtra! !icon!
-"!venvPy!" -m PyInstaller --noconfirm --clean --onefile !pyiMode! --name %app% --paths "!homerDev!" !hidden! !homerDllArg! !pyiExtra! !icon! --distpath "%CD%\exec" --workpath "!workDir!" --specpath "!workDir!" %app%.py >> "%log%" 2>&1
+"!venvPy!" -m PyInstaller --noconfirm --clean --onefile !pyiMode! --name %app% --paths "!homerDev!\exec\Python" !hidden! !homerDllArg! !pyiExtra! !icon! --distpath "%CD%\exec" --workpath "!workDir!" --specpath "!workDir!" %app%.py >> "%log%" 2>&1
 set "iCode=!errorlevel!"
 >> "%log%" echo Ran: PyInstaller, exit code !iCode!
 if not "!iCode!"=="0" (
@@ -476,13 +481,15 @@ echo Built %app%_setup.exe version !ver!
 >> "%log%" echo Built %app%_setup.exe version !ver!
 
 :done
->> "%log%" echo Build succeeded %DATE% %TIME%
+for /f "usebackq delims=" %%i in (`powershell -NoProfile -Command "Get-Date -Format 'yyyy-MM-ddTHH:mm:ss.fffzzz'"`) do set "sIso=%%i"
+>> "%log%" echo %sIso% INFO  build end result=succeeded
 echo Build succeeded. Next: exec\%app%.exe to try it, then scripts\push "message" and scripts\release.
 endlocal
 exit /b 0
 
 :failed
->> "%log%" echo Build FAILED %DATE% %TIME%
+for /f "usebackq delims=" %%i in (`powershell -NoProfile -Command "Get-Date -Format 'yyyy-MM-ddTHH:mm:ss.fffzzz'"`) do set "sIso=%%i"
+>> "%log%" echo %sIso% ERROR build end result=failed
 echo Build failed. The log is %log%
 endlocal
 exit /b 1
