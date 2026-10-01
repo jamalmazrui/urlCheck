@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
 <head>
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
@@ -8,6 +8,9 @@
   <title>Developer</title>
   <style>
     html {
+      line-height: 1.5;
+      font-family: Georgia, serif;
+      font-size: 20px;
       color: #1a1a1a;
       background-color: #fdfdfd;
     }
@@ -26,16 +29,13 @@
     @media (max-width: 600px) {
       body {
         font-size: 0.9em;
-        padding: 12px;
+        padding: 1em;
       }
       h1 {
         font-size: 1.8em;
       }
     }
     @media print {
-      html {
-        background-color: white;
-      }
       body {
         background-color: transparent;
         color: black;
@@ -85,10 +85,9 @@
       color: #606060;
     }
     code {
-      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-family: Menlo, Monaco, 'Lucida Console', Consolas, monospace;
       font-size: 85%;
       margin: 0;
-      hyphens: manual;
     }
     pre {
       margin: 1em 0;
@@ -153,17 +152,17 @@
     div.columns{display: flex; gap: min(4vw, 1.5em);}
     div.column{flex: auto; overflow-x: auto;}
     div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
-    /* The extra [class] is a hack that increases specificity enough to
-       override a similar rule in reveal.js */
-    ul.task-list[class]{list-style: none;}
+    ul.task-list{list-style: none;}
     ul.task-list li input[type="checkbox"] {
-      font-size: inherit;
       width: 0.8em;
       margin: 0 0.8em 0.2em -1.6em;
       vertical-align: middle;
     }
     .display.math{display: block; text-align: center; margin: 0.5rem auto;}
   </style>
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
 </head>
 <body>
 <header id="title-block-header">
@@ -178,7 +177,7 @@ or later, in <code>C:\HomerDev</code>.</p>
 <p><code>C:\urlCheck</code> mirrors the installed tree:</p>
 <ul>
 <li>At the top: <code>urlCheck.py</code> (the whole program),
-<code>buildUrlCheck.cmd</code>, <code>urlCheck_setup.iss</code>,
+<code>build.cmd</code>, <code>urlCheck_setup.iss</code>,
 <code>urlCheck.cmd</code>, <code>urlCheck.ico</code>,
 <code>requirements.txt</code>, <code>accept.inix</code>,
 <code>RepoFiles.txt</code>, <code>LocalFiles.txt</code>,
@@ -200,13 +199,13 @@ machine. The build writes <code>version.py</code> from it, and the
 installer reads it directly.</p>
 <h2 id="the-four-steps">The four steps</h2>
 <ol type="1">
-<li><code>buildUrlCheck</code> — steps the version
-(<code>buildUrlCheck nobump</code> keeps it), builds
-<code>exec\urlCheck.exe</code> with PyInstaller, writes each
-<code>.htm</code> from its <code>.md</code>, puts the project’s files in
-the Homer encoding, checks that the installer ships every file in
-<code>help</code>, and builds <code>urlCheck_setup.exe</code>. Its log
-is <code>logs\urlCheck-build-yyyyMMdd-HHmmss.log</code>.</li>
+<li><code>build</code> — steps the version (<code>build nobump</code>
+keeps it), builds <code>exec\urlCheck.exe</code> with PyInstaller,
+writes each <code>.htm</code> from its <code>.md</code>, puts the
+project’s files in the Homer encoding, checks that the installer ships
+every file in <code>help</code>, and builds
+<code>urlCheck_setup.exe</code>. Its log is
+<code>logs\urlCheck-build-yyyyMMdd-HHmmss.log</code>.</li>
 <li><code>scripts\push "message"</code> — rewrites the whitelist
 <code>.gitignore</code> from <code>RepoFiles.txt</code>, commits and
 pushes.</li>
@@ -253,10 +252,9 @@ dialogs the kit’s C# classes.</li>
 kit’s C# LbcDialog, from Python</h2>
 <p>Since 1.12.3 the dialog is not WinForms code of
 <code>urlCheck</code>’s own. It is the kit’s C# <code>LbcDialog</code>,
-the class urlFido, bookFido, extCheck and 2htm use.
-<code>buildHomerDev</code> compiles the kit’s Elevate, Inix, Lbc, Log,
-Paths, Say, Util and Web classes into
-<code>C:\HomerDev\exec\Homer.dll</code>; <code>buildUrlCheck</code>
+the class urlFido, bookFido, extCheck and 2htm use. <code>build</code>
+compiles the kit’s Elevate, Inix, Lbc, Log, Paths, Say, Util and Web
+classes into <code>C:\HomerDev\exec\Homer.dll</code>; <code>build</code>
 (with <code>homerDll=1</code>) bundles that file into
 <code>urlCheck.exe</code>; and <code>homer.lbcnet.load()</code> loads it
 through pythonnet, sets the thread to a single-threaded apartment, and

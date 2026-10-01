@@ -4,7 +4,7 @@
 # as never pushed. One path or pattern a line; a trailing slash means a folder.
 
 # The build environment, PyInstaller's scratch, the built program and the
-# installer: all made by buildUrlCheck, none of them authored.
+# installer: all made by build, none of them authored.
 .venv/
 exec/
 urlCheck_setup.exe

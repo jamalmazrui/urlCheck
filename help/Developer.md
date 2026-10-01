@@ -11,7 +11,7 @@ How `urlCheck` is built, released and laid out. Since 1.12.0 it is built on the 
 
 `C:\urlCheck` mirrors the installed tree:
 
-- At the top: `urlCheck.py` (the whole program), `buildUrlCheck.cmd`, `urlCheck_setup.iss`, `urlCheck.cmd`, `urlCheck.ico`, `requirements.txt`, `accept.inix`, `RepoFiles.txt`, `LocalFiles.txt`, `ReadMe` and `License`.
+- At the top: `urlCheck.py` (the whole program), `build.cmd`, `urlCheck_setup.iss`, `urlCheck.cmd`, `urlCheck.ico`, `requirements.txt`, `accept.inix`, `RepoFiles.txt`, `LocalFiles.txt`, `ReadMe` and `License`.
 - `exec` — the built `urlCheck.exe`. Never in git.
 - `help` — this document and the others: `urlCheck` (the guide), `Announce`, `Developer`, `History`, `Hotkeys`, each as `.md` and `.htm`.
 - `logs` — one log per run of the build or any tool.
@@ -22,7 +22,7 @@ How `urlCheck` is built, released and laid out. Since 1.12.0 it is built on the 
 
 ## The four steps
 
-1. `buildUrlCheck` — steps the version (`buildUrlCheck nobump` keeps it), builds `exec\urlCheck.exe` with PyInstaller, writes each `.htm` from its `.md`, puts the project's files in the Homer encoding, checks that the installer ships every file in `help`, and builds `urlCheck_setup.exe`. Its log is `logs\urlCheck-build-yyyyMMdd-HHmmss.log`.
+1. `build` — steps the version (`build nobump` keeps it), builds `exec\urlCheck.exe` with PyInstaller, writes each `.htm` from its `.md`, puts the project's files in the Homer encoding, checks that the installer ships every file in `help`, and builds `urlCheck_setup.exe`. Its log is `logs\urlCheck-build-yyyyMMdd-HHmmss.log`.
 2. `scripts\push "message"` — rewrites the whitelist `.gitignore` from `RepoFiles.txt`, commits and pushes.
 3. `scripts\tidy` and `scripts\tidy --do-it` — the periodic clean.
 4. `scripts\release` — runs `scripts\check`, then tags the pushed commit with the version stamped in `urlCheck_setup.exe` and publishes the installer.
@@ -46,7 +46,7 @@ Edge is not fetched. `urlCheck` drives the Edge that Windows already has, throug
 
 ## The dialog: the kit's C# LbcDialog, from Python
 
-Since 1.12.3 the dialog is not WinForms code of `urlCheck`'s own. It is the kit's C# `LbcDialog`, the class urlFido, bookFido, extCheck and 2htm use. `buildHomerDev` compiles the kit's Elevate, Inix, Lbc, Log, Paths, Say, Util and Web classes into `C:\HomerDev\exec\Homer.dll`; `buildUrlCheck` (with `homerDll=1`) bundles that file into `urlCheck.exe`; and `homer.lbcnet.load()` loads it through pythonnet, sets the thread to a single-threaded apartment, and returns the `Homer` namespace. So the dialog has exactly the focus order, keys, Help box and version check of the C# apps, and a fix to `Lbc.cs` reaches `urlCheck` on its next build.
+Since 1.12.3 the dialog is not WinForms code of `urlCheck`'s own. It is the kit's C# `LbcDialog`, the class urlFido, bookFido, extCheck and 2htm use. `build` compiles the kit's Elevate, Inix, Lbc, Log, Paths, Say, Util and Web classes into `C:\HomerDev\exec\Homer.dll`; `build` (with `homerDll=1`) bundles that file into `urlCheck.exe`; and `homer.lbcnet.load()` loads it through pythonnet, sets the thread to a single-threaded apartment, and returns the `Homer` namespace. So the dialog has exactly the focus order, keys, Help box and version check of the C# apps, and a fix to `Lbc.cs` reaches `urlCheck` on its next build.
 
 - `showGuiDialog` builds an `LbcDialog`: two bands for a field and its button, a separator, the seven checkboxes, and `runWithButtons` with OK, Guide, Default settings and Cancel (Lbc adds Help). It loops back to the dialog after Guide, Default settings, or an OK that a check sends back: a missing or invalid source, an output folder the user declined to create, or Main profile with Edge running.
 - `lbcnet.strings()` turns a Python list into the .NET `string[]` that `runWithButtons` takes, and `lbcnet.keyHandler()` turns a Python function into the `Func<Keys, bool>` that `commandKey` takes. F11 is claimed that way and answered by the C# `Elevate`, which also supplies the Help box's version section.

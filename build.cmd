@@ -1,6 +1,6 @@
 @echo off
 rem ===================================================================
-rem buildUrlCheck.cmd -- build urlCheck.exe from urlCheck.py and the Homer
+rem build.cmd -- build urlCheck.exe from urlCheck.py and the Homer
 rem Python package in C:\HomerDev.
 rem
 rem urlCheck is a Windows console program with a WinForms dialog (through
@@ -40,8 +40,8 @@ rem   - one log per run: logs\urlCheck-build-yyyyMMdd-HHmmss.log. The console
 rem     says briefly what is happening; the log holds every command and
 rem     its exit code.
 rem
-rem   buildUrlCheck          steps the version, then builds
-rem   buildUrlCheck nobump   keeps the current number
+rem   build          steps the version, then builds
+rem   build nobump   keeps the current number
 rem
 rem A running copy of the program is never closed. The build says so and
 rem stops only when the copy running is exec\urlCheck.exe from THIS project,
@@ -80,7 +80,7 @@ rem The kit modules the program imports, alphabetical. Each becomes a
 rem --hidden-import, so PyInstaller bundles it from the kit.
 set "homerModules=inix lbcnet log paths"
 rem 1 when the program builds WinForms dialogs with the kit's C# LbcDialog
-rem through homer.lbcnet: C:\HomerDev\exec\Homer.dll, which buildHomerDev
+rem through homer.lbcnet: C:\HomerDev\exec\Homer.dll, which build
 rem compiles, is bundled into the program. Empty for a console or wx program.
 set "homerDll=1"
 rem Anything else PyInstaller needs. pythonnet ships Python.Runtime.dll and
@@ -284,7 +284,7 @@ for %%M in (!homerModules!) do set "hidden=!hidden! --hidden-import %%M"
 set "homerDllArg="
 if defined homerDll (
   if not exist "!homerDev!\exec\Homer.dll" (
-    echo !homerDev!\exec\Homer.dll is missing. Run buildHomerDev, which compiles it, then build again.
+    echo !homerDev!\exec\Homer.dll is missing. Run build, which compiles it, then build again.
     >> "%log%" echo ERROR: no !homerDev!\exec\Homer.dll
     goto :failed
   )

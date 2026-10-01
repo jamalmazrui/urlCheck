@@ -7,7 +7,7 @@ from openpyxl.utils import get_column_letter
 from playwright.sync_api import sync_playwright
 import inix, lbcnet, log, paths
 
-# version.py is written by buildUrlCheck.cmd from version.txt on every build,
+# version.py is written by build.cmd from version.txt on every build,
 # so the running program reports the number the installer and the release
 # carry. Run from source without a build, the program says 0.0.0.
 try:

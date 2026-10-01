@@ -8,7 +8,7 @@
 .gitattributes
 .gitignore
 accept.inix
-buildUrlCheck.cmd
+build.cmd
 help/Announce.htm
 help/Announce.md
 help/Developer.htm
