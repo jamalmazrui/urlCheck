@@ -1945,7 +1945,12 @@ def buildReportHtml(dResults, dMetadata, lRows, nPageRate=0.0, iPageBytes=0, iIm
     # number is intuitive: a clean page is well under 1%, a typical
     # problematic page is double-digit %, and a truly bad page can
     # exceed 100%.
-    lParts.append(f"<p><strong>Accessibility failure rate: {nPageRate:.1f}%</strong></p>")
+    # NOT MEASURED IS NOT ZERO (8 October 2026, from an audit by another AI): with the
+    # page's saved source missing, its size was 0 and its rate shown as a perfect 0.0%.
+    if iPageBytes <= 0:
+        lParts.append("<p><strong>Accessibility failure rate: not measured, since the page's saved source was not available</strong></p>")
+    else:
+        lParts.append(f"<p><strong>Accessibility failure rate: {nPageRate:.1f}%</strong></p>")
     lParts.append(
         f"<p class=\"muted\">Computed as "
         f"<code>{iAccessibilityRateScale} &times; "
@@ -2173,29 +2178,73 @@ def buildRowDict(dMetadata, sOutcome, dRule, sRuleId, sHelp, sHelpUrl, sTags, sW
     }
 
 
+def processAlive(iPid):
+    """Whether a process with this id is still running, asked of Windows itself."""
+    hProcess = None
+    try:
+        hProcess = ctypes.windll.kernel32.OpenProcess(0x00100000, False, int(iPid))  # SYNCHRONIZE
+        if not hProcess: return False
+        return ctypes.windll.kernel32.WaitForSingleObject(hProcess, 0) == 0x00000102  # WAIT_TIMEOUT: still running
+    except Exception:
+        return True  # when in doubt, the folder is left alone
+    finally:
+        if hProcess: ctypes.windll.kernel32.CloseHandle(hProcess)
+
+
 def cleanPreviousTempDirs():
-    """Remove _MEI* temporary directories in %TEMP% left by previous runs of
-    this program. The current run's own directory (sys._MEIPASS) is skipped.
-    Directories belonging to currently running PyInstaller applications cannot
-    be deleted because their DLLs are locked in memory; shutil.rmtree will
-    raise an exception on the first locked file and the whole directory is left
-    intact. Only fully-exited runs leave unlocked directories, so this is safe
-    to run against all _MEI* siblings regardless of which program created them.
+    """Remove the _MEI* temporary folders that earlier runs of urlCheck left in %TEMP%, and only those.
+
+    ONLY OURS, AND ONLY FINISHED ONES (8 October 2026, from an audit by another AI): every
+    _MEI* folder was removed, though every PyInstaller program uses the name, on the belief
+    that a running program's locked files would protect its folder. Deletion goes a file at a
+    time, so a running program could lose its unlocked files before the first locked one
+    stopped it. Each run now writes urlCheck.owner, holding its process id, into its own
+    folder; a folder is removed only when it carries that mark and its process has ended.
     Has no effect when running from source (sys._MEIPASS is absent)."""
     import shutil
-    pathDir = None
-    pathTemp = None
-    sCurrentMei = ""
-
     sCurrentMei = getattr(sys, "_MEIPASS", "")
     if not sCurrentMei: return
-    pathTemp = pathlib.Path(sCurrentMei).parent
-    for pathDir in pathTemp.glob("_MEI*"):
-        if pathDir == pathlib.Path(sCurrentMei): continue
+    pathCurrent = pathlib.Path(sCurrentMei)
+    try:
+        (pathCurrent / "urlCheck.owner").write_text(str(os.getpid()), encoding="utf-8")
+    except Exception:
+        pass
+    for pathDir in pathCurrent.parent.glob("_MEI*"):
+        if pathDir == pathCurrent: continue
+        pathOwner = pathDir / "urlCheck.owner"
+        if not pathOwner.is_file(): continue
+        try:
+            iPid = int(pathOwner.read_text(encoding="utf-8").strip() or "0")
+        except Exception:
+            continue
+        if iPid and processAlive(iPid): continue
         try:
             shutil.rmtree(str(pathDir))
         except Exception:
             pass
+
+
+def neutralizeFormulas(workbook):
+    """Store as plain text every cell openpyxl took for a formula, except the ACR's own links to WCAG's quick reference.
+
+    WHY (8 October 2026, from an audit by another AI): openpyxl stores any text beginning with = as a formula, so a page
+    titled =1+1 became a live formula in the report. Page titles, addresses and rule text come from the web, so none
+    may run in Excel. Returns the number of cells changed."""
+    iChanged = 0
+    sAllowed = '=HYPERLINK("' + sWcagQuickRefBase + "#"
+    for worksheet in workbook.worksheets:
+        for row in worksheet.iter_rows():
+            for cell in row:
+                if cell.data_type == "f" and isinstance(cell.value, str) and not cell.value.startswith(sAllowed):
+                    cell.data_type = "s"
+                    iChanged += 1
+    if iChanged: logger.info(f"{iChanged} cell(s) that looked like formulas were stored as text")
+    return iChanged
+
+
+# What urlCheck itself writes into a page's folder, the only things --force removes from it.
+setOwnedPageOutputs = {sJsonName.lower(), sReportName.lower(), sReportWorkbookName.lower(), sScreenshotName.lower(),
+                       sSourceName.lower(), sAccessibilityYamlName.lower(), "violations"}
 
 
 def chooseOutputDir(pathBaseDir, sPageTitle, bForce=False):
@@ -2222,7 +2271,13 @@ def chooseOutputDir(pathBaseDir, sPageTitle, bForce=False):
         # any single entry can't be removed (e.g. a file is open in
         # another process), log it and continue -- the new run will
         # overwrite what it can.
+        # ONLY WHAT URLCHECK WROTE (8 October 2026, from an audit by another AI): every
+        # file in the folder was deleted, notes the user had added included. Now only
+        # urlCheck's own outputs go, and anything else is left, and logged.
         for child in pathCandidate.iterdir():
+            if child.name.lower() not in setOwnedPageOutputs:
+                logger.info(f"Kept {child} in {pathCandidate}: urlCheck did not write it")
+                continue
             try:
                 if child.is_dir() and not child.is_symlink():
                     shutil.rmtree(child)
@@ -2436,7 +2491,7 @@ def firstLine(sText):
     return sText
 
 
-def writeTextFile(pathFile, sContent):
+def writeTextFile(pathFile, sContent, bBom=True):
     """Write a text file in the canonical CRLF + UTF-8 BOM format
     optimized for Windows users. Use this for any file the user is
     expected to view or edit: .htm, .json, .yaml, .ini, .log, .md,
@@ -2459,7 +2514,10 @@ def writeTextFile(pathFile, sContent):
     # handles the conversion. This handles mixed-ending content
     # that might come from network sources (page.htm etc.).
     sNormalized = sContent.replace("\r\n", "\n").replace("\r", "\n")
-    with path.open("w", encoding="utf-8-sig", newline="\r\n") as fOut:
+    # JSON TAKES NO BYTE ORDER MARK (8 October 2026, from an audit by another AI): the
+    # JSON standard forbids one, and the ACR reader's json.loads refused results.json for
+    # it, so every page was skipped. bBom=False writes plain UTF-8, for JSON.
+    with path.open("w", encoding="utf-8-sig" if bBom else "utf-8", newline="\r\n") as fOut:
         fOut.write(sNormalized)
     return str(path)
 
@@ -3642,7 +3700,7 @@ def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, sAxeContent="
         # The lRows list is still computed for use by the HTML
         # report and the workbook's Results sheet.
         lRows = buildCsvRows(dResults, dMetadata)
-        writeTextFile(pathlib.Path(pathOutputDir, sJsonName), json.dumps({"metadata": dMetadata, "results": dResults}, indent=2, ensure_ascii=False))
+        writeTextFile(pathlib.Path(pathOutputDir, sJsonName), json.dumps({"metadata": dMetadata, "results": dResults}, indent=2, ensure_ascii=False), bBom=False)
         logger.info("Capturing page snapshot and screenshot")
         sSnapshot = getPageSnapshot(page, sNormalizedUrl)
         writeTextFile(pathlib.Path(pathOutputDir, sSourceName), sSnapshot)
@@ -3778,7 +3836,7 @@ def writeReportWorkbook(pathWorkbook, dResults, dMetadata, lRows, nPageRate=0.0,
     worksheet.append(["Overview", "Inapplicable (rules)", len(dResults.get("inapplicable", []))])
     worksheet.append(["Overview", "Page bytes (page.htm)", int(iPageBytes)])
     worksheet.append(["Overview", "Impact-weighted instance count", int(iImpactNumer)])
-    worksheet.append(["Overview", "Accessibility failure rate (%)", round(nPageRate, 1)])
+    worksheet.append(["Overview", "Accessibility failure rate (%)", round(nPageRate, 1) if iPageBytes > 0 else "not measured"])
     for lRow in lImpactRows: worksheet.append(["Impact (failed instances)", str(lRow[0]), int(lRow[1])])
     for lRow in lRuleRows: worksheet.append(["Top rules by instance count", str(lRow[0]), int(lRow[1])])
     for lRow in lWcagRows:
@@ -3848,6 +3906,7 @@ def writeReportWorkbook(pathWorkbook, dResults, dMetadata, lRows, nPageRate=0.0,
         for iRow in range(2, worksheet.max_row + 1): worksheet.row_dimensions[iRow].height = None
         acrBuilder.applyFormatting(worksheet, iHeaderRow=1, iDataStart=2)
         acrBuilder.addNamedRangeForCell(workbook, worksheet, worksheet.cell(row=1, column=1), "Title")
+    neutralizeFormulas(workbook)
     workbook.save(pathWorkbook)
     return str(pathWorkbook)
 
@@ -4449,7 +4508,8 @@ class acrBuilder:
             pathJson = path / sJsonName
             if not pathJson.is_file(): continue
             try:
-                d = json.loads(pathJson.read_text(encoding="utf-8"))
+                # utf-8-sig reads both: the files written before 8 October 2026 carry a mark.
+                d = json.loads(pathJson.read_text(encoding="utf-8-sig"))
             except Exception as ex:
                 logger.info(f"ACR: skipping {path.name}: cannot parse "
                     f"{sJsonName}: {ex}")
@@ -5238,10 +5298,13 @@ class acrBuilder:
         for (path, dResults, dMetadata), sSheetName in zip(lFolders, lPageNames):
             iN = computePageImpactNumerator(dResults)
             iB = computePageBytes(path)
-            iTotalNumer += iN
-            iTotalBytes += iB
+            # A page whose size could not be measured counts in neither total, so it
+            # neither inflates nor flatters the aggregate, and shows as not measured.
+            if iB > 0:
+                iTotalNumer += iN
+                iTotalBytes += iB
             lPerPageRates.append((sSheetName,
-                                   computeAccessibilityFailureRate(iN, iB)))
+                                   computeAccessibilityFailureRate(iN, iB) if iB > 0 else None))
         nAggregateRate = computeAccessibilityFailureRate(iTotalNumer, iTotalBytes)
 
         d = docx.Document()
@@ -5429,12 +5492,12 @@ class acrBuilder:
         for (path, dResults, dMetadata), sSheetName in zip(lFolders, lPageNames):
             sPageTitle = str(dMetadata.get("pageTitle") or "(untitled)")
             sPageUrl = str(dMetadata.get("pageUrl") or "")
-            nRate = dRateBySheet.get(sSheetName, 0.0)
+            nRate = dRateBySheet.get(sSheetName, None)
             p = d.add_paragraph(style="List Bullet")
             p.add_run(f"{sPageTitle}").bold = True
             if sPageUrl:
                 p.add_run(f" ({sPageUrl})")
-            p.add_run(f" — rate: {nRate:.1f}%")
+            p.add_run(f" — rate: {nRate:.1f}%" if nRate is not None else " — rate: not measured")
 
         # ---- Section 4: Conformance Summary ----
         d.add_heading("Conformance Summary", level=1)
@@ -5633,6 +5696,12 @@ class acrBuilder:
             # Capture user edits before regeneration (only meaningful
             # in append mode; --force is the explicit "start fresh"
             # gesture and discards prior edits)
+            # NO PAGES MUST NOT EMPTY A REPORT (8 October 2026, from an audit by another AI):
+            # with no page found, a blank template replaced an existing ACR and its page
+            # sheets. A blank template is still made when there is no ACR yet.
+            if not lFolders and pathWorkbook.exists():
+                logger.info(f"ACR: no scanned page was found, so the existing {sAcrWorkbookName} was left as it is")
+                return None
             dCaptured = cls.captureExistingRemarks(pathWorkbook) if not bForceMode else {}
             # Compute per-page buckets (empty when no pages)
             lPageBuckets = []
@@ -5676,6 +5745,7 @@ class acrBuilder:
                 if child.is_file() and child.name.lower() == sAcrWorkbookName.lower() and child.name != sAcrWorkbookName:
                     try: child.unlink()
                     except Exception as ex: logger.info(f"ACR: cannot remove case-variant {child.name}: {ex}")
+            neutralizeFormulas(wb)
             wb.save(str(pathWorkbook))
             logger.info(f"ACR: wrote {pathWorkbook} ({len(lFolders)} pages, "
                 f"{len(lOrderedCrits)} criteria)")

@@ -5,7 +5,7 @@
   <meta name="generator" content="pandoc" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
   <meta name="author" content="Jamal Mazrui" />
-  <title>urlCheck History</title>
+  <title>History</title>
   <style>
     html {
       color: #1a1a1a;
@@ -167,10 +167,49 @@
 </head>
 <body>
 <header id="title-block-header">
-<h1 class="title">urlCheck History</h1>
+<h1 class="title">History</h1>
 <p class="author">Jamal Mazrui</p>
 </header>
 <h1 id="urlcheck-history">urlCheck History</h1>
+<h2 id="october-2026-an-audit-by-another-ai">8 October 2026 – an audit
+by another AI</h2>
+<p>ChatGPT audited urlCheck and reported 34 findings. Checked against
+the code, these held and are fixed:</p>
+<ul>
+<li><strong>The ACR reads every scanned page again.</strong>
+results.json was written with a byte order mark, and the ACR builder’s
+JSON reader refused it – “Unexpected UTF-8 BOM” – so every page was
+skipped. JSON is now written without the mark, as its standard requires,
+and files already written with one are read too.</li>
+<li><strong>No pages found never empties an ACR.</strong> A blank
+template replaced an existing ACR and all its page sheets; now the
+existing one is kept, and the log says why. A blank template is still
+made when there is no ACR yet.</li>
+<li><strong>–force deletes only what urlCheck wrote.</strong> Every file
+in a page’s folder was deleted, your own notes included; now only
+urlCheck’s outputs go, and anything else is kept and logged.</li>
+<li><strong>Other programs’ temporary folders are left alone.</strong>
+Every _MEI folder was removed, though every program built with
+PyInstaller uses that name, and a running one could lose files. Each run
+now marks its own folder, and only urlCheck’s folders whose run has
+ended are removed.</li>
+<li><strong>Page text never becomes a spreadsheet formula.</strong> A
+page titled =1+1 became a live formula in the report; text from the web
+is now stored as text, and only the ACR’s own links to WCAG’s quick
+reference stay formulas.</li>
+<li><strong>Not measured is not zero.</strong> A page whose saved source
+was missing showed a failure rate of 0.0%, a perfect score; it now shows
+as not measured, and counts in neither total of the aggregate.</li>
+<li><strong>Kit tools</strong> updated from HomerDev 1.63.3: push stops
+on a stale whitelist and reports a failed commit as one.</li>
+</ul>
+<p>Left for later, as larger changes: an identity for each scan beyond
+its page title, so two pages titled Home never share a folder; a
+completion record, so an interrupted scan is not taken for a finished
+one; keeping automated results apart from criterion-level conformance
+and from uncovered pages; and a total scan deadline. The failure rate
+stays a percent of page source as before, its long-standing definition,
+which the report explains beside it.</p>
 <h2 id="version-1.12.3-september-2026">Version 1.12.3 (September
 2026)</h2>
 <ul>

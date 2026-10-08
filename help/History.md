@@ -5,6 +5,20 @@ author: "Jamal Mazrui"
 
 # urlCheck History
 
+## 8 October 2026 -- an audit by another AI
+
+ChatGPT audited urlCheck and reported 34 findings. Checked against the code, these held and are fixed:
+
+- **The ACR reads every scanned page again.** results.json was written with a byte order mark, and the ACR builder's JSON reader refused it -- "Unexpected UTF-8 BOM" -- so every page was skipped. JSON is now written without the mark, as its standard requires, and files already written with one are read too.
+- **No pages found never empties an ACR.** A blank template replaced an existing ACR and all its page sheets; now the existing one is kept, and the log says why. A blank template is still made when there is no ACR yet.
+- **--force deletes only what urlCheck wrote.** Every file in a page's folder was deleted, your own notes included; now only urlCheck's outputs go, and anything else is kept and logged.
+- **Other programs' temporary folders are left alone.** Every _MEI folder was removed, though every program built with PyInstaller uses that name, and a running one could lose files. Each run now marks its own folder, and only urlCheck's folders whose run has ended are removed.
+- **Page text never becomes a spreadsheet formula.** A page titled =1+1 became a live formula in the report; text from the web is now stored as text, and only the ACR's own links to WCAG's quick reference stay formulas.
+- **Not measured is not zero.** A page whose saved source was missing showed a failure rate of 0.0%, a perfect score; it now shows as not measured, and counts in neither total of the aggregate.
+- **Kit tools** updated from HomerDev 1.63.3: push stops on a stale whitelist and reports a failed commit as one.
+
+Left for later, as larger changes: an identity for each scan beyond its page title, so two pages titled Home never share a folder; a completion record, so an interrupted scan is not taken for a finished one; keeping automated results apart from criterion-level conformance and from uncovered pages; and a total scan deadline. The failure rate stays a percent of page source as before, its long-standing definition, which the report explains beside it.
+
 ## Version 1.12.3 (September 2026)
 
 - **Built from the kit's exec\\Python.** The Homer modules urlCheck uses are imported by their own names -- `import inix, lbcnet, log, paths` -- from the kit's exec\\Python folder, where they moved from the homer package.
