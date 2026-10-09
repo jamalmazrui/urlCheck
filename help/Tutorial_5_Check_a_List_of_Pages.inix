@@ -1,0 +1,135 @@
+﻿; Tutorial_5_Check_a_List_of_Pages.inix -- check a list of pages
+
+[about]
+Title=5 - Check a List of Pages
+Intro=Checking many pages in one run, from addresses typed together or listed in a text file.
+Setup=A text file listing several addresses, one to a line.
+Homework=Check five pages of one site from a list, then compare their violation counts.
+
+[step]
+
+Say=One want: to check every important page of a site, not just its home page, in one run I can leave to itself.
+Key=
+
+[step]
+
+Say=Several addresses can go into Source urls together, separated by spaces.
+Key=
+Hear=example.org example.org slash about
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=For more than a few, a text file is easier: one address to a line, saved anywhere, with any name.
+Key=
+
+[step]
+
+Say=Local web pages can be listed too, by their paths, for checking a site before it is published.
+Key=
+
+[step]
+
+Say=Browse source, B, picks that file.
+Key=Alt+B
+Hear=Open dialog
+Hear=File name edit
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=I choose my list and press Enter. urlCheck recognizes a list by what is in it, not by its extension.
+Key=Enter
+Hear=Source urls edit
+Hear=C colon backslash Lists backslash Site pages dot t x t
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=I put the reports in a folder of their own, Site Check.
+Key=Alt+O
+Hear=Output folder edit
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Log session, L, keeps a record of the whole run.
+Key=Alt+L
+Hear=Log session check box, checked
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Enter, and the run begins, one page at a time.
+Key=Enter
+Hear=Checking 2 of 12: About us
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Each page gets its own subfolder, named after its title, with its own report and workbook.
+Key=
+
+[step]
+
+Say=The result box gives the totals for the run.
+Key=
+Hear=12 pages checked
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=A page that would not load is named in the log with the reason, and the others are still checked.
+Key=
+
+[step]
+
+Say=Running the list again tomorrow skips pages whose folders exist, so only new pages are checked; Force replacements checks them all again.
+Key=
+
+[step]
+
+Say=Use configuration, U, remembers the list and the folder, so the next run is one key.
+Key=Alt+U
+Hear=Use configuration check box, checked
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Comparing the pages' reports shows which problems belong to the whole site, such as a menu, and which to one page.
+Key=
+
+[step]
+
+Say=A problem found on every page is usually one fix in a shared template, which is worth telling a developer first.
+Key=
+
+[step]
+
+Say=Each page's folder is named after its title, adjusted for the file system, so two pages with the same title get folders told apart.
+Key=
+
+[step]
+
+Say=A list can mix addresses of several sites; each is checked in turn, and sign ins, when asked for, are per site.
+Key=
+
+[step]
+
+Say=Blank lines and lines starting with a number sign are skipped, so a list can carry notes about what each address is for.
+Key=
+
+[step]
+
+Say=A long list can run while you do other work; Edge opens and closes on its own window, which is best left alone.
+Key=
+
+[step]
+
+Say=The conformance report at the end covers every page of the run, which is where walk seven picks up.
+Key=
+
+[step]
+
+Say=A whole site, checked in one run, one folder per page. The next walk checks pages behind a sign in.
+Key=

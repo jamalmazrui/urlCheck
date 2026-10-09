@@ -1,0 +1,103 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
+  <channel>
+    <title>Homer Tools Walkthroughs</title>
+    <link>Tutorials.htm</link>
+    <description></description>
+    <language>en-us</language>
+    <lastBuildDate>Fri, 09 Oct 2026 04:10:39 +0000</lastBuildDate>
+    <itunes:author></itunes:author>
+    <itunes:explicit>false</itunes:explicit>
+    <itunes:category text="Technology"/>
+    <item>
+      <title>0 - Overview</title>
+      <description>Nothing to set up; this walk only listens. Full transcript: Tutorials.htm#0-0-overview</description>
+      <link>Tutorials.htm#0-0-overview</link>
+      <guid isPermaLink="false">homer-tutorial_0_overview</guid>
+      <enclosure url="tutorials/0_Overview.mp3" length="677354" type="audio/mpeg"/>
+      <itunes:duration>00:01:36</itunes:duration>
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+    <item>
+      <title>1 - User Interface</title>
+      <description>urlCheck installed; the dialog open with Alt+Control+Shift+U. Full transcript: Tutorials.htm#0a-1-user-interface</description>
+      <link>Tutorials.htm#0a-1-user-interface</link>
+      <guid isPermaLink="false">homer-tutorial_1_user_interface</guid>
+      <enclosure url="tutorials/1_User_Interface.mp3" length="1297474" type="audio/mpeg"/>
+      <itunes:duration>00:03:10</itunes:duration>
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+    <item>
+      <title>2 - Install and Launch</title>
+      <description>urlCheck_setup.exe downloaded from the urlCheck releases page on GitHub. Full transcript: Tutorials.htm#0b-2-install-and-launch</description>
+      <link>Tutorials.htm#0b-2-install-and-launch</link>
+      <guid isPermaLink="false">homer-tutorial_2_install_and_launch</guid>
+      <enclosure url="tutorials/2_Install_and_Launch.mp3" length="1067583" type="audio/mpeg"/>
+      <itunes:duration>00:02:31</itunes:duration>
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+    <item>
+      <title>3 - Check One Web Page</title>
+      <description>urlCheck installed, and a web page you want to check. Full transcript: Tutorials.htm#0c-3-check-one-web-page</description>
+      <link>Tutorials.htm#0c-3-check-one-web-page</link>
+      <guid isPermaLink="false">homer-tutorial_3_check_one_web_page</guid>
+      <enclosure url="tutorials/3_Check_One_Web_Page.mp3" length="1301424" type="audio/mpeg"/>
+      <itunes:duration>00:03:07</itunes:duration>
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+    <item>
+      <title>4 - Read the Workbook and Screenshots</title>
+      <description>A page checked in walk three, and Excel installed. Full transcript: Tutorials.htm#0d-4-read-the-workbook-and-screenshots</description>
+      <link>Tutorials.htm#0d-4-read-the-workbook-and-screenshots</link>
+      <guid isPermaLink="false">homer-tutorial_4_read_the_workbook_and_screenshots</guid>
+      <enclosure url="tutorials/4_Read_the_Workbook_and_Screenshots.mp3" length="1149852" type="audio/mpeg"/>
+      <itunes:duration>00:02:39</itunes:duration>
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+    <item>
+      <title>5 - Check a List of Pages</title>
+      <description>A text file listing several addresses, one to a line. Full transcript: Tutorials.htm#0e-5-check-a-list-of-pages</description>
+      <link>Tutorials.htm#0e-5-check-a-list-of-pages</link>
+      <guid isPermaLink="false">homer-tutorial_5_check_a_list_of_pages</guid>
+      <enclosure url="tutorials/5_Check_a_List_of_Pages.mp3" length="1042866" type="audio/mpeg"/>
+      <itunes:duration>00:02:26</itunes:duration>
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+    <item>
+      <title>6 - Check Pages Behind a Sign In</title>
+      <description>An account on a site whose inner pages you want to check. Full transcript: Tutorials.htm#0f-6-check-pages-behind-a-sign-in</description>
+      <link>Tutorials.htm#0f-6-check-pages-behind-a-sign-in</link>
+      <guid isPermaLink="false">homer-tutorial_6_check_pages_behind_a_sign_in</guid>
+      <enclosure url="tutorials/6_Check_Pages_Behind_a_Sign_In.mp3" length="1011915" type="audio/mpeg"/>
+      <itunes:duration>00:02:20</itunes:duration>
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+    <item>
+      <title>7 - Draft a Conformance Report</title>
+      <description>A run of one or more pages, from walk three or five. Full transcript: Tutorials.htm#0g-7-draft-a-conformance-report</description>
+      <link>Tutorials.htm#0g-7-draft-a-conformance-report</link>
+      <guid isPermaLink="false">homer-tutorial_7_draft_a_conformance_report</guid>
+      <enclosure url="tutorials/7_Draft_a_Conformance_Report.mp3" length="1177504" type="audio/mpeg"/>
+      <itunes:duration>00:02:42</itunes:duration>
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+    <item>
+      <title>8 - Check from the Command Line</title>
+      <description>A command prompt. Full transcript: Tutorials.htm#0h-8-check-from-the-command-line</description>
+      <link>Tutorials.htm#0h-8-check-from-the-command-line</link>
+      <guid isPermaLink="false">homer-tutorial_8_check_from_the_command_line</guid>
+      <enclosure url="tutorials/8_Check_from_the_Command_Line.mp3" length="971210" type="audio/mpeg"/>
+      <itunes:duration>00:02:13</itunes:duration>
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+    <item>
+      <title>9 - Conclusion</title>
+      <description>Nothing to set up; this walk only listens. Full transcript: Tutorials.htm#0i-9-conclusion</description>
+      <link>Tutorials.htm#0i-9-conclusion</link>
+      <guid isPermaLink="false">homer-tutorial_9_conclusion</guid>
+      <enclosure url="tutorials/9_Conclusion.mp3" length="612418" type="audio/mpeg"/>
+      <itunes:duration>00:01:31</itunes:duration>
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+  </channel>
+</rss>

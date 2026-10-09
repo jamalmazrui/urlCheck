@@ -1,0 +1,137 @@
+﻿; Tutorial_2_Install_and_Launch.inix -- install and launch
+
+[about]
+Title=2 - Install and Launch
+Intro=Installing urlCheck for everyone on the computer, opening it from anywhere, and keeping it current.
+Setup=urlCheck_setup.exe downloaded from the urlCheck releases page on GitHub.
+Homework=After installing, open the dialog with its desktop key and press F11.
+
+[step]
+
+Say=One want: urlCheck on this computer, opened with one key, ready to check pages.
+Key=
+
+[step]
+
+Say=I open the downloaded setup program. It installs for everyone, so Windows asks for administrator rights; I say yes.
+Key=Enter
+Hear=Setup - urlCheck dialog
+Hear=Welcome to the urlCheck Setup Wizard
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=The welcome page summarizes the license: urlCheck is free and open source, under the MIT license. Enter takes Next.
+Key=Enter
+Hear=Select Destination Location
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=The default folder in Program Files is right; an update goes there without asking.
+Key=Enter
+Hear=Ready to Install
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Enter installs it.
+Key=Enter
+Hear=Installing
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=The last page offers to launch urlCheck now.
+Key=
+Hear=Launch urlCheck now check box, checked
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=I press Finish. A short box says what was installed and where the logs are.
+Key=Enter
+Hear=urlCheck setup complete
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=When I close it, urlCheck opens on its dialog.
+Key=Enter
+Hear=urlCheck dialog
+Hear=Source urls edit
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=From now on, Alt plus Control plus Shift plus U opens it from anywhere in Windows, and the Start menu has it too.
+Key=
+
+[step]
+
+Say=urlCheck drives Microsoft Edge, which Windows 10 and 11 already have, so nothing else needs installing to check a page.
+Key=
+
+[step]
+
+Say=It keeps a browser profile of its own for checking, separate from your everyday Edge, unless you choose Main profile.
+Key=
+
+[step]
+
+Say=Your settings and logs live in your own application data, so an update never touches them.
+Key=
+
+[step]
+
+Say=F11 in the dialog asks GitHub for a newer version; when there is one, Enter installs it.
+Key=F11
+Hear=Checking for a newer version
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=If this copy is the newest, No is the default, and Enter returns to the dialog.
+Key=Enter
+Hear=urlCheck dialog
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Uninstalling, from Installed apps in Windows Settings, leaves every report you made where you saved it.
+Key=
+
+[step]
+
+Say=If setup ever stops partway, its log says why, and running it again finishes the job.
+Key=
+
+[step]
+
+Say=The full guide is in the help folder of the installation, readable before the first check.
+Key=
+
+[step]
+
+Say=Each run writes a session log in your own application data, whatever the dialog says, so a problem can be traced after the fact.
+Key=
+
+[step]
+
+Say=urlCheck's own browser profile is wiped of cookies between runs unless you choose Main profile, so one site's sign in never leaks into another check.
+Key=
+
+[step]
+
+Say=A run that cannot find Edge says so in plain words, with what to install, rather than failing silently.
+Key=
+
+[step]
+
+Say=The program, its documents and its scripts all sit in Program Files, apart from anything it writes for you.
+Key=
+
+[step]
+
+Say=Installed, opened with one key, and kept current. The next walk checks a page.
+Key=

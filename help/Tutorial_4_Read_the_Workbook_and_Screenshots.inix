@@ -1,0 +1,124 @@
+﻿; Tutorial_4_Read_the_Workbook_and_Screenshots.inix -- read the workbook and screenshots
+
+[about]
+Title=4 - Read the Workbook and Screenshots
+Intro=The workbook urlCheck writes for each page: its sheets, its screenshot links, and the other files in the page's folder.
+Setup=A page checked in walk three, and Excel installed.
+Homework=Open one violation's screenshot from the workbook and share it with a sighted colleague.
+
+[step]
+
+Say=One want: the same results in a form I can sort and share with a developer, with a picture of each problem for sighted colleagues.
+Key=
+
+[step]
+
+Say=In the page's folder, report dot x l s x is the workbook. I open it in Excel.
+Key=Enter
+Hear=report dot x l s x - Excel
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=It has a sheet for each kind of result: violations, passes, incomplete, and rules that did not apply.
+Key=
+
+[step]
+
+Say=Control plus Page Down moves from sheet to sheet, and the screen reader says each sheet's name.
+Key=Control+Page Down
+Hear=Passes
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Control plus Page Up returns to the violations.
+Key=Control+Page Up
+Hear=Violations
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Each row is one rule and one element, with columns for the rule, its impact, the WCAG criterion, the element and the fix.
+Key=Down Arrow
+Hear=image-alt, critical, 1.1.1
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Sorting by impact, most critical first, puts the worst problems at the top for a developer's list.
+Key=
+
+[step]
+
+Say=The Results sheet has an Image column: each cell is a link to a screenshot of that one element.
+Key=
+Hear=Image, violations backslash image-001 dot p n g, link
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Control plus K, or Enter on the link, opens the picture, which a sighted colleague can see at once.
+Key=
+
+[step]
+
+Say=The screenshots are in the page's violations folder, numbered in order, image 001, image 002 and so on.
+Key=
+
+[step]
+
+Say=The links are relative, so the whole page folder can be zipped, emailed or moved, and they still work wherever it lands.
+Key=
+
+[step]
+
+Say=When axe's description of an element cannot be found on the page, such as an element hidden or inside a shadow tree, no screenshot is taken, and the row says nothing is attached.
+Key=
+
+[step]
+
+Say=Besides the workbook, the folder holds page dot p n g, a picture of the whole page, and page dot h t m, its source as it was checked.
+Key=
+
+[step]
+
+Say=Results dot j s o n holds everything in a form other programs read, for anyone building on urlCheck's results.
+Key=
+
+[step]
+
+Say=And page dot y a m l is the page's accessibility tree, roles and names as a screen reader receives them, readable in any text editor.
+Key=
+
+[step]
+
+Say=Reading that tree is a quick way to hear how a page is built, without the page's visual layout in the way.
+Key=
+
+[step]
+
+Say=Excel's AutoFilter narrows the sheet to one impact or one rule, which turns a long list into a short one.
+Key=Alt+Down Arrow
+Hear=Filter, Impact
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Each sheet has its header row in the first row, so the screen reader announces the column name with every cell.
+Key=
+
+[step]
+
+Say=The Passes sheet is worth a look: it shows the rules a page already meets, which is good news to share alongside the problems.
+Key=
+
+[step]
+
+Say=A developer can be sent the workbook alone; its screenshot links need the violations folder beside it, so zip the page's whole folder.
+Key=
+
+[step]
+
+Say=A report to read, a workbook to sort, a picture of each problem: one folder serves blind and sighted reviewers alike. The next walk checks a list of pages.
+Key=

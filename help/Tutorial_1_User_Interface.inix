@@ -1,0 +1,164 @@
+﻿; Tutorial_1_User_Interface.inix -- user interface
+
+[about]
+Title=1 - User Interface
+Intro=The urlCheck dialog: its fields and boxes, their underlined letters, and the keys that work anywhere in it, each shown as the reader speaks it.
+Setup=urlCheck installed; the dialog open with Alt+Control+Shift+U.
+Homework=Open the dialog, press F7, choose a control, then press Shift+F1 to hear its tip.
+
+[step]
+
+Say=One want: to move around the urlCheck dialog quickly, knowing what every box does before the first check.
+Key=
+
+[step]
+
+Say=I press the desktop key. The dialog opens on its first field.
+Key=Alt+Control+Shift+U
+Hear=urlCheck dialog
+Hear=Source urls edit
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Source urls names what to check: one address, several separated by spaces, or the path of a text file listing them. Its letter is S.
+Key=
+
+[step]
+
+Say=Tab moves to the next control, a button that picks such a file.
+Key=Tab
+Hear=Browse source button
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Alt with an underlined letter jumps straight to a control. Output folder is O.
+Key=Alt+O
+Hear=Output folder edit
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Reports go into that folder, one subfolder for each page; blank means the current folder. Choose output, C, picks one instead of typing.
+Key=
+
+[step]
+
+Say=Then the boxes. Authenticate credentials, A, pauses at the first page of each site so you can sign in.
+Key=Alt+A
+Hear=Authenticate credentials check box, not checked
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Main profile, M, uses your everyday Edge profile, with its saved sign ins.
+Key=Alt+M
+Hear=Main profile check box, not checked
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Invisible mode, I, runs Edge with no window at all.
+Key=Alt+I
+Hear=Invisible mode check box, not checked
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Force replacements, F, checks a page again even when its folder already holds a report.
+Key=Alt+F
+Hear=Force replacements check box, not checked
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=View output, V, opens the folder at the end; Log session, L, writes a log; Use configuration, U, remembers these choices.
+Key=Alt+V
+Hear=View output check box, not checked
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Space checks a box, and Space again clears it.
+Key=Space
+Hear=checked
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Space.
+Key=Space
+Hear=not checked
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Shift plus F1 says the tip for the control you are on.
+Key=Shift+F1
+Hear=View output: open the output folder when the run is done
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=F1 shows Help, with every control and every key.
+Key=F1
+Hear=urlCheck Help dialog
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Escape closes Help and returns to the same place.
+Key=Escape
+Hear=View output check box, not checked
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=F7 lists every control; choose one and press Enter to move there.
+Key=F7
+Hear=Controls list
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=I choose Source urls.
+Key=Enter
+Hear=Source urls edit
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Enter starts the check from any field, and Control plus Enter from any control. Escape closes the dialog without checking.
+Key=Tab
+Hear=Browse source button
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Guide, G, opens the full guide and returns here; Default settings, D, clears every field and box.
+Key=Alt+G
+Hear=Guide button
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=The text fields remember earlier answers: Up Arrow in Source urls brings back the last addresses checked.
+Key=
+
+[step]
+
+Say=Each box's state is saved the moment you answer it when Use configuration is ticked, so closing the dialog by Escape loses nothing.
+Key=
+
+[step]
+
+Say=Default settings clears every field and box and deletes the saved configuration, so it is for starting fresh, not for tidying.
+Key=Alt+D
+Hear=Default settings button
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=That is the dialog: what to check, where reports go, seven boxes, and a key for each. The next walk installs urlCheck.
+Key=

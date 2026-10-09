@@ -26,10 +26,18 @@ ReadMe.htm
 ReadMe.md
 RepoFiles.txt
 requirements.txt
+scripts/buildTutorials.cmd
+scripts/buildTutorials.ps1
 scripts/check.cmd
 scripts/check.py
+scripts/checkTutorial.cmd
+scripts/checkTutorial.py
 scripts/fixEncoding.cmd
 scripts/fixEncoding.py
+scripts/kind.cmd
+scripts/kind.py
+scripts/makeTutorials.cmd
+scripts/makeTutorials.py
 scripts/push.cmd
 scripts/tidy.cmd
 scripts/tidy.py
@@ -39,3 +47,9 @@ urlCheck.cmd
 urlCheck.ico
 urlCheck.py
 urlCheck_setup.iss
+# The spoken tutorials, their audio and their tools (9 October 2026).
+help/Tutorial_*.inix
+help/Tutorials.htm
+help/Tutorials.md
+help/TutorialFeed.xml
+help/tutorials/

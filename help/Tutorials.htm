@@ -1,0 +1,1270 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Tutorials</title>
+  <style>
+    html {
+      line-height: 1.5;
+      font-family: Georgia, serif;
+      font-size: 20px;
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 1em;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, 'Lucida Console', Consolas, monospace;
+      font-size: 85%;
+      margin: 0;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Tutorials</h1>
+</header>
+<h1 id="tutorials">Tutorials</h1>
+<h2 id="contents">Contents</h2>
+<ul>
+<li><a href="#0-overview">0 - Overview</a></li>
+<li><a href="#1-user-interface">1 - User Interface</a></li>
+<li><a href="#2-install-and-launch">2 - Install and Launch</a></li>
+<li><a href="#3-check-one-web-page">3 - Check One Web Page</a></li>
+<li><a href="#4-read-the-workbook-and-screenshots">4 - Read the Workbook
+and Screenshots</a></li>
+<li><a href="#5-check-a-list-of-pages">5 - Check a List of
+Pages</a></li>
+<li><a href="#6-check-pages-behind-a-sign-in">6 - Check Pages Behind a
+Sign In</a></li>
+<li><a href="#7-draft-a-conformance-report">7 - Draft a Conformance
+Report</a></li>
+<li><a href="#8-check-from-the-command-line">8 - Check from the Command
+Line</a></li>
+<li><a href="#9-conclusion">9 - Conclusion</a></li>
+<li><a href="#1-where-to-go-next">1. Where to Go Next</a></li>
+</ul>
+<!-- walkthrough: written by makeTutorials.py, do not edit between the markers -->
+<h2 id="overview">0 - Overview</h2>
+<p>What urlCheck is, what it writes, and the ten walks that teach
+it.</p>
+<p><strong>Before you start:</strong> Nothing to set up; this walk only
+listens.</p>
+<h3 id="step-1">Step 1</h3>
+<p>Welcome. This is the first of ten short walks through urlCheck. I am
+the host; the other voice is the screen reader, speaking as it would on
+your own computer.</p>
+<h3 id="step-2-insertup-arrow">Step 2: Insert+Up Arrow</h3>
+<p>Two reader keys help in every walk. If a line goes by too fast,
+Insert plus Up Arrow says it again.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Source urls edit</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-3-inserttab">Step 3: Insert+Tab</h3>
+<p>And whenever you are unsure where you are, Insert plus Tab says what
+has the focus.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Source urls edit, blank</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-4">Step 4</h3>
+<p>urlCheck checks web pages for accessibility problems. It opens each
+page in Microsoft Edge, as a person would, and runs axe-core, the
+open-source checking engine many testers use.</p>
+<h3 id="step-5">Step 5</h3>
+<p>For each page it writes a report you can read in a browser, a
+workbook you can sort, screenshots of each problem, and the page’s own
+accessibility tree.</p>
+<h3 id="step-6">Step 6</h3>
+<p>At the end of every run it drafts an Accessibility Conformance
+Report, one row for each criterion of WCAG 2.2, ready to review and
+complete.</p>
+<h3 id="step-7">Step 7</h3>
+<p>It runs from a small dialog opened from the desktop, or from the
+command line, where one line can check a whole list of pages.</p>
+<h3 id="step-8">Step 8</h3>
+<p>Here are the walks. One, the dialog. Two, installing. Three, checking
+one page. Four, the workbook and screenshots. Five, a list of pages.</p>
+<h3 id="step-9">Step 9</h3>
+<p>Six, pages behind a sign in. Seven, the conformance report. Eight,
+the command line. Nine, the conclusion, a glossary, and where to get
+help.</p>
+<h3 id="step-10">Step 10</h3>
+<p>An automated check finds many problems but not all, so the
+conformance report also lists the manual tests each criterion needs.</p>
+<h3 id="step-11">Step 11</h3>
+<p>Each walk is a few minutes long and builds on the last. Walk one
+comes next.</p>
+<p><strong>Something to try:</strong> Choose one web page you care
+about. Walk three checks it.</p>
+<h2 id="user-interface">1 - User Interface</h2>
+<p>The urlCheck dialog: its fields and boxes, their underlined letters,
+and the keys that work anywhere in it, each shown as the reader speaks
+it.</p>
+<p><strong>Before you start:</strong> urlCheck installed; the dialog
+open with Alt+Control+Shift+U.</p>
+<h3 id="step-1-1">Step 1</h3>
+<p>One want: to move around the urlCheck dialog quickly, knowing what
+every box does before the first check.</p>
+<h3 id="step-2-altcontrolshiftu">Step 2: Alt+Control+Shift+U</h3>
+<p>I press the desktop key. The dialog opens on its first field.</p>
+<p>Screen reader:</p>
+<ul>
+<li>urlCheck dialog</li>
+<li>Source urls edit</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-3">Step 3</h3>
+<p>Source urls names what to check: one address, several separated by
+spaces, or the path of a text file listing them. Its letter is S.</p>
+<h3 id="step-4-tab">Step 4: Tab</h3>
+<p>Tab moves to the next control, a button that picks such a file.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Browse source button</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-5-alto">Step 5: Alt+O</h3>
+<p>Alt with an underlined letter jumps straight to a control. Output
+folder is O.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Output folder edit</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-6-1">Step 6</h3>
+<p>Reports go into that folder, one subfolder for each page; blank means
+the current folder. Choose output, C, picks one instead of typing.</p>
+<h3 id="step-7-alta">Step 7: Alt+A</h3>
+<p>Then the boxes. Authenticate credentials, A, pauses at the first page
+of each site so you can sign in.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Authenticate credentials check box, not checked</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-8-altm">Step 8: Alt+M</h3>
+<p>Main profile, M, uses your everyday Edge profile, with its saved sign
+ins.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Main profile check box, not checked</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-9-alti">Step 9: Alt+I</h3>
+<p>Invisible mode, I, runs Edge with no window at all.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Invisible mode check box, not checked</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-10-altf">Step 10: Alt+F</h3>
+<p>Force replacements, F, checks a page again even when its folder
+already holds a report.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Force replacements check box, not checked</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-11-altv">Step 11: Alt+V</h3>
+<p>View output, V, opens the folder at the end; Log session, L, writes a
+log; Use configuration, U, remembers these choices.</p>
+<p>Screen reader:</p>
+<ul>
+<li>View output check box, not checked</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-12-space">Step 12: Space</h3>
+<p>Space checks a box, and Space again clears it.</p>
+<p>Screen reader:</p>
+<ul>
+<li>checked</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-13-space">Step 13: Space</h3>
+<p>Space.</p>
+<p>Screen reader:</p>
+<ul>
+<li>not checked</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-14-shiftf1">Step 14: Shift+F1</h3>
+<p>Shift plus F1 says the tip for the control you are on.</p>
+<p>Screen reader:</p>
+<ul>
+<li>View output: open the output folder when the run is done</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-15-f1">Step 15: F1</h3>
+<p>F1 shows Help, with every control and every key.</p>
+<p>Screen reader:</p>
+<ul>
+<li>urlCheck Help dialog</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-16-escape">Step 16: Escape</h3>
+<p>Escape closes Help and returns to the same place.</p>
+<p>Screen reader:</p>
+<ul>
+<li>View output check box, not checked</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-17-f7">Step 17: F7</h3>
+<p>F7 lists every control; choose one and press Enter to move there.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Controls list</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-18-enter">Step 18: Enter</h3>
+<p>I choose Source urls.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Source urls edit</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-19-tab">Step 19: Tab</h3>
+<p>Enter starts the check from any field, and Control plus Enter from
+any control. Escape closes the dialog without checking.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Browse source button</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-20-altg">Step 20: Alt+G</h3>
+<p>Guide, G, opens the full guide and returns here; Default settings, D,
+clears every field and box.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Guide button</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-21">Step 21</h3>
+<p>The text fields remember earlier answers: Up Arrow in Source urls
+brings back the last addresses checked.</p>
+<h3 id="step-22">Step 22</h3>
+<p>Each box’s state is saved the moment you answer it when Use
+configuration is ticked, so closing the dialog by Escape loses
+nothing.</p>
+<h3 id="step-23-altd">Step 23: Alt+D</h3>
+<p>Default settings clears every field and box and deletes the saved
+configuration, so it is for starting fresh, not for tidying.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Default settings button</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-24">Step 24</h3>
+<p>That is the dialog: what to check, where reports go, seven boxes, and
+a key for each. The next walk installs urlCheck.</p>
+<p><strong>Something to try:</strong> Open the dialog, press F7, choose
+a control, then press Shift+F1 to hear its tip.</p>
+<h2 id="install-and-launch">2 - Install and Launch</h2>
+<p>Installing urlCheck for everyone on the computer, opening it from
+anywhere, and keeping it current.</p>
+<p><strong>Before you start:</strong> urlCheck_setup.exe downloaded from
+the urlCheck releases page on GitHub.</p>
+<h3 id="step-1-2">Step 1</h3>
+<p>One want: urlCheck on this computer, opened with one key, ready to
+check pages.</p>
+<h3 id="step-2-enter">Step 2: Enter</h3>
+<p>I open the downloaded setup program. It installs for everyone, so
+Windows asks for administrator rights; I say yes.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Setup - urlCheck dialog</li>
+<li>Welcome to the urlCheck Setup Wizard</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-3-enter">Step 3: Enter</h3>
+<p>The welcome page summarizes the license: urlCheck is free and open
+source, under the MIT license. Enter takes Next.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Select Destination Location</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-4-enter">Step 4: Enter</h3>
+<p>The default folder in Program Files is right; an update goes there
+without asking.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Ready to Install</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-5-enter">Step 5: Enter</h3>
+<p>Enter installs it.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Installing</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-6-2">Step 6</h3>
+<p>The last page offers to launch urlCheck now.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Launch urlCheck now check box, checked</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-7-enter">Step 7: Enter</h3>
+<p>I press Finish. A short box says what was installed and where the
+logs are.</p>
+<p>Screen reader:</p>
+<ul>
+<li>urlCheck setup complete</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-8-enter">Step 8: Enter</h3>
+<p>When I close it, urlCheck opens on its dialog.</p>
+<p>Screen reader:</p>
+<ul>
+<li>urlCheck dialog</li>
+<li>Source urls edit</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-9-1">Step 9</h3>
+<p>From now on, Alt plus Control plus Shift plus U opens it from
+anywhere in Windows, and the Start menu has it too.</p>
+<h3 id="step-10-1">Step 10</h3>
+<p>urlCheck drives Microsoft Edge, which Windows 10 and 11 already have,
+so nothing else needs installing to check a page.</p>
+<h3 id="step-11-1">Step 11</h3>
+<p>It keeps a browser profile of its own for checking, separate from
+your everyday Edge, unless you choose Main profile.</p>
+<h3 id="step-12">Step 12</h3>
+<p>Your settings and logs live in your own application data, so an
+update never touches them.</p>
+<h3 id="step-13-f11">Step 13: F11</h3>
+<p>F11 in the dialog asks GitHub for a newer version; when there is one,
+Enter installs it.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Checking for a newer version</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-14-enter">Step 14: Enter</h3>
+<p>If this copy is the newest, No is the default, and Enter returns to
+the dialog.</p>
+<p>Screen reader:</p>
+<ul>
+<li>urlCheck dialog</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-15">Step 15</h3>
+<p>Uninstalling, from Installed apps in Windows Settings, leaves every
+report you made where you saved it.</p>
+<h3 id="step-16">Step 16</h3>
+<p>If setup ever stops partway, its log says why, and running it again
+finishes the job.</p>
+<h3 id="step-17">Step 17</h3>
+<p>The full guide is in the help folder of the installation, readable
+before the first check.</p>
+<h3 id="step-18">Step 18</h3>
+<p>Each run writes a session log in your own application data, whatever
+the dialog says, so a problem can be traced after the fact.</p>
+<h3 id="step-19">Step 19</h3>
+<p>urlCheck’s own browser profile is wiped of cookies between runs
+unless you choose Main profile, so one site’s sign in never leaks into
+another check.</p>
+<h3 id="step-20">Step 20</h3>
+<p>A run that cannot find Edge says so in plain words, with what to
+install, rather than failing silently.</p>
+<h3 id="step-21-1">Step 21</h3>
+<p>The program, its documents and its scripts all sit in Program Files,
+apart from anything it writes for you.</p>
+<h3 id="step-22-1">Step 22</h3>
+<p>Installed, opened with one key, and kept current. The next walk
+checks a page.</p>
+<p><strong>Something to try:</strong> After installing, open the dialog
+with its desktop key and press F11.</p>
+<h2 id="check-one-web-page">3 - Check One Web Page</h2>
+<p>Checking a single web page, and reading the report urlCheck writes
+for it.</p>
+<p><strong>Before you start:</strong> urlCheck installed, and a web page
+you want to check.</p>
+<h3 id="step-1-3">Step 1</h3>
+<p>One want: to know whether a site’s home page has accessibility
+problems, before writing to its owner about them.</p>
+<h3 id="step-2-altcontrolshiftu-1">Step 2: Alt+Control+Shift+U</h3>
+<p>I open the dialog. The focus is on Source urls.</p>
+<p>Screen reader:</p>
+<ul>
+<li>urlCheck dialog</li>
+<li>Source urls edit</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-3-1">Step 3</h3>
+<p>I type the address. The https part is optional; urlCheck adds it.</p>
+<p>Screen reader:</p>
+<ul>
+<li>example.org</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-4-altv">Step 4: Alt+V</h3>
+<p>I leave Output folder blank, so reports go into the current folder,
+and I tick View output.</p>
+<p>Screen reader:</p>
+<ul>
+<li>View output check box, checked</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-5-enter-1">Step 5: Enter</h3>
+<p>Enter starts the check. Edge opens the page, waits for it to settle,
+then runs axe-core.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Checking example.org</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-6-3">Step 6</h3>
+<p>A short box reports the totals when it is done.</p>
+<p>Screen reader:</p>
+<ul>
+<li>1 page checked</li>
+<li>OK button</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-7-enter-1">Step 7: Enter</h3>
+<p>Enter closes it, and File Explorer opens on the output folder. There
+is a subfolder named after the page’s title.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Example Domain</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-8-enter-1">Step 8: Enter</h3>
+<p>Enter goes into it. Inside are the report, the workbook, the
+screenshots and the page’s own files.</p>
+<p>Screen reader:</p>
+<ul>
+<li>report dot h t m</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-9-enter">Step 9: Enter</h3>
+<p>Enter on report dot h t m opens the report in the browser.</p>
+<p>Screen reader:</p>
+<ul>
+<li>urlCheck report, heading level 1</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-10-down-arrow">Step 10: Down Arrow</h3>
+<p>It begins with a summary: the page, when it was checked, and how many
+rules were violated, passed, or could not be decided.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Violations: 3. Passes: 24. Incomplete: 2.</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-11-h">Step 11: H</h3>
+<p>H moves to the violations, each rule a heading of its own.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Images must have alternate text, heading level 2</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-12-down-arrow">Step 12: Down Arrow</h3>
+<p>Under each rule: what it means, how serious it is, which WCAG
+criterion it maps to, and how many elements break it.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Impact: critical. WCAG 1.1.1</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-13-down-arrow">Step 13: Down Arrow</h3>
+<p>Then each element that breaks it, by its place in the page, with the
+advice axe gives for fixing it.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Fix: give the image an alt attribute</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-14">Step 14</h3>
+<p>Incomplete means axe could not decide by itself, such as colour
+contrast over a picture; those are for a person to check.</p>
+<h3 id="step-15-1">Step 15</h3>
+<p>Passes are listed too, so the report shows what the page does well as
+well as what it does wrong.</p>
+<h3 id="step-16-altf">Step 16: Alt+F</h3>
+<p>Checking the same page again keeps the first report, since its folder
+exists; Force replacements checks it afresh.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Force replacements check box, checked</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-17-1">Step 17</h3>
+<p>A violation count is a start, not a verdict: walk seven turns these
+results into a conformance report with the manual tests still to do.</p>
+<h3 id="step-18-1">Step 18</h3>
+<p>Impact comes in four levels, critical, serious, moderate and minor,
+which is the order to fix things in.</p>
+<h3 id="step-19-insertf6">Step 19: Insert+F6</h3>
+<p>Insert plus F6 lists the report’s headings, one for each violated
+rule, a quick table of contents to the problems.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Headings list</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-20-down-arrow">Step 20: Down Arrow</h3>
+<p>Each element is described by its place in the page and a snippet of
+its code, which is what a developer needs to find it.</p>
+<p>Screen reader:</p>
+<ul>
+<li>img src logo dot png</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-21-k">Step 21: K</h3>
+<p>The WCAG number beside each rule is a link to that criterion’s
+explanation, for anyone who wants the why behind the rule.</p>
+<p>Screen reader:</p>
+<ul>
+<li>link, WCAG 1.1.1</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-22-2">Step 22</h3>
+<p>A report from before and after a fix, side by side, is the simplest
+proof that the fix worked.</p>
+<h3 id="step-23">Step 23</h3>
+<p>One page, one report, ready to read. The next walk opens the workbook
+and its screenshots.</p>
+<p><strong>Something to try:</strong> Check the home page of a site you
+use often, and count its violations.</p>
+<h2 id="read-the-workbook-and-screenshots">4 - Read the Workbook and
+Screenshots</h2>
+<p>The workbook urlCheck writes for each page: its sheets, its
+screenshot links, and the other files in the page’s folder.</p>
+<p><strong>Before you start:</strong> A page checked in walk three, and
+Excel installed.</p>
+<h3 id="step-1-4">Step 1</h3>
+<p>One want: the same results in a form I can sort and share with a
+developer, with a picture of each problem for sighted colleagues.</p>
+<h3 id="step-2-enter-1">Step 2: Enter</h3>
+<p>In the page’s folder, report dot x l s x is the workbook. I open it
+in Excel.</p>
+<p>Screen reader:</p>
+<ul>
+<li>report dot x l s x - Excel</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-3-2">Step 3</h3>
+<p>It has a sheet for each kind of result: violations, passes,
+incomplete, and rules that did not apply.</p>
+<h3 id="step-4-controlpage-down">Step 4: Control+Page Down</h3>
+<p>Control plus Page Down moves from sheet to sheet, and the screen
+reader says each sheet’s name.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Passes</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-5-controlpage-up">Step 5: Control+Page Up</h3>
+<p>Control plus Page Up returns to the violations.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Violations</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-6-down-arrow">Step 6: Down Arrow</h3>
+<p>Each row is one rule and one element, with columns for the rule, its
+impact, the WCAG criterion, the element and the fix.</p>
+<p>Screen reader:</p>
+<ul>
+<li>image-alt, critical, 1.1.1</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-7-1">Step 7</h3>
+<p>Sorting by impact, most critical first, puts the worst problems at
+the top for a developer’s list.</p>
+<h3 id="step-8-1">Step 8</h3>
+<p>The Results sheet has an Image column: each cell is a link to a
+screenshot of that one element.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Image, violations backslash image-001 dot p n g, link</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-9-2">Step 9</h3>
+<p>Control plus K, or Enter on the link, opens the picture, which a
+sighted colleague can see at once.</p>
+<h3 id="step-10-2">Step 10</h3>
+<p>The screenshots are in the page’s violations folder, numbered in
+order, image 001, image 002 and so on.</p>
+<h3 id="step-11-2">Step 11</h3>
+<p>The links are relative, so the whole page folder can be zipped,
+emailed or moved, and they still work wherever it lands.</p>
+<h3 id="step-12-1">Step 12</h3>
+<p>When axe’s description of an element cannot be found on the page,
+such as an element hidden or inside a shadow tree, no screenshot is
+taken, and the row says nothing is attached.</p>
+<h3 id="step-13">Step 13</h3>
+<p>Besides the workbook, the folder holds page dot p n g, a picture of
+the whole page, and page dot h t m, its source as it was checked.</p>
+<h3 id="step-14-1">Step 14</h3>
+<p>Results dot j s o n holds everything in a form other programs read,
+for anyone building on urlCheck’s results.</p>
+<h3 id="step-15-2">Step 15</h3>
+<p>And page dot y a m l is the page’s accessibility tree, roles and
+names as a screen reader receives them, readable in any text editor.</p>
+<h3 id="step-16-1">Step 16</h3>
+<p>Reading that tree is a quick way to hear how a page is built, without
+the page’s visual layout in the way.</p>
+<h3 id="step-17-altdown-arrow">Step 17: Alt+Down Arrow</h3>
+<p>Excel’s AutoFilter narrows the sheet to one impact or one rule, which
+turns a long list into a short one.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Filter, Impact</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-18-2">Step 18</h3>
+<p>Each sheet has its header row in the first row, so the screen reader
+announces the column name with every cell.</p>
+<h3 id="step-19-1">Step 19</h3>
+<p>The Passes sheet is worth a look: it shows the rules a page already
+meets, which is good news to share alongside the problems.</p>
+<h3 id="step-20-1">Step 20</h3>
+<p>A developer can be sent the workbook alone; its screenshot links need
+the violations folder beside it, so zip the page’s whole folder.</p>
+<h3 id="step-21-2">Step 21</h3>
+<p>A report to read, a workbook to sort, a picture of each problem: one
+folder serves blind and sighted reviewers alike. The next walk checks a
+list of pages.</p>
+<p><strong>Something to try:</strong> Open one violation’s screenshot
+from the workbook and share it with a sighted colleague.</p>
+<h2 id="check-a-list-of-pages">5 - Check a List of Pages</h2>
+<p>Checking many pages in one run, from addresses typed together or
+listed in a text file.</p>
+<p><strong>Before you start:</strong> A text file listing several
+addresses, one to a line.</p>
+<h3 id="step-1-5">Step 1</h3>
+<p>One want: to check every important page of a site, not just its home
+page, in one run I can leave to itself.</p>
+<h3 id="step-2">Step 2</h3>
+<p>Several addresses can go into Source urls together, separated by
+spaces.</p>
+<p>Screen reader:</p>
+<ul>
+<li>example.org example.org slash about</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-3-3">Step 3</h3>
+<p>For more than a few, a text file is easier: one address to a line,
+saved anywhere, with any name.</p>
+<h3 id="step-4-1">Step 4</h3>
+<p>Local web pages can be listed too, by their paths, for checking a
+site before it is published.</p>
+<h3 id="step-5-altb">Step 5: Alt+B</h3>
+<p>Browse source, B, picks that file.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Open dialog</li>
+<li>File name edit</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-6-enter">Step 6: Enter</h3>
+<p>I choose my list and press Enter. urlCheck recognizes a list by what
+is in it, not by its extension.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Source urls edit</li>
+<li>C colon backslash Lists backslash Site pages dot t x t</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-7-alto">Step 7: Alt+O</h3>
+<p>I put the reports in a folder of their own, Site Check.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Output folder edit</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-8-altl">Step 8: Alt+L</h3>
+<p>Log session, L, keeps a record of the whole run.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Log session check box, checked</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-9-enter-1">Step 9: Enter</h3>
+<p>Enter, and the run begins, one page at a time.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Checking 2 of 12: About us</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-10-3">Step 10</h3>
+<p>Each page gets its own subfolder, named after its title, with its own
+report and workbook.</p>
+<h3 id="step-11-3">Step 11</h3>
+<p>The result box gives the totals for the run.</p>
+<p>Screen reader:</p>
+<ul>
+<li>12 pages checked</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-12-2">Step 12</h3>
+<p>A page that would not load is named in the log with the reason, and
+the others are still checked.</p>
+<h3 id="step-13-1">Step 13</h3>
+<p>Running the list again tomorrow skips pages whose folders exist, so
+only new pages are checked; Force replacements checks them all
+again.</p>
+<h3 id="step-14-altu">Step 14: Alt+U</h3>
+<p>Use configuration, U, remembers the list and the folder, so the next
+run is one key.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Use configuration check box, checked</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-15-3">Step 15</h3>
+<p>Comparing the pages’ reports shows which problems belong to the whole
+site, such as a menu, and which to one page.</p>
+<h3 id="step-16-2">Step 16</h3>
+<p>A problem found on every page is usually one fix in a shared
+template, which is worth telling a developer first.</p>
+<h3 id="step-17-2">Step 17</h3>
+<p>Each page’s folder is named after its title, adjusted for the file
+system, so two pages with the same title get folders told apart.</p>
+<h3 id="step-18-3">Step 18</h3>
+<p>A list can mix addresses of several sites; each is checked in turn,
+and sign ins, when asked for, are per site.</p>
+<h3 id="step-19-2">Step 19</h3>
+<p>Blank lines and lines starting with a number sign are skipped, so a
+list can carry notes about what each address is for.</p>
+<h3 id="step-20-2">Step 20</h3>
+<p>A long list can run while you do other work; Edge opens and closes on
+its own window, which is best left alone.</p>
+<h3 id="step-21-3">Step 21</h3>
+<p>The conformance report at the end covers every page of the run, which
+is where walk seven picks up.</p>
+<h3 id="step-22-3">Step 22</h3>
+<p>A whole site, checked in one run, one folder per page. The next walk
+checks pages behind a sign in.</p>
+<p><strong>Something to try:</strong> Check five pages of one site from
+a list, then compare their violation counts.</p>
+<h2 id="check-pages-behind-a-sign-in">6 - Check Pages Behind a Sign
+In</h2>
+<p>Checking pages that need you to sign in: pausing to authenticate, or
+using your everyday Edge profile and its saved sign ins.</p>
+<p><strong>Before you start:</strong> An account on a site whose inner
+pages you want to check.</p>
+<h3 id="step-1-6">Step 1</h3>
+<p>One want: to check the pages people use after signing in, such as an
+account page, not only the public ones.</p>
+<h3 id="step-2-1">Step 2</h3>
+<p>A page behind a sign in shows a sign in form to a browser that has
+not signed in, so checking it plainly checks the wrong page.</p>
+<h3 id="step-3-alta">Step 3: Alt+A</h3>
+<p>Authenticate credentials, A, solves this: urlCheck pauses at the
+first page of each site, so you can sign in yourself.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Authenticate credentials check box, not checked</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-4-space">Step 4: Space</h3>
+<p>Space checks it.</p>
+<p>Screen reader:</p>
+<ul>
+<li>checked</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-5-enter-2">Step 5: Enter</h3>
+<p>I put the account page’s address in Source urls and press Enter. Edge
+opens, and urlCheck waits.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Sign in, then press OK to continue</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-6-enter-1">Step 6: Enter</h3>
+<p>I sign in in the Edge window as usual, then return to urlCheck’s box
+and press Enter.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Checking account page</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-7-2">Step 7</h3>
+<p>From then on, the rest of that site’s pages in the run are checked as
+a signed in user.</p>
+<h3 id="step-8-2">Step 8</h3>
+<p>urlCheck pauses once for each site, so a list covering two sites asks
+twice.</p>
+<h3 id="step-9-altm">Step 9: Alt+M</h3>
+<p>The other way is Main profile, M: urlCheck uses your everyday Edge
+profile, with the sign ins it already holds.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Main profile check box, not checked</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-10-4">Step 10</h3>
+<p>That needs no pause, but Edge must be closed first, since one profile
+cannot be open twice.</p>
+<h3 id="step-11-4">Step 11</h3>
+<p>Without either, urlCheck uses a fresh profile of its own each time,
+which is the right choice for public pages: no cookies, no
+surprises.</p>
+<h3 id="step-12-3">Step 12</h3>
+<p>Your password never passes through urlCheck; you type it into Edge,
+as on any other day.</p>
+<h3 id="step-13-2">Step 13</h3>
+<p>Leave Invisible mode off for a run that asks you to sign in, since
+the sign in needs a window to type into.</p>
+<h3 id="step-14-2">Step 14</h3>
+<p>The reports for these pages are written like any others, so an
+account page’s problems sit beside the public pages’ in the same
+folder.</p>
+<h3 id="step-15-4">Step 15</h3>
+<p>Pages behind a sign in are often the ones people use most, so
+checking them matters most.</p>
+<h3 id="step-16-3">Step 16</h3>
+<p>When the run is done, sign out in Edge if the account matters;
+urlCheck’s own profile keeps the session otherwise.</p>
+<h3 id="step-17-3">Step 17</h3>
+<p>A site that signs you out after a few minutes may need its list split
+into shorter runs, each with its own pause.</p>
+<h3 id="step-18-4">Step 18</h3>
+<p>Two factor codes work as usual, since you are the one signing in, at
+your own pace, before pressing OK.</p>
+<h3 id="step-19-3">Step 19</h3>
+<p>Checking the sign in page itself needs no account, and is often where
+accessibility problems stop people first.</p>
+<h3 id="step-20-3">Step 20</h3>
+<p>Main profile suits a quick check of a page you already use daily;
+Authenticate suits a planned review with a clean profile.</p>
+<h3 id="step-21-4">Step 21</h3>
+<p>Signed in once, checked like the rest. The next walk drafts a
+conformance report.</p>
+<p><strong>Something to try:</strong> Check one page behind a sign in,
+using Authenticate credentials.</p>
+<h2 id="draft-a-conformance-report">7 - Draft a Conformance Report</h2>
+<p>The ACR workbook and document urlCheck writes at the end of every
+run: one row per WCAG 2.2 criterion, with a conformance verdict and the
+manual tests still to do.</p>
+<p><strong>Before you start:</strong> A run of one or more pages, from
+walk three or five.</p>
+<h3 id="step-1-7">Step 1</h3>
+<p>One want: a draft Accessibility Conformance Report for a product, the
+document buyers ask for, without starting from a blank template.</p>
+<h3 id="step-2-2">Step 2</h3>
+<p>At the end of every run, urlCheck writes ACR dot x l s x and ACR dot
+d o c x in the output folder, beside the page folders.</p>
+<p>Screen reader:</p>
+<ul>
+<li>ACR dot d o c x</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-3-4">Step 3</h3>
+<p>Together they draft a report for every page checked, mapped to WCAG
+2.2.</p>
+<h3 id="step-4-enter-1">Step 4: Enter</h3>
+<p>I open the workbook. Its first sheet, Conformance Report, has one row
+for each criterion of WCAG 2.2, A, AA and AAA.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Conformance Report</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-5-down-arrow">Step 5: Down Arrow</h3>
+<p>The first column names the criterion and its level, linked to the
+W3C’s quick reference for it.</p>
+<p>Screen reader:</p>
+<ul>
+<li>1.1.1 Non-text Content (A)</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-6-tab">Step 6: Tab</h3>
+<p>The next is a one-sentence summary of what the criterion asks.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Summary: give text alternatives for non-text content</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-7-tab">Step 7: Tab</h3>
+<p>Then Conformance, the verdict in VPAT terms: Supports, Partially
+Supports, Does Not Support, or Not Evaluated.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Does Not Support</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-8-3">Step 8</h3>
+<p>Below the verdict, the cell lists the pages whose results led to it,
+so a reviewer can trace it.</p>
+<h3 id="step-9-tab">Step 9: Tab</h3>
+<p>Then Manual: numbered steps to test what no automated check can, such
+as whether alternative text is actually right.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Manual: 1. Check each image’s text describes its purpose.</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-10-5">Step 10</h3>
+<p>Not Evaluated means no automated rule covers that criterion; the
+manual steps are the only test, and a person must do them.</p>
+<h3 id="step-11-5">Step 11</h3>
+<p>Remarks are left for you, the reviewer, to explain each verdict in
+your own words.</p>
+<h3 id="step-12-4">Step 12</h3>
+<p>The document, ACR dot d o c x, presents the same rows in the form
+buyers expect, ready to edit in Word.</p>
+<h3 id="step-13-3">Step 13</h3>
+<p>Sheets after the first hold each page’s own rows, so a verdict can be
+followed back to the page that caused it.</p>
+<h3 id="step-14-3">Step 14</h3>
+<p>A draft is a start: an honest report needs the manual tests done and
+the remarks written before it is shared.</p>
+<h3 id="step-15-5">Step 15</h3>
+<p>Run again after fixes, and the draft is rewritten from the new
+results, so the report keeps pace with the work.</p>
+<h3 id="step-16-4">Step 16</h3>
+<p>Level A criteria are the baseline, AA is what most laws and buyers
+ask for, and AAA goes further; the workbook lists all three so a
+reviewer chooses the scope.</p>
+<h3 id="step-17-4">Step 17</h3>
+<p>The verdicts come from axe’s results mapped to each criterion, so a
+Supports verdict means no violation was found, not that every manual
+test passed.</p>
+<h3 id="step-18-altdown-arrow">Step 18: Alt+Down Arrow</h3>
+<p>Filtering the Conformance column to Does Not Support gives the list
+of work to do first.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Filter, Conformance</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-19-4">Step 19</h3>
+<p>Each criterion’s link to the quick reference opens the W3C’s
+explanation and techniques, for writing an accurate remark.</p>
+<h3 id="step-20-4">Step 20</h3>
+<p>Keep each draft beside the page folders it came from, so a buyer’s
+question about a verdict can always be traced to the evidence.</p>
+<h3 id="step-21-5">Step 21</h3>
+<p>Every criterion, a verdict, and the tests still to do. The last task
+walk runs it all from the command line.</p>
+<p><strong>Something to try:</strong> Open ACR dot docx, and find one
+criterion marked Not Evaluated.</p>
+<h2 id="check-from-the-command-line">8 - Check from the Command
+Line</h2>
+<p>Checking pages from a command prompt or a batch file, with the same
+options as the dialog, invisible mode included.</p>
+<p><strong>Before you start:</strong> A command prompt.</p>
+<h3 id="step-1-8">Step 1</h3>
+<p>One want: to check a site’s pages every week, without opening the
+dialog, and to know when something new breaks.</p>
+<h3 id="step-2-3">Step 2</h3>
+<p>At a command prompt, urlCheck followed by an address checks it.</p>
+<p>Screen reader:</p>
+<ul>
+<li>urlCheck example.org</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-3-5">Step 3</h3>
+<p>Several addresses work the same way, separated by spaces, and so does
+the path of a list file.</p>
+<h3 id="step-4-2">Step 4</h3>
+<p>Every box in the dialog has an option. Dash o sends reports to a
+folder; dash f replaces existing reports; dash l writes the session
+log.</p>
+<h3 id="step-5-1">Step 5</h3>
+<p>Dash a pauses to authenticate; dash m uses your main Edge profile;
+dash i runs Edge with no window.</p>
+<h3 id="step-6-4">Step 6</h3>
+<p>So one line checks a whole list into a weekly folder, with no window
+shown.</p>
+<p>Screen reader:</p>
+<ul>
+<li>urlCheck dash i dash o Weekly C colon backslash Lists backslash Site
+pages dot t x t</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-7-3">Step 7</h3>
+<p>Quotation marks keep a path with spaces in one piece.</p>
+<h3 id="step-8-4">Step 8</h3>
+<p>Saved as a batch file, that line runs on a schedule with Windows Task
+Scheduler, even overnight.</p>
+<h3 id="step-9-3">Step 9</h3>
+<p>Dash u reads the settings saved by the dialog’s Use configuration
+box, so a run tried in the dialog repeats exactly from a batch file.</p>
+<h3 id="step-10-6">Step 10</h3>
+<p>Dash dash view output opens the folder at the end, as the dialog’s
+box does.</p>
+<h3 id="step-11-6">Step 11</h3>
+<p>urlCheck returns an exit code a batch file can test, so a scheduled
+run can flag one that failed.</p>
+<p>Screen reader:</p>
+<ul>
+<li>if errorlevel 1 echo Check the urlCheck log</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-12-5">Step 12</h3>
+<p>Local files can be checked by pattern: star dot h t m checks every
+web page in the current folder, before a site is published.</p>
+<p>Screen reader:</p>
+<ul>
+<li>urlCheck star dot h t m dash o reports</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-13-4">Step 13</h3>
+<p>Dash h shows every option, and dash v the version.</p>
+<p>Screen reader:</p>
+<ul>
+<li>urlCheck dash h</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-14-4">Step 14</h3>
+<p>Dash g opens the dialog, for anyone who starts at the prompt but
+prefers the fields.</p>
+<h3 id="step-15-6">Step 15</h3>
+<p>Comparing this week’s violation counts with last week’s shows whether
+a site is getting better or worse.</p>
+<h3 id="step-16-5">Step 16</h3>
+<p>A scheduled run can write into a folder named by date, so each week’s
+results stay apart and comparable.</p>
+<h3 id="step-17-5">Step 17</h3>
+<p>The session log of a scheduled run is in your application data, so a
+run nobody watched still leaves a record.</p>
+<h3 id="step-18-5">Step 18</h3>
+<p>Invisible mode suits a scheduled run, since no window appears to
+interrupt whatever else is happening.</p>
+<h3 id="step-19-5">Step 19</h3>
+<p>A batch file can loop over several list files, one per site, and send
+each to its own folder.</p>
+<h3 id="step-20-5">Step 20</h3>
+<p>Everything learned in the dialog carries over to the prompt, option
+for option.</p>
+<h3 id="step-21-6">Step 21</h3>
+<p>From the dialog, from a prompt, or on a schedule: the same checks
+wherever the work is. The last walk gathers it all.</p>
+<p><strong>Something to try:</strong> Write a one-line batch file that
+checks a list of pages into a folder, and run it.</p>
+<h2 id="conclusion">9 - Conclusion</h2>
+<p>What the walks covered, a glossary in two voices, and every way to
+get help with urlCheck.</p>
+<p><strong>Before you start:</strong> Nothing to set up; this walk only
+listens.</p>
+<h3 id="step-1-9">Step 1</h3>
+<p>That is urlCheck. Here is what each walk gave you.</p>
+<h3 id="step-2-4">Step 2</h3>
+<p>Walk one, the dialog. Walk two, installing. Walk three, one page and
+its report. Walk four, the workbook and screenshots. Walk five, a list
+of pages.</p>
+<h3 id="step-3-6">Step 3</h3>
+<p>Walk six, pages behind a sign in. Walk seven, the conformance report.
+Walk eight, the command line.</p>
+<h3 id="step-4-3">Step 4</h3>
+<p>Now a short glossary. I say the term; the other voice says what it
+means.</p>
+<h3 id="step-5-2">Step 5</h3>
+<p>axe-core.</p>
+<p>Screen reader:</p>
+<ul>
+<li>The open-source engine urlCheck runs on each page to find
+accessibility problems.</li>
+</ul>
+<h3 id="step-6-5">Step 6</h3>
+<p>Violation.</p>
+<p>Screen reader:</p>
+<ul>
+<li>An element that breaks an accessibility rule, with the rule, its
+impact and a fix.</li>
+</ul>
+<h3 id="step-7-4">Step 7</h3>
+<p>Incomplete.</p>
+<p>Screen reader:</p>
+<ul>
+<li>A result axe could not decide by itself, left for a person to
+check.</li>
+</ul>
+<h3 id="step-8-5">Step 8</h3>
+<p>Conformance report.</p>
+<p>Screen reader:</p>
+<ul>
+<li>A document stating, criterion by criterion, how far a product meets
+WCAG; an ACR.</li>
+</ul>
+<h3 id="step-9-4">Step 9</h3>
+<p>Accessibility tree.</p>
+<p>Screen reader:</p>
+<ul>
+<li>The roles, names and states a page gives to assistive technology, as
+a screen reader receives them.</li>
+</ul>
+<h3 id="step-10-f1">Step 10: F1</h3>
+<p>Help is a key away: F1 in the dialog shows Help, Shift plus F1 says
+the tip for the control you are on, and F7 lists the controls.</p>
+<p>Screen reader:</p>
+<ul>
+<li>urlCheck Help dialog</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-11-altg">Step 11: Alt+G</h3>
+<p>Guide, Alt plus G, opens the full guide and returns to the dialog.
+F11 checks for a newer version.</p>
+<p>Screen reader:</p>
+<ul>
+<li>Guide button</li>
+</ul>
+<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<h3 id="step-12-6">Step 12</h3>
+<p>The urlCheck page on GitHub has the latest release and a place to
+report a problem; each run’s log says exactly what happened.</p>
+<h3 id="step-13-5">Step 13</h3>
+<p>Thank you for listening. Happy checking.</p>
+<p><strong>Something to try:</strong> Check one page you rely on, and
+send its report to the site’s owner.</p>
+<!-- walkthrough ends -->
+<h2 id="where-to-go-next">1. Where to Go Next</h2>
+<p>Press F1 for the guide, Alt+Shift+H for the hotkey list, and Alt+F10
+for every command in one window.</p>
+</body>
+</html>

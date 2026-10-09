@@ -1,0 +1,81 @@
+﻿; Tutorial_9_Conclusion.inix -- conclusion
+
+[about]
+Title=9 - Conclusion
+Intro=What the walks covered, a glossary in two voices, and every way to get help with urlCheck.
+Setup=Nothing to set up; this walk only listens.
+Homework=Check one page you rely on, and send its report to the site's owner.
+
+[step]
+
+Say=That is urlCheck. Here is what each walk gave you.
+Key=
+
+[step]
+
+Say=Walk one, the dialog. Walk two, installing. Walk three, one page and its report. Walk four, the workbook and screenshots. Walk five, a list of pages.
+Key=
+
+[step]
+
+Say=Walk six, pages behind a sign in. Walk seven, the conformance report. Walk eight, the command line.
+Key=
+
+[step]
+
+Say=Now a short glossary. I say the term; the other voice says what it means.
+Key=
+
+[step]
+
+Say=axe-core.
+Key=
+Hear=The open-source engine urlCheck runs on each page to find accessibility problems.
+
+[step]
+
+Say=Violation.
+Key=
+Hear=An element that breaks an accessibility rule, with the rule, its impact and a fix.
+
+[step]
+
+Say=Incomplete.
+Key=
+Hear=A result axe could not decide by itself, left for a person to check.
+
+[step]
+
+Say=Conformance report.
+Key=
+Hear=A document stating, criterion by criterion, how far a product meets WCAG; an ACR.
+
+[step]
+
+Say=Accessibility tree.
+Key=
+Hear=The roles, names and states a page gives to assistive technology, as a screen reader receives them.
+
+[step]
+
+Say=Help is a key away: F1 in the dialog shows Help, Shift plus F1 says the tip for the control you are on, and F7 lists the controls.
+Key=F1
+Hear=urlCheck Help dialog
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Guide, Alt plus G, opens the full guide and returns to the dialog. F11 checks for a newer version.
+Key=Alt+G
+Hear=Guide button
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=The urlCheck page on GitHub has the latest release and a place to report a problem; each run's log says exactly what happened.
+Key=
+
+[step]
+
+Say=Thank you for listening. Happy checking.
+Key=

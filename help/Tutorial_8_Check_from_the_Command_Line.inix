@@ -1,0 +1,122 @@
+﻿; Tutorial_8_Check_from_the_Command_Line.inix -- check from the command line
+
+[about]
+Title=8 - Check from the Command Line
+Intro=Checking pages from a command prompt or a batch file, with the same options as the dialog, invisible mode included.
+Setup=A command prompt.
+Homework=Write a one-line batch file that checks a list of pages into a folder, and run it.
+
+[step]
+
+Say=One want: to check a site's pages every week, without opening the dialog, and to know when something new breaks.
+Key=
+
+[step]
+
+Say=At a command prompt, urlCheck followed by an address checks it.
+Key=
+Hear=urlCheck example.org
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Several addresses work the same way, separated by spaces, and so does the path of a list file.
+Key=
+
+[step]
+
+Say=Every box in the dialog has an option. Dash o sends reports to a folder; dash f replaces existing reports; dash l writes the session log.
+Key=
+
+[step]
+
+Say=Dash a pauses to authenticate; dash m uses your main Edge profile; dash i runs Edge with no window.
+Key=
+
+[step]
+
+Say=So one line checks a whole list into a weekly folder, with no window shown.
+Key=
+Hear=urlCheck dash i dash o Weekly C colon backslash Lists backslash Site pages dot t x t
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Quotation marks keep a path with spaces in one piece.
+Key=
+
+[step]
+
+Say=Saved as a batch file, that line runs on a schedule with Windows Task Scheduler, even overnight.
+Key=
+
+[step]
+
+Say=Dash u reads the settings saved by the dialog's Use configuration box, so a run tried in the dialog repeats exactly from a batch file.
+Key=
+
+[step]
+
+Say=Dash dash view output opens the folder at the end, as the dialog's box does.
+Key=
+
+[step]
+
+Say=urlCheck returns an exit code a batch file can test, so a scheduled run can flag one that failed.
+Key=
+Hear=if errorlevel 1 echo Check the urlCheck log
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Local files can be checked by pattern: star dot h t m checks every web page in the current folder, before a site is published.
+Key=
+Hear=urlCheck star dot h t m dash o reports
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Dash h shows every option, and dash v the version.
+Key=
+Hear=urlCheck dash h
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Dash g opens the dialog, for anyone who starts at the prompt but prefers the fields.
+Key=
+
+[step]
+
+Say=Comparing this week's violation counts with last week's shows whether a site is getting better or worse.
+Key=
+
+[step]
+
+Say=A scheduled run can write into a folder named by date, so each week's results stay apart and comparable.
+Key=
+
+[step]
+
+Say=The session log of a scheduled run is in your application data, so a run nobody watched still leaves a record.
+Key=
+
+[step]
+
+Say=Invisible mode suits a scheduled run, since no window appears to interrupt whatever else is happening.
+Key=
+
+[step]
+
+Say=A batch file can loop over several list files, one per site, and send each to its own folder.
+Key=
+
+[step]
+
+Say=Everything learned in the dialog carries over to the prompt, option for option.
+Key=
+
+[step]
+
+Say=From the dialog, from a prompt, or on a schedule: the same checks wherever the work is. The last walk gathers it all.
+Key=

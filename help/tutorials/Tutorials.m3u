@@ -1,0 +1,21 @@
+#EXTM3U
+#EXTINF:96,0 - Overview
+0_Overview.mp3
+#EXTINF:190,1 - User Interface
+1_User_Interface.mp3
+#EXTINF:151,2 - Install and Launch
+2_Install_and_Launch.mp3
+#EXTINF:187,3 - Check One Web Page
+3_Check_One_Web_Page.mp3
+#EXTINF:159,4 - Read the Workbook and Screenshots
+4_Read_the_Workbook_and_Screenshots.mp3
+#EXTINF:146,5 - Check a List of Pages
+5_Check_a_List_of_Pages.mp3
+#EXTINF:140,6 - Check Pages Behind a Sign In
+6_Check_Pages_Behind_a_Sign_In.mp3
+#EXTINF:162,7 - Draft a Conformance Report
+7_Draft_a_Conformance_Report.mp3
+#EXTINF:133,8 - Check from the Command Line
+8_Check_from_the_Command_Line.mp3
+#EXTINF:91,9 - Conclusion
+9_Conclusion.mp3

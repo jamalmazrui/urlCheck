@@ -1,0 +1,156 @@
+﻿; Tutorial_3_Check_One_Web_Page.inix -- check one web page
+
+[about]
+Title=3 - Check One Web Page
+Intro=Checking a single web page, and reading the report urlCheck writes for it.
+Setup=urlCheck installed, and a web page you want to check.
+Homework=Check the home page of a site you use often, and count its violations.
+
+[step]
+
+Say=One want: to know whether a site's home page has accessibility problems, before writing to its owner about them.
+Key=
+
+[step]
+
+Say=I open the dialog. The focus is on Source urls.
+Key=Alt+Control+Shift+U
+Hear=urlCheck dialog
+Hear=Source urls edit
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=I type the address. The https part is optional; urlCheck adds it.
+Key=
+Hear=example.org
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=I leave Output folder blank, so reports go into the current folder, and I tick View output.
+Key=Alt+V
+Hear=View output check box, checked
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Enter starts the check. Edge opens the page, waits for it to settle, then runs axe-core.
+Key=Enter
+Hear=Checking example.org
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=A short box reports the totals when it is done.
+Key=
+Hear=1 page checked
+Hear=OK button
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Enter closes it, and File Explorer opens on the output folder. There is a subfolder named after the page's title.
+Key=Enter
+Hear=Example Domain
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Enter goes into it. Inside are the report, the workbook, the screenshots and the page's own files.
+Key=Enter
+Hear=report dot h t m
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Enter on report dot h t m opens the report in the browser.
+Key=Enter
+Hear=urlCheck report, heading level 1
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=It begins with a summary: the page, when it was checked, and how many rules were violated, passed, or could not be decided.
+Key=Down Arrow
+Hear=Violations: 3. Passes: 24. Incomplete: 2.
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=H moves to the violations, each rule a heading of its own.
+Key=H
+Hear=Images must have alternate text, heading level 2
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Under each rule: what it means, how serious it is, which WCAG criterion it maps to, and how many elements break it.
+Key=Down Arrow
+Hear=Impact: critical. WCAG 1.1.1
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Then each element that breaks it, by its place in the page, with the advice axe gives for fixing it.
+Key=Down Arrow
+Hear=Fix: give the image an alt attribute
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Incomplete means axe could not decide by itself, such as colour contrast over a picture; those are for a person to check.
+Key=
+
+[step]
+
+Say=Passes are listed too, so the report shows what the page does well as well as what it does wrong.
+Key=
+
+[step]
+
+Say=Checking the same page again keeps the first report, since its folder exists; Force replacements checks it afresh.
+Key=Alt+F
+Hear=Force replacements check box, checked
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=A violation count is a start, not a verdict: walk seven turns these results into a conformance report with the manual tests still to do.
+Key=
+
+[step]
+
+Say=Impact comes in four levels, critical, serious, moderate and minor, which is the order to fix things in.
+Key=
+
+[step]
+
+Say=Insert plus F6 lists the report's headings, one for each violated rule, a quick table of contents to the problems.
+Key=Insert+F6
+Hear=Headings list
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Each element is described by its place in the page and a snippet of its code, which is what a developer needs to find it.
+Key=Down Arrow
+Hear=img src logo dot png
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=The WCAG number beside each rule is a link to that criterion's explanation, for anyone who wants the why behind the rule.
+Key=K
+Hear=link, WCAG 1.1.1
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=A report from before and after a fix, side by side, is the simplest proof that the fix worked.
+Key=
+
+[step]
+
+Say=One page, one report, ready to read. The next walk opens the workbook and its screenshots.
+Key=

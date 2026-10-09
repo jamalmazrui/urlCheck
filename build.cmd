@@ -91,7 +91,7 @@ set "pipPackages=pyinstaller"
 rem The kit tools this app uses, refreshed into scripts\ on every build.
 rem Name each; add one the day it is used (installCommon.cmd for install
 rem scripts written in cmd, buildTutorials and its fellows once a walk exists).
-set "kitTools=check.cmd check.py fixEncoding.cmd fixEncoding.py push.cmd release.cmd release.ps1 tidy.cmd tidy.py unpushed.cmd unpushed.py"
+set "kitTools=buildTutorials.cmd buildTutorials.ps1 check.cmd check.py checkTutorial.cmd checkTutorial.py fixEncoding.cmd fixEncoding.py kind.cmd kind.py makeTutorials.cmd makeTutorials.py push.cmd release.cmd release.ps1 tidy.cmd tidy.py unpushed.cmd unpushed.py"
 set "useDocs=1"
 set "useInstaller=1"
 set "useVersionSteps=1"

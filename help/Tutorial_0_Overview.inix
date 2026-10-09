@@ -1,0 +1,66 @@
+﻿; Tutorial_0_Overview.inix -- overview
+
+[about]
+Title=0 - Overview
+Intro=What urlCheck is, what it writes, and the ten walks that teach it.
+Setup=Nothing to set up; this walk only listens.
+Homework=Choose one web page you care about. Walk three checks it.
+
+[step]
+
+Say=Welcome. This is the first of ten short walks through urlCheck. I am the host; the other voice is the screen reader, speaking as it would on your own computer.
+Key=
+
+[step]
+
+Say=Two reader keys help in every walk. If a line goes by too fast, Insert plus Up Arrow says it again.
+Key=Insert+Up Arrow
+Hear=Source urls edit
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=And whenever you are unsure where you are, Insert plus Tab says what has the focus.
+Key=Insert+Tab
+Hear=Source urls edit, blank
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=urlCheck checks web pages for accessibility problems. It opens each page in Microsoft Edge, as a person would, and runs axe-core, the open-source checking engine many testers use.
+Key=
+
+[step]
+
+Say=For each page it writes a report you can read in a browser, a workbook you can sort, screenshots of each problem, and the page's own accessibility tree.
+Key=
+
+[step]
+
+Say=At the end of every run it drafts an Accessibility Conformance Report, one row for each criterion of WCAG 2.2, ready to review and complete.
+Key=
+
+[step]
+
+Say=It runs from a small dialog opened from the desktop, or from the command line, where one line can check a whole list of pages.
+Key=
+
+[step]
+
+Say=Here are the walks. One, the dialog. Two, installing. Three, checking one page. Four, the workbook and screenshots. Five, a list of pages.
+Key=
+
+[step]
+
+Say=Six, pages behind a sign in. Seven, the conformance report. Eight, the command line. Nine, the conclusion, a glossary, and where to get help.
+Key=
+
+[step]
+
+Say=An automated check finds many problems but not all, so the conformance report also lists the manual tests each criterion needs.
+Key=
+
+[step]
+
+Say=Each walk is a few minutes long and builds on the last. Walk one comes next.
+Key=

@@ -135,6 +135,13 @@ Source: "License.htm"; DestDir: "{app}"; Flags: ignoreversion
 ; checks that each file in help\ is matched by a line here.
 Source: "help\*.md"; DestDir: "{app}\help"; Flags: ignoreversion
 Source: "help\*.htm"; DestDir: "{app}\help"; Flags: ignoreversion
+; The spoken tutorials, in the Homer pattern of ten, and their audio, made by the
+; build before this is compiled (9 October 2026).
+Source: "help\Tutorial_*.inix"; DestDir: "{app}\help"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "help\TutorialFeed.xml"; DestDir: "{app}\help"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "help\tutorials\*.mp3"; DestDir: "{app}\help\tutorials"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "help\tutorials\*.m3u"; DestDir: "{app}\help\tutorials"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "help\tutorials\*.sha256"; DestDir: "{app}\help\tutorials"; Flags: ignoreversion skipifsourcedoesntexist
 
 [InstallDelete]
 ; What the installers before the kit put at the top of the program folder.

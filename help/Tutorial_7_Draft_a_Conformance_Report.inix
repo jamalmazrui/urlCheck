@@ -1,0 +1,126 @@
+﻿; Tutorial_7_Draft_a_Conformance_Report.inix -- draft a conformance report
+
+[about]
+Title=7 - Draft a Conformance Report
+Intro=The ACR workbook and document urlCheck writes at the end of every run: one row per WCAG 2.2 criterion, with a conformance verdict and the manual tests still to do.
+Setup=A run of one or more pages, from walk three or five.
+Homework=Open ACR dot docx, and find one criterion marked Not Evaluated.
+
+[step]
+
+Say=One want: a draft Accessibility Conformance Report for a product, the document buyers ask for, without starting from a blank template.
+Key=
+
+[step]
+
+Say=At the end of every run, urlCheck writes ACR dot x l s x and ACR dot d o c x in the output folder, beside the page folders.
+Key=
+Hear=ACR dot d o c x
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Together they draft a report for every page checked, mapped to WCAG 2.2.
+Key=
+
+[step]
+
+Say=I open the workbook. Its first sheet, Conformance Report, has one row for each criterion of WCAG 2.2, A, AA and AAA.
+Key=Enter
+Hear=Conformance Report
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=The first column names the criterion and its level, linked to the W3C's quick reference for it.
+Key=Down Arrow
+Hear=1.1.1 Non-text Content (A)
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=The next is a one-sentence summary of what the criterion asks.
+Key=Tab
+Hear=Summary: give text alternatives for non-text content
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Then Conformance, the verdict in VPAT terms: Supports, Partially Supports, Does Not Support, or Not Evaluated.
+Key=Tab
+Hear=Does Not Support
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Below the verdict, the cell lists the pages whose results led to it, so a reviewer can trace it.
+Key=
+
+[step]
+
+Say=Then Manual: numbered steps to test what no automated check can, such as whether alternative text is actually right.
+Key=Tab
+Hear=Manual: 1. Check each image's text describes its purpose.
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Not Evaluated means no automated rule covers that criterion; the manual steps are the only test, and a person must do them.
+Key=
+
+[step]
+
+Say=Remarks are left for you, the reviewer, to explain each verdict in your own words.
+Key=
+
+[step]
+
+Say=The document, ACR dot d o c x, presents the same rows in the form buyers expect, ready to edit in Word.
+Key=
+
+[step]
+
+Say=Sheets after the first hold each page's own rows, so a verdict can be followed back to the page that caused it.
+Key=
+
+[step]
+
+Say=A draft is a start: an honest report needs the manual tests done and the remarks written before it is shared.
+Key=
+
+[step]
+
+Say=Run again after fixes, and the draft is rewritten from the new results, so the report keeps pace with the work.
+Key=
+
+[step]
+
+Say=Level A criteria are the baseline, AA is what most laws and buyers ask for, and AAA goes further; the workbook lists all three so a reviewer chooses the scope.
+Key=
+
+[step]
+
+Say=The verdicts come from axe's results mapped to each criterion, so a Supports verdict means no violation was found, not that every manual test passed.
+Key=
+
+[step]
+
+Say=Filtering the Conformance column to Does Not Support gives the list of work to do first.
+Key=Alt+Down Arrow
+Hear=Filter, Conformance
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Each criterion's link to the quick reference opens the W3C's explanation and techniques, for writing an accurate remark.
+Key=
+
+[step]
+
+Say=Keep each draft beside the page folders it came from, so a buyer's question about a verdict can always be traced to the evidence.
+Key=
+
+[step]
+
+Say=Every criterion, a verdict, and the tests still to do. The last task walk runs it all from the command line.
+Key=

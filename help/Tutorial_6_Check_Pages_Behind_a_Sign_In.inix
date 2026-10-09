@@ -1,0 +1,122 @@
+﻿; Tutorial_6_Check_Pages_Behind_a_Sign_In.inix -- check pages behind a sign in
+
+[about]
+Title=6 - Check Pages Behind a Sign In
+Intro=Checking pages that need you to sign in: pausing to authenticate, or using your everyday Edge profile and its saved sign ins.
+Setup=An account on a site whose inner pages you want to check.
+Homework=Check one page behind a sign in, using Authenticate credentials.
+
+[step]
+
+Say=One want: to check the pages people use after signing in, such as an account page, not only the public ones.
+Key=
+
+[step]
+
+Say=A page behind a sign in shows a sign in form to a browser that has not signed in, so checking it plainly checks the wrong page.
+Key=
+
+[step]
+
+Say=Authenticate credentials, A, solves this: urlCheck pauses at the first page of each site, so you can sign in yourself.
+Key=Alt+A
+Hear=Authenticate credentials check box, not checked
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Space checks it.
+Key=Space
+Hear=checked
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=I put the account page's address in Source urls and press Enter. Edge opens, and urlCheck waits.
+Key=Enter
+Hear=Sign in, then press OK to continue
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=I sign in in the Edge window as usual, then return to urlCheck's box and press Enter.
+Key=Enter
+Hear=Checking account page
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=From then on, the rest of that site's pages in the run are checked as a signed in user.
+Key=
+
+[step]
+
+Say=urlCheck pauses once for each site, so a list covering two sites asks twice.
+Key=
+
+[step]
+
+Say=The other way is Main profile, M: urlCheck uses your everyday Edge profile, with the sign ins it already holds.
+Key=Alt+M
+Hear=Main profile check box, not checked
+Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=That needs no pause, but Edge must be closed first, since one profile cannot be open twice.
+Key=
+
+[step]
+
+Say=Without either, urlCheck uses a fresh profile of its own each time, which is the right choice for public pages: no cookies, no surprises.
+Key=
+
+[step]
+
+Say=Your password never passes through urlCheck; you type it into Edge, as on any other day.
+Key=
+
+[step]
+
+Say=Leave Invisible mode off for a run that asks you to sign in, since the sign in needs a window to type into.
+Key=
+
+[step]
+
+Say=The reports for these pages are written like any others, so an account page's problems sit beside the public pages' in the same folder.
+Key=
+
+[step]
+
+Say=Pages behind a sign in are often the ones people use most, so checking them matters most.
+Key=
+
+[step]
+
+Say=When the run is done, sign out in Edge if the account matters; urlCheck's own profile keeps the session otherwise.
+Key=
+
+[step]
+
+Say=A site that signs you out after a few minutes may need its list split into shorter runs, each with its own pause.
+Key=
+
+[step]
+
+Say=Two factor codes work as usual, since you are the one signing in, at your own pace, before pressing OK.
+Key=
+
+[step]
+
+Say=Checking the sign in page itself needs no account, and is often where accessibility problems stop people first.
+Key=
+
+[step]
+
+Say=Main profile suits a quick check of a page you already use daily; Authenticate suits a planned review with a clean profile.
+Key=
+
+[step]
+
+Say=Signed in once, checked like the rest. The next walk drafts a conformance report.
+Key=
