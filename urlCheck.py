@@ -3008,6 +3008,16 @@ def isUrlListFile(sInput):
     return True
 
 
+# A file with one of these extensions given as the source is a page to scan; any other file is a list of urls.
+c_setWebPageExts = {".asp", ".aspx", ".htm", ".html", ".jsp", ".mht", ".mhtml", ".php", ".shtml", ".xhtml"}
+
+
+def looksLikeLocalPath(sText):
+    """True when sText is written as a path on this computer -- a drive letter, a backslash, a leading dot or tilde, or
+    a UNC name -- rather than a url or a domain, which never use those."""
+    return bool(re.match(r'^(?:[A-Za-z]:[\\/]|\\\\|\.{1,2}[\\/]|~[\\/]|/)', sText)) or ("\\" in sText and "://" not in sText)
+
+
 def classifyInput(sInput):
     """Classify the source input string.
 
@@ -3048,8 +3058,23 @@ def classifyInput(sInput):
         sUnquoted = sUnquoted[1:-1].strip()
     # Test the entire (unquoted) input as a file path first. This catches
     # paths with embedded spaces without requiring the user to add quotes.
+    # A WEB PAGE IS SCANNED, NOT READ AS A LIST; A MISSING PATH OR A FOLDER SAYS SO (11 October 2026). Every existing
+    # file was taken for a list of urls, so a local page given here had each line of its HTML treated as a url; and
+    # a path to nothing, or to a folder, fell through to be tried as a web address. A file with a web page's extension
+    # is now one page to scan; a path that does not exist, or names a folder, is an error that says what was typed.
     if isUrlListFile(sUnquoted):
+        if pathlib.Path(sUnquoted).suffix.lower() in c_setWebPageExts:
+            return ("urls", [sUnquoted])
         return ("listfile", sUnquoted)
+    lsParts = parseSpaceSeparated(sStripped)
+    if looksLikeLocalPath(sUnquoted) and all(looksLikeLocalPath(s) or "\\" in s for s in lsParts) and not any(os.path.isfile(s.strip('"')) for s in lsParts):
+        try:
+            bFolder = pathlib.Path(sUnquoted).expanduser().is_dir()
+        except Exception:
+            bFolder = False
+        if bFolder:
+            return ("error", "%s is a folder. Give a web page, a plain text file listing urls or local pages, or one or more urls." % sUnquoted)
+        return ("error", "No file named %s was found. Check the path, or use Browse source to choose it." % sUnquoted)
     # Not a single file. Fall back to space-tokenization, but honor
     # quoted segments so the user can supply a mix of paths-with-spaces
     # and individual urls.

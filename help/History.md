@@ -5,6 +5,11 @@ author: "Jamal Mazrui"
 
 # urlCheck History
 
+## 11 October 2026 -- from an audit and a report
+
+- **A path you type is understood.** Any existing file given as the source was read as a list of urls, so a local web page had each line of its HTML treated as a url; and a path to nothing, or to a folder, was tried as a web address. A file with a web page's extension (.htm, .html and the like) is now one page to scan; a .txt or other file is still a list; a page and urls can be mixed; and a path that does not exist, or names a folder, gets a plain message saying what was typed.
+- **Launch after setup works on a first install.** The installer's Launch box writes a marker file into %LOCALAPPDATA%\\<App>\\logs, but on a first install that folder did not exist yet -- it was made later, when setup kept its log -- so the marker could not be written, and the program did not start after setup. The marker line now makes the folder first. Found by an audit of bookFido by another AI, and fixed in every Homer installer.
+
 ## 9 October 2026 -- spoken tutorials
 
 **Ten spoken walks, in the Homer pattern of ten.** Walk 0 is an overview and table of contents; 1, the user interface, each control shown as the screen reader speaks it; 2, installing; 3 to 8, tasks around concrete wants -- checking one page, the workbook and its screenshots, a list of pages, pages behind a sign in, a draft conformance report, and the command line; and 9, the conclusion, with a glossary in two voices and every way to get help. Each task walk is predicted at three minutes or more by the kit's measured model, and every key and feature it teaches was checked against this guide. The build speaks them; the installer ships them and their audio; the repository carries both.

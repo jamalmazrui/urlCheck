@@ -8,6 +8,9 @@
   <title>History</title>
   <style>
     html {
+      line-height: 1.5;
+      font-family: Georgia, serif;
+      font-size: 20px;
       color: #1a1a1a;
       background-color: #fdfdfd;
     }
@@ -26,16 +29,13 @@
     @media (max-width: 600px) {
       body {
         font-size: 0.9em;
-        padding: 12px;
+        padding: 1em;
       }
       h1 {
         font-size: 1.8em;
       }
     }
     @media print {
-      html {
-        background-color: white;
-      }
       body {
         background-color: transparent;
         color: black;
@@ -85,10 +85,9 @@
       color: #606060;
     }
     code {
-      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-family: Menlo, Monaco, 'Lucida Console', Consolas, monospace;
       font-size: 85%;
       margin: 0;
-      hyphens: manual;
     }
     pre {
       margin: 1em 0;
@@ -153,23 +152,42 @@
     div.columns{display: flex; gap: min(4vw, 1.5em);}
     div.column{flex: auto; overflow-x: auto;}
     div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
-    /* The extra [class] is a hack that increases specificity enough to
-       override a similar rule in reveal.js */
-    ul.task-list[class]{list-style: none;}
+    ul.task-list{list-style: none;}
     ul.task-list li input[type="checkbox"] {
-      font-size: inherit;
       width: 0.8em;
       margin: 0 0.8em 0.2em -1.6em;
       vertical-align: middle;
     }
     .display.math{display: block; text-align: center; margin: 0.5rem auto;}
   </style>
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
 </head>
 <body>
 <header id="title-block-header">
 <p class="author">Jamal Mazrui</p>
 </header>
 <h1 id="urlcheck-history">urlCheck History</h1>
+<h2 id="october-2026-from-an-audit-and-a-report">11 October 2026 – from
+an audit and a report</h2>
+<ul>
+<li><strong>A path you type is understood.</strong> Any existing file
+given as the source was read as a list of urls, so a local web page had
+each line of its HTML treated as a url; and a path to nothing, or to a
+folder, was tried as a web address. A file with a web page’s extension
+(.htm, .html and the like) is now one page to scan; a .txt or other file
+is still a list; a page and urls can be mixed; and a path that does not
+exist, or names a folder, gets a plain message saying what was
+typed.</li>
+<li><strong>Launch after setup works on a first install.</strong> The
+installer’s Launch box writes a marker file into
+%LOCALAPPDATA%\<App>\logs, but on a first install that folder did not
+exist yet – it was made later, when setup kept its log – so the marker
+could not be written, and the program did not start after setup. The
+marker line now makes the folder first. Found by an audit of bookFido by
+another AI, and fixed in every Homer installer.</li>
+</ul>
 <h2 id="october-2026-spoken-tutorials">9 October 2026 – spoken
 tutorials</h2>
 <p><strong>Ten spoken walks, in the Homer pattern of ten.</strong> Walk
