@@ -13,17 +13,27 @@ Key=
 
 [step]
 
-Say=Two reader keys help in every walk. If a line goes by too fast, Insert plus Up Arrow says it again.
+Say=You know your screen reader's own keys already, and three of them are worth remembering whenever you feel lost or unsure. Insert plus Up Arrow says the line you are on again.
 Key=Insert+Up Arrow
 Hear=Source urls edit
-Note=Confirm the wording with a live run: buildTutorials -live.
 
 [step]
 
-Say=And whenever you are unsure where you are, Insert plus Tab says what has the focus.
+Say=Insert plus Tab says what has the focus: its name, its role, and its value or state.
 Key=Insert+Tab
 Hear=Source urls edit, blank
-Note=Confirm the wording with a live run: buildTutorials -live.
+
+[step]
+
+Say=Insert plus T says the title of the window.
+Key=Insert+T
+Hear=urlCheck
+
+[step]
+
+Say=If you set your screen reader to use Caps Lock in place of Insert, Caps Lock works the same way for all three.
+Key=
+Hear=
 
 [step]
 

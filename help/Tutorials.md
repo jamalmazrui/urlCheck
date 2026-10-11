@@ -137,6 +137,24 @@
 - [7 - Draft a Conformance Report](#7-draft-a-conformance-report)
 - [8 - Check from the Command Line](#8-check-from-the-command-line)
 - [9 - Conclusion](#9-conclusion)
+- [1 - User Interface](#1-user-interface)
+- [2 - Install and Launch](#2-install-and-launch)
+- [3 - Check One Web Page](#3-check-one-web-page)
+- [4 - Read the Workbook and Screenshots](#4-read-the-workbook-and-screenshots)
+- [5 - Check a List of Pages](#5-check-a-list-of-pages)
+- [6 - Check Pages Behind a Sign In](#6-check-pages-behind-a-sign-in)
+- [7 - Draft a Conformance Report](#7-draft-a-conformance-report)
+- [8 - Check from the Command Line](#8-check-from-the-command-line)
+- [9 - Conclusion](#9-conclusion)
+- [1 - User Interface](#1-user-interface)
+- [2 - Install and Launch](#2-install-and-launch)
+- [3 - Check One Web Page](#3-check-one-web-page)
+- [4 - Read the Workbook and Screenshots](#4-read-the-workbook-and-screenshots)
+- [5 - Check a List of Pages](#5-check-a-list-of-pages)
+- [6 - Check Pages Behind a Sign In](#6-check-pages-behind-a-sign-in)
+- [7 - Draft a Conformance Report](#7-draft-a-conformance-report)
+- [8 - Check from the Command Line](#8-check-from-the-command-line)
+- [9 - Conclusion](#9-conclusion)
 - [0 - Overview](#0-overview)
 - [1 - User Interface](#1-user-interface)
 - [2 - Install and Launch](#2-install-and-launch)
@@ -163,53 +181,61 @@ Welcome. This is the first of ten short walks through urlCheck. I am the host; t
 
 ### Step 2: Insert+Up Arrow
 
-Two reader keys help in every walk. If a line goes by too fast, Insert plus Up Arrow says it again.
+You know your screen reader's own keys already, and three of them are worth remembering whenever you feel lost or unsure. Insert plus Up Arrow says the line you are on again.
 
 Screen reader:
 
 - Source urls edit
 
-Confirm the wording with a live run: buildTutorials -live.
-
 ### Step 3: Insert+Tab
 
-And whenever you are unsure where you are, Insert plus Tab says what has the focus.
+Insert plus Tab says what has the focus: its name, its role, and its value or state.
 
 Screen reader:
 
 - Source urls edit, blank
 
-Confirm the wording with a live run: buildTutorials -live.
+### Step 4: Insert+T
 
-### Step 4
+Insert plus T says the title of the window.
 
-urlCheck checks web pages for accessibility problems. It opens each page in Microsoft Edge, as a person would, and runs axe-core, the open-source checking engine many testers use.
+Screen reader:
+
+- urlCheck
 
 ### Step 5
 
-For each page it writes a report you can read in a browser, a workbook you can sort, screenshots of each problem, and the page's own accessibility tree.
+If you set your screen reader to use Caps Lock in place of Insert, Caps Lock works the same way for all three.
 
 ### Step 6
 
-At the end of every run it drafts an Accessibility Conformance Report, one row for each criterion of WCAG 2.2, ready to review and complete.
+urlCheck checks web pages for accessibility problems. It opens each page in Microsoft Edge, as a person would, and runs axe-core, the open-source checking engine many testers use.
 
 ### Step 7
 
-It runs from a small dialog opened from the desktop, or from the command line, where one line can check a whole list of pages.
+For each page it writes a report you can read in a browser, a workbook you can sort, screenshots of each problem, and the page's own accessibility tree.
 
 ### Step 8
 
-Here are the walks. One, the dialog. Two, installing. Three, checking one page. Four, the workbook and screenshots. Five, a list of pages.
+At the end of every run it drafts an Accessibility Conformance Report, one row for each criterion of WCAG 2.2, ready to review and complete.
 
 ### Step 9
 
-Six, pages behind a sign in. Seven, the conformance report. Eight, the command line. Nine, the conclusion, a glossary, and where to get help.
+It runs from a small dialog opened from the desktop, or from the command line, where one line can check a whole list of pages.
 
 ### Step 10
 
-An automated check finds many problems but not all, so the conformance report also lists the manual tests each criterion needs.
+Here are the walks. One, the dialog. Two, installing. Three, checking one page. Four, the workbook and screenshots. Five, a list of pages.
 
 ### Step 11
+
+Six, pages behind a sign in. Seven, the conformance report. Eight, the command line. Nine, the conclusion, a glossary, and where to get help.
+
+### Step 12
+
+An automated check finds many problems but not all, so the conformance report also lists the manual tests each criterion needs.
+
+### Step 13
 
 Each walk is a few minutes long and builds on the last. Walk one comes next.
 
