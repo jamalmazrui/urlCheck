@@ -362,9 +362,14 @@ if exist "!homerDev!\help\CamelType_Python.md" if exist "CamelType_Python.htm" d
 rem ---- documents ----------------------------------------------------------
 if not defined useDocs goto :docsDone
 set "pandoc="
-for /f "delims=" %%p in ('where pandoc 2^>nul') do if not defined pandoc set "pandoc=%%p"
+rem THE NEWEST PANDOC, NOT THE FIRST ON THE PATH (14 October 2026, as the kit's app template has done since
+rem 1.56.0): the first pandoc on the PATH was Pandoc 2.19 in C:\bin, while Pandoc 3.12.1 sat in Program Files, so
+rem the help pages were made by the old one. The kit's newest.ps1 runs every copy it finds, logs each with its version
+rem and prints the newest; without the kit, the install folders are looked in before the PATH.
+if exist "!homerDev!\scripts\newest.ps1" for /f "usebackq delims=" %%p in (`powershell -NoProfile -ExecutionPolicy Bypass -File "!homerDev!\scripts\newest.ps1" pandoc -Log "%log%"`) do set "pandoc=%%p"
 if not defined pandoc if exist "%ProgramFiles%\Pandoc\pandoc.exe" set "pandoc=%ProgramFiles%\Pandoc\pandoc.exe"
 if not defined pandoc if exist "%LOCALAPPDATA%\Pandoc\pandoc.exe" set "pandoc=%LOCALAPPDATA%\Pandoc\pandoc.exe"
+for /f "delims=" %%p in ('where pandoc 2^>nul') do if not defined pandoc set "pandoc=%%p"
 if not defined pandoc (
   echo Installing pandoc, which writes the .htm copy of each document
   winget install --id JohnMacFarlane.Pandoc --scope machine --silent --accept-source-agreements --accept-package-agreements >> "%log%" 2>&1

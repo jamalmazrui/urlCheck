@@ -5,6 +5,10 @@ author: "Jamal Mazrui"
 
 # urlCheck History
 
+## 14 October 2026 -- the newest Pandoc for the help pages
+
+- **The help pages are made by the newest Pandoc, not the first on the PATH.** The build took the first pandoc on the PATH, which was Pandoc 2.19 in C:\bin, while Pandoc 3.12.1 was installed in Program Files. It now asks the kit's newest.ps1, as the kit's app template has done since kit 1.56.0, and the log names every copy found and its version.
+
 ## 14 October 2026 -- each page known by its address
 
 - **Two pages with one title no longer share a folder.** The folder was named for the page's title alone, so a second page with the same title was skipped, or with --force replaced the first one's reports, and a page whose title changed got a second folder. Each folder now holds urlCheck-source.txt, naming the address it is for: a page's folder is the one whose record names its address, whatever it is called, and otherwise the first of "Title", "Title (2)" and so on that is free. Folders keep readable names. A folder from before this, with no record, is adopted by the first page that uses it and recorded at once (from an audit by another AI).
