@@ -296,8 +296,10 @@ end;
 
 procedure startIfAsked();
 //  Starts urlCheck's dialog if the Launch box left its marker, and removes the
-//  marker. Started through cmd so it runs as the person, not as the elevated
-//  installer, and with Documents as its folder like the shortcuts.
+//  marker, with Documents as its folder like the shortcuts. ExecAsOriginalUser
+//  (14 October 2026, from an audit by another AI): Exec, even through cmd, ran the
+//  program with the installer's elevated rights, so its logs and settings could
+//  belong to the administrator; it now runs as the person.
 var
   sFlag: String;
   iResult: Integer;
@@ -305,7 +307,7 @@ begin
   sFlag := ExpandConstant('{localappdata}\{#AppName}\logs\{#AppName}_launch.flag');
   if not FileExists(sFlag) then exit;
   DeleteFile(sFlag);
-  Exec(ExpandConstant('{cmd}'),
+  ExecAsOriginalUser(ExpandConstant('{cmd}'),
        '/s /c ""' + ExpandConstant('{app}\exec\{#AppExeName}') + '" {#AppLaunchParams}"',
        ExpandConstant('{userdocs}'), SW_SHOW, ewNoWait, iResult);
 end;

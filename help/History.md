@@ -5,6 +5,10 @@ author: "Jamal Mazrui"
 
 # urlCheck History
 
+## 14 October 2026 -- started as you
+
+- **Setup starts urlCheck as you,** not with the installer's administrator rights (from an audit by another AI).
+
 ## 11 October 2026 -- from an audit and a report
 
 - **The dialog offers sources to start with**, as urlFido's does: the major organizations of and for blind people, acb.org, afb.org, nfb.org and wbu.ngo, fill an empty Source field, and Default settings restores them rather than emptying it. The command line is unchanged.
