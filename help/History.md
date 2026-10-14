@@ -5,6 +5,11 @@ author: "Jamal Mazrui"
 
 # urlCheck History
 
+## 14 October 2026 -- no folder claimed without evidence
+
+- **A folder named for a page's title is claimed only when urlCheck's own results show it scanned that address.** A folder with no address record was adopted for any address: an audit put unrelated notes in such a folder, and urlCheck claimed it for a new address, skipped the scan, and trusted the claim from then on. Now such a folder is left as it is and the next free name used, unless its own results.json names the address (from a second audit by another AI).
+- **Setting old reports aside is recorded before the first file moves,** and a move that fails puts back what had moved. Tested on the real code: an unrelated folder left unclaimed, a migrated one adopted on evidence, and a failure on the second of two moves leaving both reports in place.
+
 ## 14 October 2026 -- the draft report claims no conformance it has not seen
 
 - **A criterion is never marked Supports by automated checks alone.** The draft conformance report marked a criterion Supports when every automated check on it passed, or when the page held nothing the rules apply to. But automated checks find failures; they cannot prove a criterion is met -- a keyboard trap or a missing step in a task passes every automated rule. Such a criterion is now Not Evaluated, with a second line saying what the checks found, and Supports is left to a reviewer, in the Result column. ACR.docx says so at the head of its summary, counts how many criteria passed every automated check and still need a person's review, and lists under Criteria Requiring Attention only those where the checks found a failure or could not finish, so real failures are not buried. Both glossaries and the guide say the same. Tested by generating a real ACR.docx for a page with one failure and every other check passing: it marks no criterion Supports and lists the one failure for attention (from an audit by another AI).

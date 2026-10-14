@@ -2275,9 +2275,24 @@ def writeSourceRecord(pathFolder, sNormalizedUrl, sInput, sPageTitle):
     return True
 
 
+def scannedUrl(pathFolder):
+    """The normalized address urlCheck's own results.json in the folder says it scanned, or "" when it has none."""
+    try:
+        dData = json.loads((pathFolder / sJsonName).read_text(encoding="utf-8-sig"))
+        return str((dData.get("metadata") or {}).get("normalizedUrl") or "")
+    except Exception:
+        return ""
+
+
 def findPageFolder(pathBaseDir, sPageTitle, sNormalizedUrl):
-    """(folder, bExists): this page's folder, found by the address its record names, else the first free or unrecorded
-    folder named for the title."""
+    """(folder, bExists): this page's folder, found by the address its record names, else the first free folder named for
+    the title.
+
+    NO FOLDER IS CLAIMED WITHOUT EVIDENCE (14 October 2026, from a second audit by another AI). A folder named for the
+    title with no address record was adopted for whatever address came, and recorded as its own: an audit put unrelated
+    notes in such a folder, urlCheck claimed it for a new address, skipped the scan, and trusted the claim from then on.
+    An unrecorded folder is now adopted only when urlCheck's own results.json in it names this address; any other is
+    left as it is, and the next free name is used."""
     if pathBaseDir.is_dir():
         for pathChild in sorted(pathBaseDir.iterdir(), key=lambda p: p.name.lower()):
             if pathChild.is_dir() and recordedUrl(pathChild) == sNormalizedUrl: return pathChild, True
@@ -2286,8 +2301,10 @@ def findPageFolder(pathBaseDir, sPageTitle, sNormalizedUrl):
         pathCandidate = pathBaseDir / (sBaseName if iNumber == 1 else "%s (%d)" % (sBaseName, iNumber))
         if not pathCandidate.exists(): return pathCandidate, False
         if pathCandidate.is_dir() and recordedUrl(pathCandidate) == "":
-            logger.info(f"Adopted {pathCandidate}, which has no address record, for {sNormalizedUrl}")
-            return pathCandidate, True
+            if scannedUrl(pathCandidate) == sNormalizedUrl:
+                logger.info(f"Adopted {pathCandidate}: it has no address record, but its own results.json names {sNormalizedUrl}")
+                return pathCandidate, True
+            logger.info(f"Left {pathCandidate} as it is: nothing in it shows it belongs to {sNormalizedUrl}")
     raise RuntimeError("More than 999 folders are named for the title " + sPageTitle)
 
 
@@ -2310,7 +2327,28 @@ def setAsideOutputs(pathFolder):
         pathAside = pathFolder.parent / (pathFolder.name + ".recovery-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + "-" + str(iNumber))
         iNumber += 1
     pathAside.mkdir()
-    for pathChild in lOwned: shutil.move(str(pathChild), str(pathAside / pathChild.name))
+    # REGISTERED BEFORE THE FIRST MOVE (14 October 2026, from a second audit by another AI): the outputs were moved one at
+    # a time and the folder registered for putting back only afterwards, so a move that failed partway left the earlier
+    # ones moved with nothing to restore them. The folder is registered first, and a failed move puts back what moved.
+    dPendingAside[str(pathFolder)] = pathAside
+    lMoved = []
+    try:
+        for pathChild in lOwned:
+            shutil.move(str(pathChild), str(pathAside / pathChild.name))
+            lMoved.append(pathChild.name)
+    except Exception as ex:
+        logger.warn(f"Moving the earlier reports aside failed after {len(lMoved)} of {len(lOwned)} ({ex}); putting them back")
+        lStranded = []
+        for sName in lMoved:
+            try: shutil.move(str(pathAside / sName), str(pathFolder / sName))
+            except Exception: lStranded.append(sName)
+        if lStranded:
+            logger.warn(f"These earlier reports could not be put back and are kept in {pathAside}: {', '.join(lStranded)}")
+        else:
+            dPendingAside.pop(str(pathFolder), None)
+            try: pathAside.rmdir()
+            except Exception: pass
+        raise
     logger.info(f"Moved the earlier reports aside until this scan finishes: {pathAside}")
     return pathAside
 
@@ -2350,8 +2388,8 @@ def chooseOutputDir(pathBaseDir, sPageTitle, bForce=False, sNormalizedUrl="", sI
     if not bExists: pathFolder.mkdir(parents=True, exist_ok=False)
     writeSourceRecord(pathFolder, sNormalizedUrl, sInput, sPageTitle)
     if bExists:
-        pathAside = setAsideOutputs(pathFolder)
-        if pathAside is not None: dPendingAside[str(pathFolder)] = pathAside
+        # setAsideOutputs registers the folder for settleOutputs itself, before it moves anything.
+        setAsideOutputs(pathFolder)
     return pathFolder, False
 
 
