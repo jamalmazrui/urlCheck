@@ -1,16 +1,22 @@
 ﻿<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US" xml:lang="en-US">
 <head>
   <meta charset="utf-8" />
-  <meta name="generator" content="pandoc" />
+  <meta name="generator" content="pandoc 3.12.1" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
   <meta name="author" content="Jamal Mazrui" />
   <meta name="description" content="Accessibility Checker for Web Pages" />
   <title>urlCheck</title>
   <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
     html {
       color: #1a1a1a;
+      color: light-dark(#1a1a1a, #fdfdfd);
       background-color: #fdfdfd;
+      background-color: light-dark(#fdfdfd, #1a1a1a);
+      color-scheme: light dark;
     }
     body {
       margin: 0 auto;
@@ -35,12 +41,16 @@
     }
     @media print {
       html {
-        background-color: white;
+        color-scheme: light only;
       }
-      body {
+      html, body, pre, code {
         background-color: transparent;
+      }
+      body, a, a:visited, blockquote {
         color: black;
-        font-size: 12pt;
+      }
+      pre, code {
+        padding: 0;
       }
       p, h2, h3 {
         orphans: 3;
@@ -53,13 +63,14 @@
     p {
       margin: 1em 0;
     }
-    a {
-      color: #1a1a1a;
-    }
-    a:visited {
-      color: #1a1a1a;
+    a, a:visited {
+      color: inherit;
     }
     img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
       max-width: 100%;
     }
     h1, h2, h3, h4, h5, h6 {
@@ -82,10 +93,14 @@
     blockquote {
       margin: 1em 0 1em 1.7em;
       padding-left: 1em;
-      border-left: 2px solid #e6e6e6;
+      border-left: 2px solid;
+      border-color: #e6e6e6;
+      border-color: light-dark(#e6e6e6, #4c4c4c);
       color: #606060;
+      color: light-dark(#606060, #b6b6b6);
     }
     code {
+      white-space: pre-wrap;
       font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
       font-size: 85%;
       margin: 0;
@@ -105,8 +120,8 @@
      overflow: visible;
     }
     hr {
-      background-color: #1a1a1a;
       border: none;
+      border-top: 1px solid currentColor;
       height: 1px;
       margin: 1em 0;
     }
@@ -123,11 +138,11 @@
     }
     tbody {
       margin-top: 0.5em;
-      border-top: 1px solid #1a1a1a;
-      border-bottom: 1px solid #1a1a1a;
+      border-top: 1px solid currentColor;
+      border-bottom: 1px solid currentColor;
     }
     th {
-      border-top: 1px solid #1a1a1a;
+      border-top: 1px solid currentColor;
       padding: 0.25em 0.5em 0.25em 0.5em;
     }
     td {
@@ -149,10 +164,13 @@
     #TOC a:not(:hover) {
       text-decoration: none;
     }
-    code{white-space: pre-wrap;}
     span.smallcaps{font-variant: small-caps;}
-    div.columns{display: flex; gap: min(4vw, 1.5em);}
-    div.column{flex: auto; overflow-x: auto;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
     div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
     /* The extra [class] is a hack that increases specificity enough to
        override a similar rule in reveal.js */
@@ -163,10 +181,10 @@
       margin: 0 0.8em 0.2em -1.6em;
       vertical-align: middle;
     }
-    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
     /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
     pre > code.sourceCode { white-space: pre; position: relative; }
-    pre > code.sourceCode > span { line-height: 1.25; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
     pre > code.sourceCode > span:empty { height: 1.2em; }
     .sourceCode { overflow: visible; }
     code.sourceCode > span { color: inherit; text-decoration: inherit; }
@@ -234,6 +252,31 @@
 <header id="title-block-header">
 <p class="author">Jamal Mazrui</p>
 </header>
+<nav id="TOC" role="doc-toc" aria-label="Contents">
+<ul>
+<li><a href="#urlcheck-guide" id="toc-urlcheck-guide">urlCheck Guide</a>
+<ul>
+<li><a href="#what-you-need" id="toc-what-you-need">What you
+need</a></li>
+<li><a href="#installing" id="toc-installing">Installing</a></li>
+<li><a href="#running-urlcheck" id="toc-running-urlcheck">Running
+urlCheck</a></li>
+<li><a href="#command-line-options"
+id="toc-command-line-options">Command-line options</a></li>
+<li><a href="#supported-sources" id="toc-supported-sources">Supported
+sources</a></li>
+<li><a href="#output" id="toc-output">Output</a></li>
+<li><a href="#configuration-file"
+id="toc-configuration-file">Configuration file</a></li>
+<li><a href="#log-files" id="toc-log-files">Log files</a></li>
+<li><a href="#notes" id="toc-notes">Notes</a></li>
+<li><a href="#uninstalling" id="toc-uninstalling">Uninstalling</a></li>
+<li><a href="#for-developers" id="toc-for-developers">For
+developers</a></li>
+<li><a href="#license" id="toc-license">License</a></li>
+</ul></li>
+</ul>
+</nav>
 <main>
 <h1 id="urlcheck-guide">urlCheck Guide</h1>
 <p><strong>Author:</strong> Jamal Mazrui <strong>Copyright:</strong> ©
@@ -485,66 +528,70 @@ per line; the file may have any extension</li>
 extension.</p>
 <hr />
 <h2 id="output">Output</h2>
-<p>For each scanned page, urlCheck creates a subfolder whose name is
-based on the page title, adjusted as needed for the file system. Inside
+<p>For each page it scans, urlCheck makes a subfolder named for the
+page’s title, adjusted as needed for the file system. A page is known by
+its address, not its title: a second page with the same title gets
+“Title (2)”, and a page whose title has changed keeps its folder. Inside
 the folder:</p>
 <ul>
-<li><code>report.htm</code> — human-readable accessibility report (open
-in any browser)</li>
-<li><code>report.xlsx</code> — Excel workbook with separate sheets for
-violations, passes, incomplete, and inapplicable rules. The Results
-sheet has an <strong>Image</strong> column whose cells are clickable
-hyperlinks to per-violation screenshots (see below).</li>
-<li><code>results.json</code> — full structured scan output (metadata +
-axe-core results) for programmatic downstream use</li>
-<li><code>page.yaml</code> — ARIA accessibility tree of the page</li>
-<li><code>page.htm</code> — saved page source with stylesheet hrefs
-preserved</li>
-<li><code>page.png</code> — full-page screenshot</li>
-<li><code>violations/</code> — element-level screenshots, one PNG per
-violation node where the screenshot could be captured (see below)</li>
+<li><code>report.htm</code> — the accessibility report to read, in any
+browser</li>
+<li><code>report.xlsx</code> — an Excel workbook with separate sheets
+for violations, passes, incomplete and inapplicable rules. The Results
+sheet has an <strong>Image</strong> column whose cells link to
+screenshots of each violation (see below).</li>
+<li><code>results.json</code> — the full scan output, both its metadata
+and the axe-core results, for use by other programs</li>
+<li><code>page.yaml</code> — the page’s ARIA accessibility tree</li>
+<li><code>page.htm</code> — the saved page source, with its stylesheet
+links kept</li>
+<li><code>page.png</code> — a screenshot of the page</li>
+<li><code>violations/</code> — a screenshot of each element with a
+violation, one PNG for each one that could be captured (see below)</li>
+<li><code>urlCheck-source.txt</code> — the address the folder belongs
+to, which is how urlCheck finds the folder again</li>
 </ul>
 <h3 id="per-violation-screenshots">Per-violation screenshots</h3>
-<p>For each rule-violation node found by axe, urlCheck attempts to
-capture an element-level screenshot using the CSS selector axe provides.
-Successful captures are saved as <code>violations/image-001.png</code>,
-<code>violations/image-002.png</code>, etc. The Image column of the
-Results sheet in <code>report.xlsx</code> shows the basename as a
-clickable hyperlink to the relative path; clicking the cell opens the
-PNG in the OS default image viewer.</p>
-<p>The hyperlinks are <strong>relative</strong> (e.g.,
-<code>violations/image-001.png</code>, not absolute paths), so you can
-move, zip, or share the page subfolder freely — the links resolve
-correctly wherever the workbook ends up, as long as the
-<code>violations/</code> subfolder travels with it.</p>
-<p>When axe’s CSS selector cannot be resolved by the browser engine —
-typical cases include shadow-DOM-pierced selectors, hidden or zero-size
-elements, or selectors that match multiple elements — urlCheck silently
-skips that node. The corresponding row of the Results sheet has an empty
-Image cell. There is no warning printed; the assumption is that the user
-looking at a Results sheet sees what was captured and what wasn’t, and
-can use the CSS selector in the <strong>Path</strong> column to find the
-element manually if needed.</p>
-<p>If a per-page folder with the same sanitized title already exists,
-urlCheck skips that url by default — previous scan results are
-preserved. Use <code>--force</code> (or check <strong>Force
-replacements</strong> in the dialog) to instead empty the existing
-folder and replace its contents with a fresh scan. The skip decision is
-made right after the page title is read, before the expensive
-accessibility scan, so re-running urlCheck on a long url list is cheap
-when most pages have already been scanned.</p>
+<p>For each element where axe found a violation, urlCheck tries to take
+a screenshot of that element, using the CSS selector axe gives. Each one
+it captures is saved as <code>violations/image-001.png</code>,
+<code>violations/image-002.png</code> and so on. In
+<code>report.xlsx</code>, the Image column of the Results sheet shows
+the file name as a link; choosing the cell opens the PNG in your usual
+image viewer.</p>
+<p>The links are <strong>relative</strong>, such as
+<code>violations/image-001.png</code>, not full paths. So you can move,
+zip or share the page’s folder freely: the links still work wherever the
+workbook goes, as long as the <code>violations/</code> folder goes with
+it.</p>
+<p>Sometimes the browser cannot find what axe’s CSS selector names.
+Typical cases are selectors that reach inside a shadow DOM, hidden or
+zero-size elements, and selectors that match more than one element.
+urlCheck then skips that element quietly, and its row in the Results
+sheet has an empty Image cell. No warning is printed: the Results sheet
+shows what was captured and what was not, and the CSS selector in the
+<strong>Path</strong> column lets you find the element by hand.</p>
+<p>If a page already has a folder, urlCheck skips that page by default,
+keeping the earlier results. Use <code>--force</code>, or check
+<strong>Force replacements</strong> in the dialog, to scan it again. The
+earlier reports are then set aside until the new scan finishes, put back
+if it fails, and removed only once it succeeds; files you added to the
+folder are never touched. The decision to skip is made right after the
+page’s title is read, before the slow accessibility scan, so running
+urlCheck again on a long list is quick when most pages have already been
+scanned.</p>
 <p>If <code>--view-output</code> is set, the <strong>parent</strong>
-output folder (the one containing the per-page subfolders) opens in File
-Explorer at the end of the run.</p>
+output folder, the one holding the page folders, opens in File Explorer
+at the end of the run.</p>
 <h3
 id="accessibility-conformance-report-acr.xlsx-and-acr.docx">Accessibility
 Conformance Report (ACR.xlsx and ACR.docx)</h3>
 <p>At the end of every run, urlCheck writes <code>ACR.xlsx</code> and
-<code>ACR.docx</code> in the parent output folder. Together they form a
-draft Accessibility Conformance Report that aggregates axe-core results
-across pages and maps them to WCAG 2.2 success criteria using standard
-VPAT 2.5 terminology (Supports, Partially Supports, Does Not Support,
-Not Applicable, Not Evaluated).</p>
+<code>ACR.docx</code> in the parent output folder. Together they make a
+draft Accessibility Conformance Report. It gathers the axe-core results
+from all the pages and matches them to the WCAG 2.2 success criteria, in
+the standard terms of VPAT 2.5: Supports, Partially Supports, Does Not
+Support, Not Applicable and Not Evaluated.</p>
 <p>The first sheet of <code>ACR.xlsx</code>, <strong>Conformance
 Report</strong>, has one row per WCAG 2.2 criterion (all 86, including
 Level A, AA, and AAA — the obsolete 4.1.1 Parsing is omitted). The
@@ -555,13 +602,13 @@ e.g., <code>1.1.1 Non-text Content (A)</code>. Hyperlinked to the W3C
 WCAG 2.2 Quick Reference for that criterion.</li>
 <li><strong>Summary</strong> — A single-sentence description of the
 criterion’s intent.</li>
-<li><strong>Conformance</strong> — The derived VPAT 2.5 conformance
-term. The cell is multi-line: line 1 is the verdict (Supports /
-Partially Supports / Does Not Support / Not Evaluated); subsequent lines
-list the page sheet names whose per-page Calc was <code>fail</code> or
-<code>partial</code> under “Not supported:”, and pages whose per-page
-Calc was <code>manual</code> (incomplete) under “Not evaluated:”. Only
-line 1 is visible by default; expand the row to see the page lists.</li>
+<li><strong>Conformance</strong> — The VPAT 2.5 conformance term worked
+out for the criterion. The cell has several lines. Line 1 is the
+verdict: Supports, Partially Supports, Does Not Support or Not
+Evaluated. Under “Not supported:” come the pages whose Calc was
+<code>fail</code> or <code>partial</code>, and under “Not evaluated:”
+the pages whose Calc was <code>manual</code> (incomplete). Only line 1
+shows at first; expand the row to see the pages.</li>
 <li><strong>Manual</strong> — Numbered manual-test steps for the
 criterion.</li>
 <li><strong>Result</strong> — User-editable. Where the human reviewer
@@ -582,15 +629,13 @@ that page. Each rule is shown with its instance count (e.g.,
 (axe outcome categories, urlCheck Calc values, VPAT 2.5 conformance
 terms, WCAG principles and levels) and links to relevant external
 resources.</p>
-<p>The companion <code>ACR.docx</code> is a narrative summary with
+<p>The companion <code>ACR.docx</code> is a written summary, with
 sections for Overview, Pages Analyzed, Conformance Summary, Criteria
-Requiring Attention, Methodology, and Resources. It is informed by
-report.htm’s information architecture but adapted to focus on
-per-criterion conformance rather than per-rule diagnostics. Both files
-are draft assets generated by automation; the user is expected to
-manually verify and refine them, especially the Result and Remarks
-columns and any criteria marked Not Evaluated, before publishing the
-final ACR.</p>
+Requiring Attention, Methodology and Resources. It follows the layout of
+report.htm, but it is about how each criterion is met rather than about
+each rule. Both files are drafts made by automation. Before publishing
+the final ACR, check and improve them by hand, especially the Result and
+Remarks columns and any criterion marked Not Evaluated.</p>
 <h4 id="calc-formula-table">Calc formula table</h4>
 <p>The Calc column on per-page sheets uses these formulas:</p>
 <ul>
@@ -624,13 +669,12 @@ WCAG 2.0 Understanding Conformance)</li>
 all included pages. So if 3 image elements lack alt text, axe-core
 reports 3 instances of the <code>image-alt</code> violation, and the
 Remarks line shows <code>fail 3</code> for the matching criterion.</p>
-<p>The “Not Evaluated” term is reserved by VPAT 2.5 for AAA criteria,
-but urlCheck uses it more broadly for cases where automated testing
-cannot reach a verdict. This is defensible because the urlCheck output
-is a <strong>draft</strong> ACR. The user is expected to perform the
-manual checks listed in the Manual column, write a final verdict in the
-Result column, and save the curated workbook in a separate folder before
-publishing.</p>
+<p>VPAT 2.5 keeps the term “Not Evaluated” for AAA criteria, but
+urlCheck also uses it wherever automated testing cannot reach a verdict.
+That is reasonable because urlCheck’s output is a <strong>draft</strong>
+ACR. The user is expected to perform the manual checks listed in the
+Manual column, write a final verdict in the Result column, and save the
+curated workbook in a separate folder before publishing.</p>
 <h4 id="workbook-scope">Workbook scope</h4>
 <p>Without <code>--force</code>, urlCheck scopes the report to
 <strong>all</strong> subfolders under the parent that contain a
@@ -657,18 +701,17 @@ every violation instance on the page, and the denominator is the byte
 size of the saved page source (<code>page.htm</code>). Each impact level
 reflects axe-core’s own severity rating; instances are individual
 flagged DOM elements, not distinct rules.</p>
-<p>The constant <code>100000</code> is tuned so the result reads
+<p>The constant <code>100000</code> is chosen so the result reads
 naturally as a percent. <strong>Lower is better.</strong> A clean page
-is well under 1%; a typical problematic page lands in the double digits;
-a truly broken page can exceed 100%. The percent framing is purely a
-display convention to make the number easy to grasp and remember; the
-underlying quantity is impact-weighted violation instances per byte of
-page source, which has no natural ceiling.</p>
-<p>For a page set (the ACR-level rate), urlCheck sums per-page
-numerators and per-page denominators before dividing. This is a
-size-weighted view: bigger pages contribute proportionally more,
-reflecting that they have more content with more places where users
-might encounter violations. The aggregate rate is shown in
+is well under 1%, a typical page with problems is in the double digits,
+and a truly broken page can pass 100%. Showing it as a percent only
+makes the number easy to grasp and remember. What it measures is
+violations, weighted by their impact, per byte of page source, which has
+no natural upper limit.</p>
+<p>For a set of pages, the rate in the ACR, urlCheck adds up the pages’
+top numbers and their bottom numbers before dividing. So bigger pages
+count for more, since they have more content, and more places where
+someone might meet a violation. The aggregate rate is shown in
 <code>ACR.docx</code>’s metadata header; per-page rates are shown next
 to each page in the Pages Analyzed list and in
 <code>report.xlsx</code>’s Summary sheet.</p>

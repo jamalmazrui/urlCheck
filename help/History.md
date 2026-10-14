@@ -5,6 +5,14 @@ author: "Jamal Mazrui"
 
 # urlCheck History
 
+## 14 October 2026 -- the guide describes the program as it now is
+
+- **The guide's account of page folders was out of date, and is corrected.** It said a page's folder was found by its title and that --force emptied it; since the change of 14 October, a page is known by its address, a second page with the same title gets "Title (2)", and a forced scan sets the earlier reports aside until it succeeds. The guide now says so, and lists urlCheck-source.txt among each folder's files. Long sentences in the Output and conformance-report sections were also split, so the guide reads at grade 8.7, down from 10.1, with every term kept.
+
+## 14 October 2026 -- contents lists, and plainer guides
+
+- **Every help page has a contents list.** The build ran Pandoc without --toc, so a long guide had no list of its sections. Pages are now built with one, and a page that lacks one is built again once to gain it.
+
 ## 14 October 2026 -- the announcement in plainer words
 
 - **Announce.md now reads at grade 7.6, down from 9.4,** inside the ninth-grade target for documents shared publicly. Long sentences were split and dense phrases put plainly; every fact, key and link is kept, and first-person passages keep their author's own words. The section about the companion tools reads the same in each announcement that carries it, with the tools' hotkeys in alphabetical order.

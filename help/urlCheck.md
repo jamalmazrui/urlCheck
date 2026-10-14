@@ -147,37 +147,38 @@ Url-list files are detected automatically by content sniffing, not by extension.
 
 ## Output
 
-For each scanned page, urlCheck creates a subfolder whose name is based on the page title, adjusted as needed for the file system. Inside the folder:
+For each page it scans, urlCheck makes a subfolder named for the page's title, adjusted as needed for the file system. A page is known by its address, not its title: a second page with the same title gets "Title (2)", and a page whose title has changed keeps its folder. Inside the folder:
 
-- `report.htm` — human-readable accessibility report (open in any browser)
-- `report.xlsx` — Excel workbook with separate sheets for violations, passes, incomplete, and inapplicable rules. The Results sheet has an **Image** column whose cells are clickable hyperlinks to per-violation screenshots (see below).
-- `results.json` — full structured scan output (metadata + axe-core results) for programmatic downstream use
-- `page.yaml` — ARIA accessibility tree of the page
-- `page.htm` — saved page source with stylesheet hrefs preserved
-- `page.png` — full-page screenshot
-- `violations/` — element-level screenshots, one PNG per violation node where the screenshot could be captured (see below)
+- `report.htm` — the accessibility report to read, in any browser
+- `report.xlsx` — an Excel workbook with separate sheets for violations, passes, incomplete and inapplicable rules. The Results sheet has an **Image** column whose cells link to screenshots of each violation (see below).
+- `results.json` — the full scan output, both its metadata and the axe-core results, for use by other programs
+- `page.yaml` — the page's ARIA accessibility tree
+- `page.htm` — the saved page source, with its stylesheet links kept
+- `page.png` — a screenshot of the page
+- `violations/` — a screenshot of each element with a violation, one PNG for each one that could be captured (see below)
+- `urlCheck-source.txt` — the address the folder belongs to, which is how urlCheck finds the folder again
 
 ### Per-violation screenshots
 
-For each rule-violation node found by axe, urlCheck attempts to capture an element-level screenshot using the CSS selector axe provides. Successful captures are saved as `violations/image-001.png`, `violations/image-002.png`, etc. The Image column of the Results sheet in `report.xlsx` shows the basename as a clickable hyperlink to the relative path; clicking the cell opens the PNG in the OS default image viewer.
+For each element where axe found a violation, urlCheck tries to take a screenshot of that element, using the CSS selector axe gives. Each one it captures is saved as `violations/image-001.png`, `violations/image-002.png` and so on. In `report.xlsx`, the Image column of the Results sheet shows the file name as a link; choosing the cell opens the PNG in your usual image viewer.
 
-The hyperlinks are **relative** (e.g., `violations/image-001.png`, not absolute paths), so you can move, zip, or share the page subfolder freely — the links resolve correctly wherever the workbook ends up, as long as the `violations/` subfolder travels with it.
+The links are **relative**, such as `violations/image-001.png`, not full paths. So you can move, zip or share the page's folder freely: the links still work wherever the workbook goes, as long as the `violations/` folder goes with it.
 
-When axe's CSS selector cannot be resolved by the browser engine — typical cases include shadow-DOM-pierced selectors, hidden or zero-size elements, or selectors that match multiple elements — urlCheck silently skips that node. The corresponding row of the Results sheet has an empty Image cell. There is no warning printed; the assumption is that the user looking at a Results sheet sees what was captured and what wasn't, and can use the CSS selector in the **Path** column to find the element manually if needed.
+Sometimes the browser cannot find what axe's CSS selector names. Typical cases are selectors that reach inside a shadow DOM, hidden or zero-size elements, and selectors that match more than one element. urlCheck then skips that element quietly, and its row in the Results sheet has an empty Image cell. No warning is printed: the Results sheet shows what was captured and what was not, and the CSS selector in the **Path** column lets you find the element by hand.
 
-If a per-page folder with the same sanitized title already exists, urlCheck skips that url by default — previous scan results are preserved. Use `--force` (or check **Force replacements** in the dialog) to instead empty the existing folder and replace its contents with a fresh scan. The skip decision is made right after the page title is read, before the expensive accessibility scan, so re-running urlCheck on a long url list is cheap when most pages have already been scanned.
+If a page already has a folder, urlCheck skips that page by default, keeping the earlier results. Use `--force`, or check **Force replacements** in the dialog, to scan it again. The earlier reports are then set aside until the new scan finishes, put back if it fails, and removed only once it succeeds; files you added to the folder are never touched. The decision to skip is made right after the page's title is read, before the slow accessibility scan, so running urlCheck again on a long list is quick when most pages have already been scanned.
 
-If `--view-output` is set, the **parent** output folder (the one containing the per-page subfolders) opens in File Explorer at the end of the run.
+If `--view-output` is set, the **parent** output folder, the one holding the page folders, opens in File Explorer at the end of the run.
 
 ### Accessibility Conformance Report (ACR.xlsx and ACR.docx)
 
-At the end of every run, urlCheck writes `ACR.xlsx` and `ACR.docx` in the parent output folder. Together they form a draft Accessibility Conformance Report that aggregates axe-core results across pages and maps them to WCAG 2.2 success criteria using standard VPAT 2.5 terminology (Supports, Partially Supports, Does Not Support, Not Applicable, Not Evaluated).
+At the end of every run, urlCheck writes `ACR.xlsx` and `ACR.docx` in the parent output folder. Together they make a draft Accessibility Conformance Report. It gathers the axe-core results from all the pages and matches them to the WCAG 2.2 success criteria, in the standard terms of VPAT 2.5: Supports, Partially Supports, Does Not Support, Not Applicable and Not Evaluated.
 
 The first sheet of `ACR.xlsx`, **Conformance Report**, has one row per WCAG 2.2 criterion (all 86, including Level A, AA, and AAA — the obsolete 4.1.1 Parsing is omitted). The columns are:
 
 - **Criterion** — Criterion number, name, and level, e.g., `1.1.1 Non-text Content (A)`. Hyperlinked to the W3C WCAG 2.2 Quick Reference for that criterion.
 - **Summary** — A single-sentence description of the criterion's intent.
-- **Conformance** — The derived VPAT 2.5 conformance term. The cell is multi-line: line 1 is the verdict (Supports / Partially Supports / Does Not Support / Not Evaluated); subsequent lines list the page sheet names whose per-page Calc was `fail` or `partial` under "Not supported:", and pages whose per-page Calc was `manual` (incomplete) under "Not evaluated:". Only line 1 is visible by default; expand the row to see the page lists.
+- **Conformance** — The VPAT 2.5 conformance term worked out for the criterion. The cell has several lines. Line 1 is the verdict: Supports, Partially Supports, Does Not Support or Not Evaluated. Under "Not supported:" come the pages whose Calc was `fail` or `partial`, and under "Not evaluated:" the pages whose Calc was `manual` (incomplete). Only line 1 shows at first; expand the row to see the pages.
 - **Manual** — Numbered manual-test steps for the criterion.
 - **Result** — User-editable. Where the human reviewer records the final ACR verdict.
 - **Remarks** — User-editable. The first line is auto-generated with axe-context instance counts: `Axe: fail N, pass N, incomplete N, inapplicable N`. The user can append additional remarks below.
@@ -186,7 +187,7 @@ The remaining per-page sheets are diagnostic views, one per scanned page, named 
 
 The final **Glossary** sheet defines all the terms used (axe outcome categories, urlCheck Calc values, VPAT 2.5 conformance terms, WCAG principles and levels) and links to relevant external resources.
 
-The companion `ACR.docx` is a narrative summary with sections for Overview, Pages Analyzed, Conformance Summary, Criteria Requiring Attention, Methodology, and Resources. It is informed by report.htm's information architecture but adapted to focus on per-criterion conformance rather than per-rule diagnostics. Both files are draft assets generated by automation; the user is expected to manually verify and refine them, especially the Result and Remarks columns and any criteria marked Not Evaluated, before publishing the final ACR.
+The companion `ACR.docx` is a written summary, with sections for Overview, Pages Analyzed, Conformance Summary, Criteria Requiring Attention, Methodology and Resources. It follows the layout of report.htm, but it is about how each criterion is met rather than about each rule. Both files are drafts made by automation. Before publishing the final ACR, check and improve them by hand, especially the Result and Remarks columns and any criterion marked Not Evaluated.
 
 #### Calc formula table
 
@@ -210,7 +211,7 @@ The Conformance column on the rollup sheet is derived from the per-page Calcs ac
 
 Counts are by node instance (one DOM element flagged), summed across all included pages. So if 3 image elements lack alt text, axe-core reports 3 instances of the `image-alt` violation, and the Remarks line shows `fail 3` for the matching criterion.
 
-The "Not Evaluated" term is reserved by VPAT 2.5 for AAA criteria, but urlCheck uses it more broadly for cases where automated testing cannot reach a verdict. This is defensible because the urlCheck output is a **draft** ACR. The user is expected to perform the manual checks listed in the Manual column, write a final verdict in the Result column, and save the curated workbook in a separate folder before publishing.
+VPAT 2.5 keeps the term "Not Evaluated" for AAA criteria, but urlCheck also uses it wherever automated testing cannot reach a verdict. That is reasonable because urlCheck's output is a **draft** ACR. The user is expected to perform the manual checks listed in the Manual column, write a final verdict in the Result column, and save the curated workbook in a separate folder before publishing.
 
 #### Workbook scope
 
@@ -230,9 +231,9 @@ rate = 100000 * impactWeightedInstances / pageBytes
 
 where the numerator is `1*minor + 2*moderate + 3*serious + 4*critical` summed over every violation instance on the page, and the denominator is the byte size of the saved page source (`page.htm`). Each impact level reflects axe-core's own severity rating; instances are individual flagged DOM elements, not distinct rules.
 
-The constant `100000` is tuned so the result reads naturally as a percent. **Lower is better.** A clean page is well under 1%; a typical problematic page lands in the double digits; a truly broken page can exceed 100%. The percent framing is purely a display convention to make the number easy to grasp and remember; the underlying quantity is impact-weighted violation instances per byte of page source, which has no natural ceiling.
+The constant `100000` is chosen so the result reads naturally as a percent. **Lower is better.** A clean page is well under 1%, a typical page with problems is in the double digits, and a truly broken page can pass 100%. Showing it as a percent only makes the number easy to grasp and remember. What it measures is violations, weighted by their impact, per byte of page source, which has no natural upper limit.
 
-For a page set (the ACR-level rate), urlCheck sums per-page numerators and per-page denominators before dividing. This is a size-weighted view: bigger pages contribute proportionally more, reflecting that they have more content with more places where users might encounter violations. The aggregate rate is shown in `ACR.docx`'s metadata header; per-page rates are shown next to each page in the Pages Analyzed list and in `report.xlsx`'s Summary sheet.
+For a set of pages, the rate in the ACR, urlCheck adds up the pages' top numbers and their bottom numbers before dividing. So bigger pages count for more, since they have more content, and more places where someone might meet a violation. The aggregate rate is shown in `ACR.docx`'s metadata header; per-page rates are shown next to each page in the Pages Analyzed list and in `report.xlsx`'s Summary sheet.
 
 The metric is meant to be tracked over time. As the page owner remediates issues, the rate should drop from one scan session to the next. Accessibility is a journey, not a destination.
 
