@@ -2247,48 +2247,112 @@ setOwnedPageOutputs = {sJsonName.lower(), sReportName.lower(), sReportWorkbookNa
                        sSourceName.lower(), sAccessibilityYamlName.lower(), "violations"}
 
 
-def chooseOutputDir(pathBaseDir, sPageTitle, bForce=False):
+# A PAGE IS KNOWN BY ITS ADDRESS, ITS FOLDER BY ITS TITLE (14 October 2026, from an audit by another AI). The folder
+# was named for the page's title and nothing else, so two pages with one title shared a folder -- the second skipped, or
+# with --force replacing the first one's reports -- and a page whose title changed got a second folder. Each folder now
+# holds urlCheck-source.txt, naming the address it is for. A page's folder is the one whose record names its address,
+# whatever the folder is called; otherwise the first of "Title", "Title (2)" and so on that is free, or that is an
+# earlier folder with no record, which is adopted. The names stay readable: a hash would be noise in every folder name
+# heard by ear and browsed by first letter.
+sSourceRecordName = "urlCheck-source.txt"
+
+
+def recordedUrl(pathFolder):
+    """The normalized address a page folder's record names, or "" when it has none."""
+    pathRecord = pathFolder / sSourceRecordName
+    if not pathRecord.is_file(): return ""
+    try:
+        for sLine in pathRecord.read_text(encoding="utf-8-sig").splitlines():
+            if sLine.lower().startswith("normalized address:"): return sLine.split(":", 1)[1].strip()
+    except Exception:
+        pass
+    return ""
+
+
+def writeSourceRecord(pathFolder, sNormalizedUrl, sInput, sPageTitle):
+    writeTextFile(pathFolder / sSourceRecordName, "Normalized address: %s\nAddress as given: %s\nTitle: %s\nRecorded: %s\n" % (
+        sNormalizedUrl, sInput, sPageTitle, datetime.datetime.now().strftime("%Y-%m-%d %H:%M")))
+    return True
+
+
+def findPageFolder(pathBaseDir, sPageTitle, sNormalizedUrl):
+    """(folder, bExists): this page's folder, found by the address its record names, else the first free or unrecorded
+    folder named for the title."""
+    if pathBaseDir.is_dir():
+        for pathChild in sorted(pathBaseDir.iterdir(), key=lambda p: p.name.lower()):
+            if pathChild.is_dir() and recordedUrl(pathChild) == sNormalizedUrl: return pathChild, True
+    sBaseName = getSafeTitle(sPageTitle)
+    for iNumber in range(1, 1000):
+        pathCandidate = pathBaseDir / (sBaseName if iNumber == 1 else "%s (%d)" % (sBaseName, iNumber))
+        if not pathCandidate.exists(): return pathCandidate, False
+        if pathCandidate.is_dir() and recordedUrl(pathCandidate) == "":
+            logger.info(f"Adopted {pathCandidate}, which has no address record, for {sNormalizedUrl}")
+            return pathCandidate, True
+    raise RuntimeError("More than 999 folders are named for the title " + sPageTitle)
+
+
+# THE LAST GOOD SCAN IS KEPT UNTIL A NEW ONE SUCCEEDS (14 October 2026, from an audit by another AI). --force deleted
+# urlCheck's reports in the folder before the new scan began, so a scan that then failed -- a timeout, a page that would
+# not load -- lost the last good reports. They are now moved aside, and put back if the scan does not finish.
+dPendingAside = {}
+
+
+def setAsideOutputs(pathFolder):
+    """Moves urlCheck's own outputs in the folder aside; returns the folder holding them, or None if there were none."""
+    lOwned = [p for p in pathFolder.iterdir() if p.name.lower() in setOwnedPageOutputs]
+    for pathChild in pathFolder.iterdir():
+        if pathChild.name.lower() not in setOwnedPageOutputs and pathChild.name != sSourceRecordName:
+            logger.info(f"Kept {pathChild} in {pathFolder}: urlCheck did not write it")
+    if not lOwned: return None
+    pathAside = pathFolder.parent / (pathFolder.name + ".recovery-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+    iNumber = 2
+    while pathAside.exists():
+        pathAside = pathFolder.parent / (pathFolder.name + ".recovery-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + "-" + str(iNumber))
+        iNumber += 1
+    pathAside.mkdir()
+    for pathChild in lOwned: shutil.move(str(pathChild), str(pathAside / pathChild.name))
+    logger.info(f"Moved the earlier reports aside until this scan finishes: {pathAside}")
+    return pathAside
+
+
+def settleOutputs(pathFolder, bFinished):
+    """After a scan: removes the earlier reports when it finished, otherwise puts them back over anything partial."""
+    pathAside = dPendingAside.pop(str(pathFolder), None)
+    if pathAside is None: return True
+    try:
+        if bFinished:
+            shutil.rmtree(pathAside)
+            logger.info(f"The scan finished, so the earlier reports were removed: {pathAside}")
+            return True
+        for pathChild in list(pathAside.iterdir()):
+            pathTarget = pathFolder / pathChild.name
+            if pathTarget.is_dir() and not pathTarget.is_symlink(): shutil.rmtree(pathTarget)
+            elif pathTarget.exists(): pathTarget.unlink()
+            shutil.move(str(pathChild), str(pathTarget))
+        pathAside.rmdir()
+        logger.info(f"The scan did not finish, so the earlier reports were put back in {pathFolder}")
+    except Exception as ex:
+        logger.warn(f"The earlier reports could not be settled ({ex}); they are kept in {pathAside}")
+    return True
+
+
+def chooseOutputDir(pathBaseDir, sPageTitle, bForce=False, sNormalizedUrl="", sInput=""):
     """Decide the per-page output folder.
 
-    Returns the Path of the folder to write into, OR None if the folder
-    already exists and bForce is False (caller should skip this url).
-
-    When the folder does not exist, it is created.
-    When the folder exists and bForce is True, its contents are deleted
-    so the run starts from a clean slate; the folder itself is reused.
+    Returns (folder, bSkip). bSkip is True when the page already has a folder and bForce is False, so the caller skips
+    this url. A new folder is created with its address record. With bForce, urlCheck's earlier reports are moved aside
+    until the scan finishes (settleOutputs); files the person added are left where they are.
     """
-    pathCandidate = None
-    sBaseName = ""
-
-    sBaseName = getSafeTitle(sPageTitle)
-    pathCandidate = pathBaseDir / sBaseName
-    if not pathCandidate.exists():
-        pathCandidate.mkdir(parents=True, exist_ok=False)
-        return pathCandidate
-    if bForce:
-        # Existing folder, --force is on: empty its contents and reuse
-        # the folder. Delete files and subdirectories defensively; if
-        # any single entry can't be removed (e.g. a file is open in
-        # another process), log it and continue -- the new run will
-        # overwrite what it can.
-        # ONLY WHAT URLCHECK WROTE (8 October 2026, from an audit by another AI): every
-        # file in the folder was deleted, notes the user had added included. Now only
-        # urlCheck's own outputs go, and anything else is left, and logged.
-        for child in pathCandidate.iterdir():
-            if child.name.lower() not in setOwnedPageOutputs:
-                logger.info(f"Kept {child} in {pathCandidate}: urlCheck did not write it")
-                continue
-            try:
-                if child.is_dir() and not child.is_symlink():
-                    shutil.rmtree(child)
-                else:
-                    child.unlink()
-            except Exception as ex:
-                logger.info(f"Could not remove {child} while emptying "
-                    f"{pathCandidate} for --force: {ex}")
-        return pathCandidate
-    # Existing folder, no --force: caller should skip.
-    return None
+    pathFolder, bExists = findPageFolder(pathBaseDir, sPageTitle, sNormalizedUrl)
+    # An adopted folder is recorded at once, skipped or not, so a later page with the same title cannot adopt it too.
+    if bExists and recordedUrl(pathFolder) == "": writeSourceRecord(pathFolder, sNormalizedUrl, sInput, sPageTitle)
+    if bExists and not bForce: return pathFolder, True
+    if not bExists: pathFolder.mkdir(parents=True, exist_ok=False)
+    writeSourceRecord(pathFolder, sNormalizedUrl, sInput, sPageTitle)
+    if bExists:
+        pathAside = setAsideOutputs(pathFolder)
+        if pathAside is not None: dPendingAside[str(pathFolder)] = pathAside
+    return pathFolder, False
 
 
 def ensureSuccess(bCondition, sMessage):
@@ -3579,6 +3643,7 @@ def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, sAxeContent="
     lRows = []
     page = None
     pathOutputDir = None
+    bScanFinished = False
     sAxeSource = ""
     sPageTitle = ""
     sResultsJson = ""
@@ -3674,11 +3739,11 @@ def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, sAxeContent="
         # the per-page folder already exists and --force is not set,
         # so we skip this url. Skip happens BEFORE the expensive
         # axe-core run, screenshot, snapshot, and report-writing.
-        pathOutputDir = chooseOutputDir(pathBaseDir, sPageTitle, bForce=bForce)
-        if pathOutputDir is None:
-            sExistingDir = str(pathBaseDir / getSafeTitle(sPageTitle))
+        pathOutputDir, bSkip = chooseOutputDir(pathBaseDir, sPageTitle, bForce=bForce, sNormalizedUrl=sNormalizedUrl, sInput=sInput)
+        if bSkip:
             logger.info(f"Skipped (output folder exists, no --force): "
-                f"{sNormalizedUrl} -> {sExistingDir}")
+                f"{sNormalizedUrl} -> {pathOutputDir}")
+            pathOutputDir = None
             return "skipped"
         logger.info(f"Output folder: {pathOutputDir}")
         logger.info("Running axe-core")
@@ -3775,8 +3840,10 @@ def scanUrl(sInput, sNormalizedUrl, browser, context, pathBaseDir, sAxeContent="
         # summary is built fresh by main() from lScanned / lFailed /
         # lSkippedExisting and shown in the MessageBox.
         logger.info(buildConsoleSummary(dResults, dMetadata, str(pathOutputDir)))
+        bScanFinished = True
         return (str(pathOutputDir), sPageTitle)
     finally:
+        if pathOutputDir is not None: settleOutputs(pathOutputDir, bScanFinished)
         try:
             if page is not None: page.close()
         except Exception:

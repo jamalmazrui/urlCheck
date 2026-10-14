@@ -5,6 +5,11 @@ author: "Jamal Mazrui"
 
 # urlCheck History
 
+## 14 October 2026 -- each page known by its address
+
+- **Two pages with one title no longer share a folder.** The folder was named for the page's title alone, so a second page with the same title was skipped, or with --force replaced the first one's reports, and a page whose title changed got a second folder. Each folder now holds urlCheck-source.txt, naming the address it is for: a page's folder is the one whose record names its address, whatever it is called, and otherwise the first of "Title", "Title (2)" and so on that is free. Folders keep readable names. A folder from before this, with no record, is adopted by the first page that uses it and recorded at once (from an audit by another AI).
+- **A forced scan that fails keeps the last good reports.** --force deleted the earlier reports before the new scan began; they are now moved aside, put back if the scan does not finish, and removed only once it does. Files you added to the folder are never touched.
+
 ## 14 October 2026 -- started as you
 
 - **Setup starts urlCheck as you,** not with the installer's administrator rights (from an audit by another AI).
