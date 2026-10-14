@@ -7,6 +7,7 @@ author: "Jamal Mazrui"
 
 ## 11 October 2026 -- from an audit and a report
 
+- **The dialog offers sources to start with**, as urlFido's does: the major organizations of and for blind people, acb.org, afb.org, nfb.org and wbu.ngo, fill an empty Source field, and Default settings restores them rather than emptying it. The command line is unchanged.
 - **A path you type is understood.** Any existing file given as the source was read as a list of urls, so a local web page had each line of its HTML treated as a url; and a path to nothing, or to a folder, was tried as a web address. A file with a web page's extension (.htm, .html and the like) is now one page to scan; a .txt or other file is still a list; a page and urls can be mixed; and a path that does not exist, or names a folder, gets a plain message saying what was typed.
 - **Launch after setup works on a first install.** The installer's Launch box writes a marker file into %LOCALAPPDATA%\\<App>\\logs, but on a first install that folder did not exist yet -- it was made later, when setup kept its log -- so the marker could not be written, and the program did not start after setup. The marker line now makes the folder first. Found by an audit of bookFido by another AI, and fixed in every Homer installer.
 

@@ -234,6 +234,7 @@
 <header id="title-block-header">
 <p class="author">Jamal Mazrui</p>
 </header>
+<main>
 <h1 id="urlcheck-guide">urlCheck Guide</h1>
 <p><strong>Author:</strong> Jamal Mazrui <strong>Copyright:</strong> ©
 2026 Jamal Mazrui <strong>License:</strong> <a
@@ -409,23 +410,23 @@ put that folder on your PATH, and run <code>urlCheck</code> with the
 source as an argument. <code>urlCheck.cmd</code> there runs the program
 in the <code>exec</code> folder.</p>
 <div class="sourceCode" id="cb1"><pre
-class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a># Single URL:</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>urlCheck https:/<span class="at">/example</span>.com</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a># Several URLs:</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>urlCheck https:/<span class="at">/a</span>.com https:/<span class="at">/b</span>.com</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a># URLs from a file:</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>urlCheck urls.txt</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a># Output to a folder:</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>urlCheck *.htm <span class="at">-o</span> reports</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a># View output when done:</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>urlCheck https:/<span class="at">/example</span>.com -<span class="at">-view-output</span></span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a># Open the GUI:</span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>urlCheck <span class="at">-g</span></span></code></pre></div>
+class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb1-1"># Single URL:</span>
+<span id="cb1-2">urlCheck https:/<span class="at">/example</span>.com</span>
+<span id="cb1-3"></span>
+<span id="cb1-4"># Several URLs:</span>
+<span id="cb1-5">urlCheck https:/<span class="at">/a</span>.com https:/<span class="at">/b</span>.com</span>
+<span id="cb1-6"></span>
+<span id="cb1-7"># URLs from a file:</span>
+<span id="cb1-8">urlCheck urls.txt</span>
+<span id="cb1-9"></span>
+<span id="cb1-10"># Output to a folder:</span>
+<span id="cb1-11">urlCheck *.htm <span class="at">-o</span> reports</span>
+<span id="cb1-12"></span>
+<span id="cb1-13"># View output when done:</span>
+<span id="cb1-14">urlCheck https:/<span class="at">/example</span>.com -<span class="at">-view-output</span></span>
+<span id="cb1-15"></span>
+<span id="cb1-16"># Open the GUI:</span>
+<span id="cb1-17">urlCheck <span class="at">-g</span></span></code></pre></div>
 <p>When invoked without arguments from a GUI shell (Explorer
 double-click, Start-menu shortcut, desktop hotkey),
 <code>urlCheck</code> shows the dialog automatically. When invoked
@@ -737,5 +738,6 @@ Developer, in this folder.</p>
 <h2 id="license">License</h2>
 <p>MIT License. See <code>License.htm</code> at the top of the program
 folder.</p>
+</main>
 </body>
 </html>

@@ -46,9 +46,9 @@ iAuthPostConfirmSettleDelayMs = 4000
 
 # Constants added with the move to the Homer Development Kit take the c_ prefix
 # Camel Type now asks for; the older ones above and below keep their names.
-c_sConfigSection = "Settings"
-c_sGitHubOwner = "JamalMazrui"
-c_sLegacyConfigFileName = "urlCheck.ini"
+sConfigSection = "Settings"
+sGitHubOwner = "JamalMazrui"
+sLegacyConfigFileName = "urlCheck.ini"
 
 sAccessibilityInsightsUrl = "https://accessibilityinsights.io/docs/web/overview/"
 sAccessibilityYamlName = "page.yaml"
@@ -3008,8 +3008,13 @@ def isUrlListFile(sInput):
     return True
 
 
+# SOURCES THE DIALOG OFFERS WHEN IT HAS NOTHING ELSE TO SHOW (11 October 2026), the same as urlFido's: the major
+# organizations of and for blind people, so a new user has something real to check at once. The dialog only: on the
+# command line an empty source is still an error, as in every command-line tool. wbu.ngo, not wbu.org.
+sDefaultSources = "acb.org afb.org nfb.org wbu.ngo"
+
 # A file with one of these extensions given as the source is a page to scan; any other file is a list of urls.
-c_setWebPageExts = {".asp", ".aspx", ".htm", ".html", ".jsp", ".mht", ".mhtml", ".php", ".shtml", ".xhtml"}
+setWebPageExts = {".asp", ".aspx", ".htm", ".html", ".jsp", ".mht", ".mhtml", ".php", ".shtml", ".xhtml"}
 
 
 def looksLikeLocalPath(sText):
@@ -3063,7 +3068,7 @@ def classifyInput(sInput):
     # a path to nothing, or to a folder, fell through to be tried as a web address. A file with a web page's extension
     # is now one page to scan; a path that does not exist, or names a folder, is an error that says what was typed.
     if isUrlListFile(sUnquoted):
-        if pathlib.Path(sUnquoted).suffix.lower() in c_setWebPageExts:
+        if pathlib.Path(sUnquoted).suffix.lower() in setWebPageExts:
             return ("urls", [sUnquoted])
         return ("listfile", sUnquoted)
     lsParts = parseSpaceSeparated(sStripped)
@@ -4330,7 +4335,7 @@ class configManager:
 
     @staticmethod
     def getLegacyPath():
-        return os.path.join(paths.userFolder(), c_sLegacyConfigFileName)
+        return os.path.join(paths.userFolder(), sLegacyConfigFileName)
 
     @staticmethod
     def configExists():
@@ -4426,15 +4431,15 @@ class configManager:
             if not os.path.isfile(sPath):
                 lHeader = ["; urlCheck settings, written when Use configuration is checked at OK.",
                            "; Delete this file to reset, or press Default settings in the dialog.",
-                           "[" + c_sConfigSection + "]"]
+                           "[" + sConfigSection + "]"]
                 inix.write(sPath, inix.parseLines(lHeader))
             for sKey, vValue in dValues.items():
                 if isinstance(vValue, bool): vValue = "Yes" if vValue else "No"
-                inix.setValue(sPath, c_sConfigSection, sKey, str(vValue))
+                inix.setValue(sPath, sConfigSection, sKey, str(vValue))
             logger.info(f"Saved configuration to {sPath}")
             if os.path.isfile(configManager.getLegacyPath()):
                 os.remove(configManager.getLegacyPath())
-                logger.info(f"Removed the old {c_sLegacyConfigFileName}; its settings are now in {sPath}")
+                logger.info(f"Removed the old {sLegacyConfigFileName}; its settings are now in {sPath}")
         except Exception as ex:
             print(f"[WARN] Could not save configuration to {sPath}: {ex}")
             logger.info(f"Could not save configuration: {ex}")
@@ -6027,12 +6032,12 @@ def showGuiDialog(arguments):
     except Exception as ex:
         logger.info(f".NET diagnostics unavailable: {ex}")
     try:
-        Homer.Elevate.configure(c_sGitHubOwner, sProgramName, sProgramVersion)
+        Homer.Elevate.configure(sGitHubOwner, sProgramName, sProgramVersion)
     except Exception as ex:
         logger.info(f"Elevate.configure failed (continuing): {ex}")
 
     # The values the dialog opens with, and keeps between its own returns.
-    sSource = getattr(arguments, "sSource", "") or ""
+    sSource = getattr(arguments, "sSource", "") or sDefaultSources
     sOutputDir = getattr(arguments, "sOutputDir", "") or ""
     bAuth = bool(getattr(arguments, "bAuthenticate", False))
     bForce = bool(getattr(arguments, "bForce", False))
@@ -6173,7 +6178,7 @@ def showGuiDialog(arguments):
             launchReadMe()
             continue
         if sButton.lower() == "default settings":
-            sSource = ""
+            sSource = sDefaultSources
             sOutputDir = ""
             bAuth = bForce = bInvisible = bLog = bMain = bUseCfg = bView = False
             configManager.eraseAll()
