@@ -5,6 +5,9 @@ author: "Jamal Mazrui"
 
 # urlCheck History
 
+## 14 October 2026 -- the draft report claims no conformance it has not seen
+
+- **A criterion is never marked Supports by automated checks alone.** The draft conformance report marked a criterion Supports when every automated check on it passed, or when the page held nothing the rules apply to. But automated checks find failures; they cannot prove a criterion is met -- a keyboard trap or a missing step in a task passes every automated rule. Such a criterion is now Not Evaluated, with a second line saying what the checks found, and Supports is left to a reviewer, in the Result column. ACR.docx says so at the head of its summary, counts how many criteria passed every automated check and still need a person's review, and lists under Criteria Requiring Attention only those where the checks found a failure or could not finish, so real failures are not buried. Both glossaries and the guide say the same. Tested by generating a real ACR.docx for a page with one failure and every other check passing: it marks no criterion Supports and lists the one failure for attention (from an audit by another AI).
 ## 14 October 2026 -- the guide describes the program as it now is
 
 - **The guide's account of page folders was out of date, and is corrected.** It said a page's folder was found by its title and that --force emptied it; since the change of 14 October, a page is known by its address, a second page with the same title gets "Title (2)", and a forced scan sets the earlier reports aside until it succeeds. The guide now says so, and lists urlCheck-source.txt among each folder's files. Long sentences in the Output and conformance-report sections were also split, so the guide reads at grade 8.7, down from 10.1, with every term kept.

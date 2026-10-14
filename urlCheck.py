@@ -4774,29 +4774,40 @@ class acrBuilder:
     def calcToConformance(cls, sCalc):
         """Map internal Calc value to VPAT 2.5-style ACR terminology.
 
-        The mapping follows ITI guidance and WCAG 2.0 Understanding
-        Conformance: when no content on the page is subject to a
-        criterion, the criterion IS satisfied (a vacuous truth), so
-        the appropriate term is "Supports", not "Not Applicable".
-        See https://www.w3.org/TR/UNDERSTANDING-WCAG20/conformance.html
+        NO SUPPORTS WITHOUT A PERSON'S REVIEW (14 October 2026, from an audit
+        by another AI). An automated pass was mapped to "Supports", and so was
+        a page with no content a rule applies to, as a criterion satisfied
+        vacuously. But automated checks find failures; they cannot prove a
+        criterion is met -- a keyboard trap or a missing step in a task passes
+        every rule, and content a rule cannot see is not content that is not
+        there. So a pass, and an inapplicable result, are now "Not Evaluated",
+        and the cell's second line says what the checks found (automatedNote).
+        Supports is a verdict only a reviewer gives, in the Result column.
 
-        VPAT 2.5 reserves "Not Evaluated" for AAA criteria, but
-        urlCheck uses it more broadly as the honest verdict for
-        criteria where automated testing cannot decide. urlCheck
-        produces a draft ACR; the user is expected to revisit each
-        "Not Evaluated" entry, perform the manual checks listed in
-        the Manual column, and rewrite the Result column with their
-        final verdict before publishing.
+        VPAT 2.5 reserves "Not Evaluated" for AAA criteria, but urlCheck uses
+        it more broadly as the honest verdict for criteria where automated
+        testing cannot decide. urlCheck produces a draft ACR; the user is
+        expected to revisit each "Not Evaluated" entry, perform the manual
+        checks listed in the Manual column, and write the final verdict in the
+        Result column before publishing.
         """
         d = {
-            "pass":     "Supports",
+            "pass":     "Not Evaluated",
             "partial":  "Partially Supports",
             "fail":     "Does Not Support",
             "manual":   "Not Evaluated",
-            "na":       "Supports",
+            "na":       "Not Evaluated",
             "unknown":  "Not Evaluated",
         }
         return d.get(sCalc, "Not Evaluated")
+
+    @classmethod
+    def automatedNote(cls, sCalc):
+        """What the automated checks found, for a criterion they could not decide: the Conformance cell's second line."""
+        return {
+            "pass": "Automated checks found no failures; confirm with the manual steps.",
+            "na": "Automated checks found no content this applies to; confirm with the manual steps.",
+        }.get(sCalc, "")
 
     @classmethod
     def aggregateInstances(cls, lPageBuckets, sCrit, sBucket):
@@ -4992,7 +5003,8 @@ class acrBuilder:
 
         fnSection("VPAT 2.5 Conformance Terms", [
             ("Supports",
-             "The functionality of the product has at least one method that meets the criterion without known defects, or meets with equivalent facilitation."),
+             "The functionality of the product has at least one method that meets the criterion without known defects, or meets with equivalent facilitation. "
+             "In this draft, only a reviewer gives this verdict, in the Result column; automated checks never do."),
             ("Partially Supports",
              "Some functionality of the product does not meet the criterion."),
             ("Does Not Support",
@@ -5279,6 +5291,7 @@ class acrBuilder:
             # / na / unknown are not listed (not actionable).
             dPages = cls.pagesByVerdict(lPageBuckets, lPageNames, sCrit)
             aLines = [sConformance]
+            if cls.automatedNote(sCalc): aLines.append(cls.automatedNote(sCalc))
             aNotSupported = sorted(set(dPages["fail"] + dPages["partial"]))
             aNotEvaluated = dPages["manual"]
             if aNotSupported:
@@ -5553,8 +5566,8 @@ class acrBuilder:
             ("Supports",
              "The functionality of the page meets the criterion without "
              "known defects, or meets it with equivalent facilitation. "
-             "Includes vacuous satisfaction when no content of the kind "
-             "the criterion governs is present on the page."),
+             "In this draft, only a reviewer gives this verdict, in the "
+             "Result column of ACR.xlsx; automated checks never do."),
             ("Partially Supports",
              "Some functionality of the page meets the criterion; some does not."),
             ("Does Not Support",
@@ -5606,6 +5619,12 @@ class acrBuilder:
             sConf = cls.calcToConformance(sCalc)
             if sConf in dCounts: dCounts[sConf] += 1
             else: dCounts[sConf] = 1
+        iClean = sum(1 for sCrit in lOrderedCrits if cls.rollupVerdict(lPageBuckets, sCrit) in ("pass", "na"))
+        d.add_paragraph(
+            "No criterion is marked Supports in this draft. Automated checks find failures, but they cannot "
+            "prove a criterion is met: a keyboard trap or a missing step in a task passes every automated rule. "
+            "A criterion is marked Supports only after a person's review, in the Result column of ACR.xlsx."
+        )
         d.add_paragraph(
             f"Of the {len(lOrderedCrits)} WCAG 2.2 success criteria evaluated:"
         )
@@ -5615,22 +5634,23 @@ class acrBuilder:
             p = d.add_paragraph(style="List Bullet")
             p.add_run(f"{sTerm}: ").bold = True
             p.add_run(f"{iN} {('criterion' if iN == 1 else 'criteria')}")
+            if sTerm == "Not Evaluated" and iClean:
+                p.add_run(f", of which {iClean} passed every automated check and still need a person's review")
 
         # ---- Section 5: Criteria Requiring Attention ----
-        # Every criterion whose Conformance is not "Supports".
+        # Every criterion where the automated checks found a failure or could not finish: what a reviewer turns to first.
+        # A criterion that passed every check is not listed; it is counted above and still needs a person's review.
         d.add_heading("Criteria Requiring Attention", level=1)
         aAttention = []
         for sCrit in lOrderedCrits:
             sCalc = cls.rollupVerdict(lPageBuckets, sCrit)
             sConf = cls.calcToConformance(sCalc)
-            if sConf != "Supports":
+            if sCalc in ("fail", "partial", "manual"):
                 aAttention.append((sCrit, sConf, sCalc))
         if not aAttention:
             d.add_paragraph(
-                "All evaluated criteria are marked Supports. Note that some "
-                "criteria may be marked Supports because the criterion is "
-                "satisfied vacuously when no relevant content exists on the "
-                "page. See per-criterion details in ACR.xlsx."
+                "The automated checks found no failures and nothing left incomplete. That is not conformance: "
+                "every criterion still needs a person's review, using the manual steps in ACR.xlsx."
             )
         else:
             d.add_paragraph(

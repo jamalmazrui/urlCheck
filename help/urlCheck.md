@@ -202,12 +202,14 @@ The Calc column on per-page sheets uses these formulas:
 
 The Conformance column on the rollup sheet is derived from the per-page Calcs across all included pages (worst-result-wins semantics):
 
-- All `pass` — Supports
+- All `pass` — Not Evaluated, with a second line saying the automated checks found no failures
 - Any `pass` and any `fail` — Partially Supports
 - Any `fail` (no pass) — Does Not Support
 - Any `manual` (no fail or pass) — Not Evaluated
-- Only `na` everywhere — Supports (vacuously satisfied, per WCAG 2.0 Understanding Conformance)
+- Only `na` everywhere — Not Evaluated, with a second line saying the automated checks found no content it applies to
 - `unknown` everywhere — Not Evaluated
+
+**Supports comes only from a person.** Automated checks find failures, but they cannot prove a criterion is met: a keyboard trap or a missing step in a task passes every automated rule, and content a rule cannot see is not content that is absent. So the draft never derives Supports; a reviewer gives it, in the Result column, after the manual steps.
 
 Counts are by node instance (one DOM element flagged), summed across all included pages. So if 3 image elements lack alt text, axe-core reports 3 instances of the `image-alt` violation, and the Remarks line shows `fail 3` for the matching criterion.
 

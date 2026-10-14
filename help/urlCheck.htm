@@ -656,15 +656,22 @@ This is the value before a scan.</li>
 per-page Calcs across all included pages (worst-result-wins
 semantics):</p>
 <ul>
-<li>All <code>pass</code> — Supports</li>
+<li>All <code>pass</code> — Not Evaluated, with a second line saying the
+automated checks found no failures</li>
 <li>Any <code>pass</code> and any <code>fail</code> — Partially
 Supports</li>
 <li>Any <code>fail</code> (no pass) — Does Not Support</li>
 <li>Any <code>manual</code> (no fail or pass) — Not Evaluated</li>
-<li>Only <code>na</code> everywhere — Supports (vacuously satisfied, per
-WCAG 2.0 Understanding Conformance)</li>
+<li>Only <code>na</code> everywhere — Not Evaluated, with a second line
+saying the automated checks found no content it applies to</li>
 <li><code>unknown</code> everywhere — Not Evaluated</li>
 </ul>
+<p><strong>Supports comes only from a person.</strong> Automated checks
+find failures, but they cannot prove a criterion is met: a keyboard trap
+or a missing step in a task passes every automated rule, and content a
+rule cannot see is not content that is absent. So the draft never
+derives Supports; a reviewer gives it, in the Result column, after the
+manual steps.</p>
 <p>Counts are by node instance (one DOM element flagged), summed across
 all included pages. So if 3 image elements lack alt text, axe-core
 reports 3 instances of the <code>image-alt</code> violation, and the
