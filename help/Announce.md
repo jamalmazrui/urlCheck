@@ -20,10 +20,23 @@ The full list of changes is in History.
 
 ## About the companion accessibility tools
 
-`urlCheck`, `extCheck`, and `2htm` are a small family of free, MIT-licensed Windows tools written by Jamal Mazrui and shared on GitHub. They share control names, dialog layout and command-line spellings wherever the idea is the same, so a person who knows one knows the others.
+urlCheck, extCheck and 2htm are three free Windows tools for accessibility work. Jamal Mazrui wrote them and shares them on GitHub under the MIT license.
 
-- [urlCheck](https://github.com/JamalMazrui/urlCheck) — checks web pages with Edge and axe-core, producing per-page reports plus a session-level Accessibility Conformance Report covering all 86 WCAG 2.2 success criteria.
-- [extCheck](https://github.com/JamalMazrui/extCheck) — checks the accessibility of `.docx`, `.xlsx`, `.pptx` and `.md` files.
-- [2htm](https://github.com/JamalMazrui/2htm) — converts Office documents and other formats to clean, accessible HTML.
+- [urlCheck](https://github.com/JamalMazrui/urlCheck) checks web pages. It opens each page in Microsoft Edge, tests it with axe-core and writes a report for the page. It also writes an Accessibility Conformance Report, as `ACR.xlsx` and `ACR.docx`, that covers all 86 success criteria of WCAG 2.2.
+- [extCheck](https://github.com/JamalMazrui/extCheck) checks Word, Excel, PowerPoint and Markdown files. It writes a report of the problems in each file, found by a set of rules that can grow.
+- [2htm](https://github.com/JamalMazrui/2htm) turns Office documents and other files into clean, accessible web pages, using Microsoft's own conversion. It can also write plain text, or leave out the images.
 
-Each has a dialog and a command line with the same options, an optional installer with a desktop hotkey (Alt+Control+Shift+U for `urlCheck`, Alt+Control+U for its companion `urlFido`, Alt+Control+2 for `2htm`, Alt+Control+X for `extCheck`), and opt-in recall of the last settings.
+The three tools work the same way in the dialog and on the command line. Every option is in both, with the same name and the same default, so a task done by hand can be repeated exactly from a script.
+
+What they share:
+
+- **Accessible in both modes.** Every control in the dialog has its own Alt key, the tab order makes sense, and screen readers announce progress and results. Help is there in both modes.
+- **Learn one, know all three.** The tools use the same control names, the same dialog layout and the same command-line options wherever they do the same thing.
+- **An installer if you want one.** Each tool has a setup program. It puts the tool in Program Files, adds it to the Start menu, installs its guides and sets a desktop hotkey: Alt+Control+2 for 2htm, Alt+Control+X for extCheck, Alt+Control+Shift+U for urlCheck and Alt+Control+U for urlFido. You can also run a tool without installing it.
+- **Many sources at once.** One command can take any number of files, wildcards, folders, web addresses or lists, and handles them one after another.
+- **Settings kept, if you choose.** A tool can remember your last choices in the dialog, so a task you do often takes one step.
+- **Progress as it happens.** The command line names each file or page as it goes, with a short reason when one fails. The dialog ends with a list of what was done, what failed and what was skipped.
+- **Earlier results kept.** A second run keeps earlier results and skips work already done. The force option starts fresh.
+- **A session log if you want one,** to look back at what happened.
+
+All three are free under the [MIT license](https://opensource.org/license/mit/). It lets anyone use, change and share the tools, even in business, as long as the copyright notice and the license stay with every copy.

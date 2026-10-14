@@ -5,6 +5,10 @@ author: "Jamal Mazrui"
 
 # urlCheck History
 
+## 14 October 2026 -- the announcement in plainer words
+
+- **Announce.md now reads at grade 7.6, down from 9.4,** inside the ninth-grade target for documents shared publicly. Long sentences were split and dense phrases put plainly; every fact, key and link is kept, and first-person passages keep their author's own words. The section about the companion tools reads the same in each announcement that carries it, with the tools' hotkeys in alphabetical order.
+
 ## 14 October 2026 -- the newest Pandoc for the help pages
 
 - **The help pages are made by the newest Pandoc, not the first on the PATH.** The build took the first pandoc on the PATH, which was Pandoc 2.19 in C:\bin, while Pandoc 3.12.1 was installed in Program Files. It now asks the kit's newest.ps1, as the kit's app template has done since kit 1.56.0, and the log names every copy found and its version.
