@@ -5,7 +5,7 @@
     <link>Tutorials.htm</link>
     <description></description>
     <language>en-us</language>
-    <lastBuildDate>Wed, 14 Oct 2026 17:43:36 +0000</lastBuildDate>
+    <lastBuildDate>Thu, 15 Oct 2026 20:23:40 +0000</lastBuildDate>
     <itunes:author></itunes:author>
     <itunes:explicit>false</itunes:explicit>
     <itunes:category text="Technology"/>
@@ -14,8 +14,8 @@
       <description>Nothing to set up; this walk only listens. Full transcript: Tutorials.htm#0-0-overview</description>
       <link>Tutorials.htm#0-0-overview</link>
       <guid isPermaLink="false">homer-tutorial_0_overview</guid>
-      <enclosure url="tutorials/0_Overview.mp3" length="789331" type="audio/mpeg"/>
-      <itunes:duration>00:01:50</itunes:duration>
+      <enclosure url="tutorials/0_Overview.mp3" length="876210" type="audio/mpeg"/>
+      <itunes:duration>00:02:02</itunes:duration>
       <itunes:explicit>false</itunes:explicit>
     </item>
     <item>
@@ -41,8 +41,8 @@
       <description>urlCheck installed, and a web page you want to check. Full transcript: Tutorials.htm#0c-3-check-one-web-page</description>
       <link>Tutorials.htm#0c-3-check-one-web-page</link>
       <guid isPermaLink="false">homer-tutorial_3_check_one_web_page</guid>
-      <enclosure url="tutorials/3_Check_One_Web_Page.mp3" length="1301424" type="audio/mpeg"/>
-      <itunes:duration>00:03:07</itunes:duration>
+      <enclosure url="tutorials/3_Check_One_Web_Page.mp3" length="1340527" type="audio/mpeg"/>
+      <itunes:duration>00:03:12</itunes:duration>
       <itunes:explicit>false</itunes:explicit>
     </item>
     <item>
@@ -50,8 +50,8 @@
       <description>A page checked in walk three, and Excel installed. Full transcript: Tutorials.htm#0d-4-read-the-workbook-and-screenshots</description>
       <link>Tutorials.htm#0d-4-read-the-workbook-and-screenshots</link>
       <guid isPermaLink="false">homer-tutorial_4_read_the_workbook_and_screenshots</guid>
-      <enclosure url="tutorials/4_Read_the_Workbook_and_Screenshots.mp3" length="1149852" type="audio/mpeg"/>
-      <itunes:duration>00:02:39</itunes:duration>
+      <enclosure url="tutorials/4_Read_the_Workbook_and_Screenshots.mp3" length="1208833" type="audio/mpeg"/>
+      <itunes:duration>00:02:47</itunes:duration>
       <itunes:explicit>false</itunes:explicit>
     </item>
     <item>
@@ -77,8 +77,8 @@
       <description>A run of one or more pages, from walk three or five. Full transcript: Tutorials.htm#0g-7-draft-a-conformance-report</description>
       <link>Tutorials.htm#0g-7-draft-a-conformance-report</link>
       <guid isPermaLink="false">homer-tutorial_7_draft_a_conformance_report</guid>
-      <enclosure url="tutorials/7_Draft_a_Conformance_Report.mp3" length="1177504" type="audio/mpeg"/>
-      <itunes:duration>00:02:42</itunes:duration>
+      <enclosure url="tutorials/7_Draft_a_Conformance_Report.mp3" length="1212715" type="audio/mpeg"/>
+      <itunes:duration>00:02:46</itunes:duration>
       <itunes:explicit>false</itunes:explicit>
     </item>
     <item>
@@ -86,8 +86,8 @@
       <description>A command prompt. Full transcript: Tutorials.htm#0h-8-check-from-the-command-line</description>
       <link>Tutorials.htm#0h-8-check-from-the-command-line</link>
       <guid isPermaLink="false">homer-tutorial_8_check_from_the_command_line</guid>
-      <enclosure url="tutorials/8_Check_from_the_Command_Line.mp3" length="971210" type="audio/mpeg"/>
-      <itunes:duration>00:02:13</itunes:duration>
+      <enclosure url="tutorials/8_Check_from_the_Command_Line.mp3" length="986586" type="audio/mpeg"/>
+      <itunes:duration>00:02:15</itunes:duration>
       <itunes:explicit>false</itunes:explicit>
     </item>
     <item>

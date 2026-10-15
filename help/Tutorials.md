@@ -24,7 +24,7 @@ What urlCheck is, what it writes, and the ten walks that teach it.
 
 ### Step 1
 
-Welcome. This is the first of ten short walks through urlCheck. I am the host; the other voice is the screen reader, speaking as it would on your own computer.
+Welcome. This is the first of ten short walks through urlCheck. I am the host; the other voice is the screen reader. It is a simulation of what a screen reader says, so your own reader's words may differ a little.
 
 ### Step 2: Insert+Up Arrow
 
@@ -52,7 +52,7 @@ Screen reader:
 
 ### Step 5
 
-If you set your screen reader to use Caps Lock in place of Insert, Caps Lock works the same way for all three.
+On a laptop keyboard, Caps Lock usually stands in for Insert, though in some laptop layouts the line command moves to a letter, such as Caps Lock plus L. And if speech goes by before you catch it, your reader can replay it: Insert plus X in some readers, a speech history in others.
 
 ### Step 6
 
@@ -613,7 +613,7 @@ Impact comes in four levels, critical, serious, moderate and minor, which is the
 
 ### Step 19: Insert+F6
 
-Insert plus F6 lists the report's headings, one for each violated rule, a quick table of contents to the problems.
+The reader's headings list, Insert plus F6 in some readers and part of the Insert plus F7 list in others, shows the report's headings, one for each violated rule, a quick table of contents to the problems.
 
 Screen reader:
 
@@ -721,7 +721,7 @@ Confirm the wording with a live run: buildTutorials -live.
 
 ### Step 9
 
-Control plus K, or Enter on the link, opens the picture, which a sighted colleague can see at once.
+Shift plus F10 on the link opens its context menu, and Open Hyperlink there opens the picture, which a sighted colleague can see at once.
 
 ### Step 10
 
@@ -763,7 +763,7 @@ Confirm the wording with a live run: buildTutorials -live.
 
 ### Step 18
 
-Each sheet has its header row in the first row, so the screen reader announces the column name with every cell.
+Each sheet has its header row in the first row. A screen reader announces the column name with each cell only once it knows which row holds the names; if yours does not, its command for setting column headers tells it once.
 
 ### Step 19
 
@@ -1155,7 +1155,7 @@ Level A criteria are the baseline, AA is what most laws and buyers ask for, and 
 
 ### Step 17
 
-The verdicts come from axe's results mapped to each criterion, so a Supports verdict means no violation was found, not that every manual test passed.
+The verdicts come from axe's results mapped to each criterion, so a Supports verdict here means only that the automated checks found nothing against that criterion. It is a draft: the manual tests and a reviewer decide the verdict that goes out.
 
 ### Step 18: Alt+Down Arrow
 
@@ -1219,9 +1219,9 @@ So one line checks a whole list into a weekly folder, with no window shown.
 
 Screen reader:
 
-- urlCheck dash i dash o Weekly C colon backslash Lists backslash Site pages dot t x t
+- urlCheck dash i dash o Weekly, then in quotation marks, C colon backslash Lists backslash Site pages dot t x t
 
-Confirm the wording with a live run: buildTutorials -live.
+The exact line: urlCheck -i -o Weekly "C:\Lists\Site pages.txt"
 
 ### Step 7
 

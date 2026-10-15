@@ -100,7 +100,7 @@ Key=
 
 [step]
 
-Say=The verdicts come from axe's results mapped to each criterion, so a Supports verdict means no violation was found, not that every manual test passed.
+Say=The verdicts come from axe's results mapped to each criterion, so a Supports verdict here means only that the automated checks found nothing against that criterion. It is a draft: the manual tests and a reviewer decide the verdict that goes out.
 Key=
 
 [step]

@@ -58,7 +58,7 @@ Note=Confirm the wording with a live run: buildTutorials -live.
 
 [step]
 
-Say=Control plus K, or Enter on the link, opens the picture, which a sighted colleague can see at once.
+Say=Shift plus F10 on the link opens its context menu, and Open Hyperlink there opens the picture, which a sighted colleague can see at once.
 Key=
 
 [step]
@@ -105,7 +105,7 @@ Note=Confirm the wording with a live run: buildTutorials -live.
 
 [step]
 
-Say=Each sheet has its header row in the first row, so the screen reader announces the column name with every cell.
+Say=Each sheet has its header row in the first row. A screen reader announces the column name with each cell only once it knows which row holds the names; if yours does not, its command for setting column headers tells it once.
 Key=
 
 [step]

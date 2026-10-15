@@ -211,8 +211,9 @@ it.</p>
 listens.</p>
 <h3 id="step-1">Step 1</h3>
 <p>Welcome. This is the first of ten short walks through urlCheck. I am
-the host; the other voice is the screen reader, speaking as it would on
-your own computer.</p>
+the host; the other voice is the screen reader. It is a simulation of
+what a screen reader says, so your own reader’s words may differ a
+little.</p>
 <h3 id="step-2-insertup-arrow">Step 2: Insert+Up Arrow</h3>
 <p>You know your screen reader’s own keys already, and three of them are
 worth remembering whenever you feel lost or unsure. Insert plus Up Arrow
@@ -235,8 +236,11 @@ value or state.</p>
 <li>urlCheck</li>
 </ul>
 <h3 id="step-5">Step 5</h3>
-<p>If you set your screen reader to use Caps Lock in place of Insert,
-Caps Lock works the same way for all three.</p>
+<p>On a laptop keyboard, Caps Lock usually stands in for Insert, though
+in some laptop layouts the line command moves to a letter, such as Caps
+Lock plus L. And if speech goes by before you catch it, your reader can
+replay it: Insert plus X in some readers, a speech history in
+others.</p>
 <h3 id="step-6">Step 6</h3>
 <p>urlCheck checks web pages for accessibility problems. It opens each
 page in Microsoft Edge, as a person would, and runs axe-core, the
@@ -669,8 +673,9 @@ results into a conformance report with the manual tests still to do.</p>
 <p>Impact comes in four levels, critical, serious, moderate and minor,
 which is the order to fix things in.</p>
 <h3 id="step-19-insertf6">Step 19: Insert+F6</h3>
-<p>Insert plus F6 lists the report’s headings, one for each violated
-rule, a quick table of contents to the problems.</p>
+<p>The reader’s headings list, Insert plus F6 in some readers and part
+of the Insert plus F7 list in others, shows the report’s headings, one
+for each violated rule, a quick table of contents to the problems.</p>
 <p>Screen reader:</p>
 <ul>
 <li>Headings list</li>
@@ -755,8 +760,8 @@ screenshot of that one element.</p>
 </ul>
 <p>Confirm the wording with a live run: buildTutorials -live.</p>
 <h3 id="step-9-2">Step 9</h3>
-<p>Control plus K, or Enter on the link, opens the picture, which a
-sighted colleague can see at once.</p>
+<p>Shift plus F10 on the link opens its context menu, and Open Hyperlink
+there opens the picture, which a sighted colleague can see at once.</p>
 <h3 id="step-10-2">Step 10</h3>
 <p>The screenshots are in the page’s violations folder, numbered in
 order, image 001, image 002 and so on.</p>
@@ -788,8 +793,10 @@ turns a long list into a short one.</p>
 </ul>
 <p>Confirm the wording with a live run: buildTutorials -live.</p>
 <h3 id="step-18-2">Step 18</h3>
-<p>Each sheet has its header row in the first row, so the screen reader
-announces the column name with every cell.</p>
+<p>Each sheet has its header row in the first row. A screen reader
+announces the column name with each cell only once it knows which row
+holds the names; if yours does not, its command for setting column
+headers tells it once.</p>
 <h3 id="step-19-1">Step 19</h3>
 <p>The Passes sheet is worth a look: it shows the rules a page already
 meets, which is good news to share alongside the problems.</p>
@@ -1096,8 +1103,9 @@ ask for, and AAA goes further; the workbook lists all three so a
 reviewer chooses the scope.</p>
 <h3 id="step-17-4">Step 17</h3>
 <p>The verdicts come from axe’s results mapped to each criterion, so a
-Supports verdict means no violation was found, not that every manual
-test passed.</p>
+Supports verdict here means only that the automated checks found nothing
+against that criterion. It is a draft: the manual tests and a reviewer
+decide the verdict that goes out.</p>
 <h3 id="step-18-altdown-arrow">Step 18: Alt+Down Arrow</h3>
 <p>Filtering the Conformance column to Does Not Support gives the list
 of work to do first.</p>
@@ -1147,10 +1155,10 @@ dash i runs Edge with no window.</p>
 shown.</p>
 <p>Screen reader:</p>
 <ul>
-<li>urlCheck dash i dash o Weekly C colon backslash Lists backslash Site
-pages dot t x t</li>
+<li>urlCheck dash i dash o Weekly, then in quotation marks, C colon
+backslash Lists backslash Site pages dot t x t</li>
 </ul>
-<p>Confirm the wording with a live run: buildTutorials -live.</p>
+<p>The exact line: urlCheck -i -o Weekly “C:pages.txt”</p>
 <h3 id="step-7-3">Step 7</h3>
 <p>Quotation marks keep a path with spaces in one piece.</p>
 <h3 id="step-8-4">Step 8</h3>

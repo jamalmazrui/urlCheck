@@ -37,8 +37,8 @@ Key=
 
 Say=So one line checks a whole list into a weekly folder, with no window shown.
 Key=
-Hear=urlCheck dash i dash o Weekly C colon backslash Lists backslash Site pages dot t x t
-Note=Confirm the wording with a live run: buildTutorials -live.
+Hear=urlCheck dash i dash o Weekly, then in quotation marks, C colon backslash Lists backslash Site pages dot t x t
+Note=The exact line: urlCheck -i -o Weekly "C:\Lists\Site pages.txt"
 
 [step]
 

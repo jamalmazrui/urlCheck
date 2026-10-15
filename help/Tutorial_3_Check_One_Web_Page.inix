@@ -126,7 +126,7 @@ Key=
 
 [step]
 
-Say=Insert plus F6 lists the report's headings, one for each violated rule, a quick table of contents to the problems.
+Say=The reader's headings list, Insert plus F6 in some readers and part of the Insert plus F7 list in others, shows the report's headings, one for each violated rule, a quick table of contents to the problems.
 Key=Insert+F6
 Hear=Headings list
 Note=Confirm the wording with a live run: buildTutorials -live.
