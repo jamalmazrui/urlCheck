@@ -36,6 +36,8 @@ WHAT IT CHECKS
   version     version.txt present and agreeing with the installer script
   publish     RepoFiles.txt present and .gitignore generated from it
   logging     the program opens a log at startup
+  mainthread  a WinForms program's Main carries [STAThread], with nothing between
+  shipped     every program the installer runs is one it installs
   naming      no accessible name set to a caption a screen reader already reads
   keys        no Alt+Control binding, no letter claimed twice in one dialog
   build       the build script runs and returns zero            (--build)
@@ -62,6 +64,7 @@ project folder or in its scripts folder; both mean the project.
 
 import argparse
 import datetime
+import fnmatch
 import glob
 import os
 import platform
@@ -814,10 +817,127 @@ def checkFinishPage():
                     lsBad.append("%s: box without Install, Update or Reinstall: %s" % (sRel, sWhat))
                 if re.search(r"nvda-addon|nvda\.exe|GetNvdaPath", sFile, re.I): lsBad.append("%s: box starts NVDA: %s" % (sRel, sFile))
                 if re.search(r"must be running", sDesc, re.I): lsBad.append("%s: label says NVDA must be running" % sRel)
+                # A SCRIPT ON THE FINISH PAGE IS TOLD noPause (1.78.1). Inno runs these after the wizard has closed, so a
+                # script that pauses at its end leaves a console waiting for a key with no installer behind it: DbDo's
+                # Ollama and model entries did, on 19 October 2026, through cmd /c with no noPause and no wait.
+                sParams = field("Parameters")
+                oScript = re.search(r"install\w*\.cmd", sFile + " " + sParams, re.I)
+                if oScript and not re.search(r"\bnoPause\b|-bQuiet\b", sParams, re.I):  # installJawsScripts takes -bQuiet and never pauses
+                    lsBad.append("%s: %s runs without noPause, so its console can wait for a key after the wizard closes" % (sRel, oScript.group(0)))
+                if oScript and "nowait" in sFlags:
+                    lsBad.append("%s: %s runs with nowait, so nothing waits for it to finish" % (sRel, oScript.group(0)))
     for sLine in lsBad: logLine("FINISH PAGE: " + sLine)
     if lsBad:
         return finding("finish", "fail", "%s on the finish page" % countNoun(len(lsBad), "rule broken", "rules broken"))
     return finding("finish", "pass", "every finish-page box follows the rules")
+
+
+# THE MAIN THREAD OF A WINDOWS PROGRAM IS A SINGLE-THREADED APARTMENT (1.72.55, 15 October 2026). DbDo's Copy Cell
+# said "Clipboard error: Current thread must be set to single thread apartment" because a function added between
+# [STAThread] and Main took the attribute for itself, and Main ran without it. The compiler accepts that; the
+# clipboard and the common file dialogs do not. So a WinForms source fails here when Main lacks the attribute or the
+# attribute sits on anything but Main.
+def checkMainThread():
+    """[STAThread] directly on Main, in every C# source that uses Windows Forms."""
+    lsBad, iMains = [], 0
+    for sPath in sourceFiles():
+        if not sPath.lower().endswith(".cs"): continue
+        sText = readText(sPath)
+        if "System.Windows.Forms" not in sText: continue
+        sShown = os.path.relpath(sPath, sRoot)
+        lsLines = sText.splitlines()
+        for iAt, sLine in enumerate(lsLines):
+            sTrim = sLine.strip()
+            if sTrim.startswith("//"): continue
+            if re.search(r"\bstatic\s+(?:int|void)\s+Main\s*\(", sTrim):
+                iMains += 1
+                iBack, bSta = iAt - 1, False
+                while iBack >= 0:
+                    sBack = lsLines[iBack].strip()
+                    if not sBack or sBack.startswith("//"): iBack -= 1; continue
+                    if sBack.startswith("["):
+                        if re.match(r"\[\s*(?:System\.)?STAThread", sBack): bSta = True
+                        iBack -= 1; continue
+                    break
+                if not bSta: lsBad.append("%s line %d: Main has no [STAThread]" % (sShown, iAt + 1))
+            if re.match(r"\[\s*(?:System\.)?STAThread(?:Attribute)?\s*\]$", sTrim):
+                iNext = iAt + 1
+                while iNext < len(lsLines):
+                    sNext = lsLines[iNext].strip()
+                    if not sNext or sNext.startswith("//") or sNext.startswith("["): iNext += 1; continue
+                    break
+                if iNext >= len(lsLines) or not re.search(r"\bMain\s*\(", lsLines[iNext]):
+                    lsBad.append("%s line %d: [STAThread] is on something other than Main" % (sShown, iAt + 1))
+    for sLine in lsBad: logLine("MAIN THREAD: " + sLine)
+    if lsBad:
+        return finding("mainthread", "fail", "the clipboard and file dialogs need Main to carry [STAThread] directly: " + "; ".join(lsBad[:4]))
+    if not iMains: return finding("mainthread", "skip", "no Windows Forms program with a Main method")
+    return finding("mainthread", "pass", "%s with [STAThread] directly on it" % countNoun(iMains, "Main method"))
+
+
+def issSectionEntries(sText, sSection):
+    """Each entry of one section of an installer script, its continued lines joined."""
+    oStart = re.search(r"(?mi)^\[%s\]\s*$" % re.escape(sSection), sText)
+    if not oStart: return []
+    oEnd = re.search(r"(?m)^\[[A-Za-z]+\]\s*$", sText[oStart.end():])
+    sBody = sText[oStart.end(): oStart.end() + oEnd.start()] if oEnd else sText[oStart.end():]
+    lsEntries, sCurrent = [], ""
+    for sLine in sBody.splitlines():
+        sStrip = sLine.strip()
+        if not sStrip or sStrip.startswith(";") or sStrip.startswith("#"):
+            continue
+        sCurrent += " " + sStrip.rstrip("\\")
+        if not sStrip.endswith("\\"): lsEntries.append(sCurrent.strip()); sCurrent = ""
+    if sCurrent.strip(): lsEntries.append(sCurrent.strip())
+    return lsEntries
+
+
+def issField(sEntry, sName):
+    oMatch = re.search(r"(?i)(?:^|;)\s*" + sName + r':\s*("(?:[^"]|"")*"|[^;]+)', sEntry)
+    return oMatch.group(1).strip().strip('"') if oMatch else ""
+
+
+# WHAT THE INSTALLER RUNS, IT INSTALLS (1.72.55, 15 October 2026). DbDo 1.0.287's finish page never offered the JAWS
+# scripts, on a computer with JAWS running: its installer asked installScreenReaderSupport.cmd for their state, and no
+# Source: line installed that script, so the question had no one to answer it and both screen reader boxes were hidden.
+# Its mpv box ran installMpv.cmd, which the build never copied from the kit. HomerScribe failed the same way on 24
+# September. Every Filename under {app} in [Icons], [Run] and [UninstallRun] must match a Source: line's installed path, and a
+# script it names must be in the project.
+def checkShipped():
+    """Every program the installer runs is one the installer puts there."""
+    lsBad, iRuns = [], 0
+    for sIss in glob.glob(os.path.join(sRoot, "*_setup.iss")):
+        sText = readText(sIss)
+        dDefines = dict(re.findall(r'(?m)^\s*#define\s+(\w+)\s+"([^"]*)"', sText))
+        def resolve(sValue):
+            return re.sub(r"\{#(\w+)\}", lambda oMatch: dDefines.get(oMatch.group(1), oMatch.group(0)), sValue)
+        lsInstalled = []
+        for sEntry in issSectionEntries(sText, "Files"):
+            sSource, sDest = resolve(issField(sEntry, "Source")), resolve(issField(sEntry, "DestDir"))
+            if not sSource or not sDest or "external" in issField(sEntry, "Flags").lower(): continue
+            sSource = sSource.replace("/", "\\")
+            lsInstalled.append((sDest.rstrip("\\") + "\\" + sSource.split("\\")[-1], sSource))
+        # [Icons] too (15 October 2026): HomerScribe's documentation shortcut named {app}\help\ReadMe.htm, which no
+        # Source: line installs, so it was never made.
+        for sSection in ("Icons", "Run", "UninstallRun"):
+            for sEntry in issSectionEntries(sText, sSection):
+                sFile = resolve(issField(sEntry, "Filename")).replace("/", "\\")
+                if not sFile.lower().startswith("{app}\\"): continue
+                iRuns += 1
+                lsMatch = [sSource for sPattern, sSource in lsInstalled if fnmatch.fnmatch(sFile.lower(), sPattern.lower())]
+                if not lsMatch:
+                    lsBad.append("%s runs %s, but no Source: line installs it" % (os.path.basename(sIss), sFile))
+                    continue
+                sRelative = sFile[len("{app}\\"):]
+                # The installer writes backslashes; the path is built with os.sep so the test reads the same anywhere.
+                if sRelative.lower().startswith("scripts\\") and not os.path.isfile(os.path.join(sRoot, *sRelative.split("\\"))):
+                    lsBad.append("%s runs %s, but %s is not in the project (the build copies kit scripts it names)" % (os.path.basename(sIss), sFile, sRelative))
+    lsBad = sorted(set(lsBad), key=str.lower)
+    for sLine in lsBad: logLine("SHIPPED: " + sLine)
+    if lsBad:
+        return finding("shipped", "fail", "%s: %s" % (countNoun(len(lsBad), "program the installer runs is", "programs the installer runs are") + " not installed", "; ".join(lsBad[:4])))
+    if not iRuns: return finding("shipped", "skip", "the installer runs nothing from its own folder")
+    return finding("shipped", "pass", "%s, each installed by a Source: line" % countNoun(iRuns, "program the installer runs", "programs the installer runs"))
 
 
 def checkKeys():
@@ -942,6 +1062,122 @@ def checkKeys():
         return finding("keys", "fail", "%s; every one is in the log" %
                        countNoun(len(lsBad), "key problem"))
     return finding("keys", "pass", "0 reserved combinations, 0 access keys claimed twice")
+
+
+def checkConversions():
+    """ONE COPY OF EVERY CONVERSION (1.74.0): an app converts files only through the kit's Conversion.
+
+    Scans the app's own .cs files for private conversion code -- its own Pandoc finder, a 2htm call, an
+    Office COM object, pymupdf4llm -- which the kit's Conversion.cs and exec\\conversions.inix replace.
+    An app the manifest lists in conversionsMoved= (data\\SuiteCommands.inix, [Suite]) fails on any such
+    line; any other app gets a warning that counts them, until its move. 2htm's own COM converters stay,
+    as its last resort, until it too moves.
+    """
+    sApp = os.path.basename(os.path.normpath(sRoot))
+    try:
+        import kind
+        sKit = kind.findKit([sRoot]) or ""
+    except Exception:
+        sKit = ""
+    if not sKit or os.path.normcase(os.path.abspath(sKit)) == os.path.normcase(os.path.abspath(sRoot)):
+        return finding("conversion", "skip", "this is the kit, whose Conversion.cs is the shared copy" if sKit else "the kit was not found")
+    lsMoved = []
+    sManifest = os.path.join(sKit, "data", "SuiteCommands.inix")
+    if os.path.isfile(sManifest):
+        oMatch = re.search(r"(?im)^\s*conversionsMoved\s*=\s*(.*)$", readText(sManifest))
+        if oMatch: lsMoved = [s.strip().lower() for s in oMatch.group(1).split(",") if s.strip()]
+    lsPatterns = [(r"pandoc\.exe", "its own Pandoc finder"), (r"2htm\.exe", "a 2htm call"),
+                  (r"\"(Word|Excel|PowerPoint)\.Application\"", "an Office COM object"), (r"pymupdf4llm", "its own PDF reader")]
+    lsHits = []
+    for sPath in sourceFiles():
+        if not sPath.lower().endswith(".cs"): continue
+        if os.path.dirname(os.path.abspath(sPath)) != os.path.abspath(sRoot): continue
+        for iLine, sLine in enumerate(readText(sPath).splitlines(), 1):
+            if sLine.strip().startswith("//"): continue
+            # NOT A CONVERSION (1.76.0): Office used for something else, such as Word's spelling or thesaurus, is
+            # marked "// homer: not a conversion -- <why>" on its line. It is logged with its reason, never counted.
+            oKept = re.search(r"//\s*homer:\s*not a conversion\b(.*)$", sLine, re.I)
+            if oKept:
+                logLine("conversion: %s line %d kept, not a conversion%s" % (os.path.basename(sPath), iLine, oKept.group(1).rstrip()))
+                continue
+            for sPattern, sWhat in lsPatterns:
+                if re.search(sPattern, sLine, re.I):
+                    lsHits.append("%s line %d: %s" % (os.path.basename(sPath), iLine, sWhat))
+    for sHit in lsHits: logLine("conversion: " + sHit)
+    if not lsHits:
+        return finding("conversion", "pass", "every conversion goes through the kit's Conversion")
+    sCount = countNoun(len(lsHits), "line") + " of private conversion code"
+    if sApp.lower() in lsMoved:
+        return finding("conversion", "fail", sCount + "; the kit's Conversion replaces it, and the log names each one")
+    return finding("conversion", "warn", sCount + ", to move to the kit's Conversion; the log names each one")
+
+
+def checkSuite():
+    """The Homer Suite's command and key contract, for this app (1.73.1).
+
+    Runs the kit's scripts\\checkKeys.py with --app and --gate. An app on the
+    Homer frame (its source calls MdiFrame.runOrExport) is first started with
+    /exportkeys, which writes every command and key it declares and ends
+    before any window appears, so what is checked is what the program really
+    does. A key bound twice with no reviewed exception, a key Windows or a
+    screen reader takes, or a clash the program reported fails the check.
+    An app neither in the suite manifest nor on the frame is skipped.
+    """
+    sApp = os.path.basename(os.path.normpath(sRoot))
+    # THE DEVELOPMENT KIT, FOUND AS TIDY FINDS IT (1.73.7). This took the folder of the kind.py already loaded, which
+    # can be the installed kit's in Program Files, older than the development kit and without checkKeys.py, so every
+    # app's suite check skipped. kind.findKit prefers the development kit beside or above the project.
+    try:
+        import kind
+        sKit = kind.findKit([sRoot]) or ""
+    except Exception:
+        sKit = ""
+    sKitScripts = os.path.join(sKit, "scripts") if sKit else ""
+    sChecker = os.path.join(sKitScripts, "checkKeys.py") if sKitScripts else ""
+    if not sChecker or not os.path.isfile(sChecker):
+        return finding("suite", "skip", "the kit's checkKeys.py was not found")
+    sManifest = os.path.join(os.path.dirname(sKitScripts), "data", "SuiteCommands.inix")
+    bInManifest = os.path.isfile(sManifest) and ("[" + sApp.lower() + " ") in readText(sManifest).lower()
+    bOnFrame = any("MdiFrame.runOrExport" in readText(sPath) for sPath in sourceFiles() if sPath.lower().endswith(".cs"))
+    if not bInManifest and not bOnFrame:
+        return finding("suite", "skip", "%s is not in the suite manifest and not on the Homer frame" % sApp)
+    # The project folder goes along, so checkKeys can confirm that each command
+    # the manifest marks shared= really calls the kit's SuiteCommands (1.74.0).
+    lsArgs = [sys.executable, sChecker, "--gate", "--app", sApp, "--source", sRoot]
+    if bOnFrame:
+        sExe = next((s for s in (os.path.join(sRoot, "exec", sApp + ".exe"), os.path.join(sRoot, sApp + ".exe")) if os.path.isfile(s)), "")
+        if not sExe:
+            return finding("suite", "fail", "%s is on the Homer frame but %s.exe was not found to export its keys; build first" % (sApp, sApp))
+        sExport = os.path.join(sLogDir, "%s-keys-%s.inix" % (sApp, datetime.datetime.now().strftime("%Y%m%d-%H%M%S")))
+        try:
+            oRun = subprocess.run([sExe, "/exportkeys", sExport], cwd=os.path.dirname(sExe), capture_output=True, text=True, timeout=120)
+            logLine("suite: %s /exportkeys exit %d" % (sExe, oRun.returncode))
+        except Exception as oError:
+            return finding("suite", "fail", "%s could not export its keys: %s" % (sApp, oError))
+        if oRun.returncode != 0 or not os.path.isfile(sExport):
+            return finding("suite", "fail", "%s did not export its keys (exit %d)" % (sApp, oRun.returncode))
+        lsArgs.append(sExport)
+    try:
+        oResult = subprocess.run(lsArgs, cwd=sRoot, capture_output=True, text=True, timeout=300)
+    except Exception as oError:
+        return finding("suite", "fail", "checkKeys could not run: %s" % oError)
+    for sLine in (oResult.stdout + oResult.stderr).splitlines():
+        logLine("suite: " + sLine)
+    sSummary = next((s for s in oResult.stdout.splitlines() if s.startswith("checkKeys")), "checkKeys gave no summary")
+    if oResult.returncode != 0:
+        return finding("suite", "fail", sSummary + " The checkKeys log in the kit's logs folder names each one.")
+    # THE JAWS KEY MAP HANDS ON WHAT THE SUITE ALLOWS (1.73.5). Tidy writes those lines before every push, so a key
+    # still missing here means tidy could not, and the log of that tidy says why.
+    try:
+        if sKitScripts not in sys.path: sys.path.insert(0, sKitScripts)
+        import jawsKeys
+        lsMissing = jawsKeys.missing(sRoot, sApp, os.path.dirname(sKitScripts))
+    except Exception as oError:
+        lsMissing = []
+        logLine("suite: the JAWS key map could not be read: %s" % oError)
+    if lsMissing:
+        return finding("suite", "fail", "%s The JAWS key map does not hand on %s; tidy writes it, so its log says why it could not." % (sSummary, ", ".join(lsMissing)))
+    return finding("suite", "pass", sSummary)
 
 
 def checkSkillChecks(sKind):
@@ -1093,7 +1329,42 @@ def checkLayout(sKind):
         return finding("layout", "pass", "%d folder%s outside the tree, all in the kit's conformance backlog: %s" % (len(lsListed), "" if len(lsListed) == 1 else "s", ", ".join(lsListed)))
     if lsBad:
         return finding("layout", "fail", "%s outside the Homer tree and declared nowhere: %s" % (countNoun(len(lsBad), "folder") if "countNoun" in globals() else str(len(lsBad)) + " folders", ", ".join(lsBad)))
-    return finding("layout", "pass", "every top-level folder is a standard one" + ("" if not lsDeclaredExtra else "; declared besides: " + ", ".join(lsDeclaredExtra)))
+    # A DECLARED EXTRA FOLDER IS A WARNING, NOT A PASS (1.80.0). Declaring a folder let a project opt out of
+    # "no new folders" silently: ChatGPT's BatCon declared kit and third-party and the check passed it. It now
+    # warns, so the author sees the folders and confirms them; it does not fail, since he may have approved one.
+    if lsDeclaredExtra:
+        return finding("layout", "warn", "%s outside the standard Homer tree, declared by the project; confirm each was wanted: %s"
+                       % (countNoun(len(lsDeclaredExtra), "folder"), ", ".join(lsDeclaredExtra)))
+    return finding("layout", "pass", "every top-level folder is a standard one")
+
+
+def checkKitUse():
+    """THE KIT IS USED, NEVER COPIED (1.80.0). A project builds against the installed kit (C:\\HomerDev or
+    wherever kind.findKit finds it). A copy of the kit inside a project fails: it drifts from the real kit, its
+    changes never reach the other apps, and it hides the project from every check that compares it with the kit --
+    ChatGPT's BatCon carried one, and the shared, installer, skills, suite and conversion checks all skipped. A kit
+    that cannot be found fails too, rather than letting those checks skip unseen."""
+    if os.path.isfile(os.path.join(sRoot, "exec", "CSharp", "Lbc.cs")):
+        return finding("kituse", "skip", "this is the kit")
+    lsCopies = []
+    for sTop, lsDirs, lsFiles in os.walk(sRoot):
+        lsDirs[:] = [s for s in lsDirs if s.lower() not in (".git", "notes", "logs", "__pycache__", ".venv", "venv")]
+        if os.path.isfile(os.path.join(sTop, "exec", "CSharp", "Lbc.cs")) and os.path.isfile(os.path.join(sTop, "exec", "conversions.inix")) \
+                and os.path.normcase(os.path.abspath(sTop)) != os.path.normcase(os.path.abspath(sRoot)):
+            lsCopies.append(os.path.relpath(sTop, sRoot)); lsDirs[:] = []
+    if lsCopies:
+        for s in lsCopies: logLine("KIT COPY: %s holds a copy of the HomerDev kit; build against the installed kit instead" % s)
+        return finding("kituse", "fail", "%s a copy of the HomerDev kit: %s; build against the installed kit, and deliver any kit change as HomerDev.zip"
+                       % ("this project holds" if len(lsCopies) == 1 else "these folders hold", ", ".join(lsCopies)))
+    try:
+        import kind
+        sKit = kind.findKit([sRoot]) or ""
+    except Exception:
+        sKit = ""
+    if not sKit:
+        return finding("kituse", "fail", "the HomerDev kit was not found, so the checks that compare this project with it cannot run; "
+                       "install HomerDev or set the HomerDev variable")
+    return finding("kituse", "pass", "built against the kit at %s, with no copy of it in the project" % sKit)
 
 
 nCopyThreshold = 0.5
@@ -1583,14 +1854,19 @@ def main():
         checkLocal()
         checkFinishPage()
         checkLayout("app")
+        checkKitUse()
         checkHeadings()
         checkSharedCode()
         checkIssComments()
         checkInstaller()
         checkInstallerNames()
+        checkShipped()
+        checkMainThread()
         checkSkillChecks("app")
         checkBuildName()
         checkKeys()
+        checkSuite()
+        checkConversions()
         checkBuild(dArguments.build)
         checkSmoke(dArguments.build)
         checkAccept()
