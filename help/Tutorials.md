@@ -32,7 +32,7 @@ You know your screen reader's own keys already, and three of them are worth reme
 
 Screen reader:
 
-- Source urls edit
+- Source paths edit
 
 ### Step 3: Insert+Tab
 
@@ -40,7 +40,7 @@ Insert plus Tab says what has the focus: its name, its role, and its value or st
 
 Screen reader:
 
-- Source urls edit, blank
+- Source paths edit, blank
 
 ### Step 4: Insert+T
 
@@ -105,13 +105,13 @@ I press the desktop key. The dialog opens on its first field.
 Screen reader:
 
 - urlCheck dialog
-- Source urls edit
+- Source paths edit
 
 Confirm the wording with a live run: buildTutorials -live.
 
 ### Step 3
 
-Source urls names what to check: one address, several separated by spaces, or the path of a text file listing them. Its letter is S.
+Source paths names what to check: one address, several separated by spaces, or the path of a text file listing them. Its letter is S.
 
 ### Step 4: Tab
 
@@ -119,7 +119,7 @@ Tab moves to the next control, a button that picks such a file.
 
 Screen reader:
 
-- Browse source button
+- Browse local source button
 
 Confirm the wording with a live run: buildTutorials -live.
 
@@ -135,7 +135,7 @@ Confirm the wording with a live run: buildTutorials -live.
 
 ### Step 6
 
-Reports go into that folder, one subfolder for each page; blank means the current folder. Choose output, C, picks one instead of typing.
+Reports go into that folder, one subfolder for each page; blank means the current folder. Choose output directory, C, picks one instead of typing.
 
 ### Step 7: Alt+A
 
@@ -159,11 +159,11 @@ Confirm the wording with a live run: buildTutorials -live.
 
 ### Step 9: Alt+I
 
-Invisible mode, I, runs Edge with no window at all.
+Invisible browser, I, runs Edge with no window at all.
 
 Screen reader:
 
-- Invisible mode check box, not checked
+- Invisible browser check box, not checked
 
 Confirm the wording with a live run: buildTutorials -live.
 
@@ -179,11 +179,11 @@ Confirm the wording with a live run: buildTutorials -live.
 
 ### Step 11: Alt+V
 
-View output, V, opens the folder at the end; Log session, L, writes a log; Use configuration, U, remembers these choices.
+View output directory, V, opens the folder at the end; Use configuration, U, remembers these choices.
 
 Screen reader:
 
-- View output check box, not checked
+- View output directory check box, not checked
 
 Confirm the wording with a live run: buildTutorials -live.
 
@@ -213,7 +213,7 @@ Shift plus F1 says the tip for the control you are on.
 
 Screen reader:
 
-- View output: open the output folder when the run is done
+- View output directory: open the output folder when the run is done
 
 Confirm the wording with a live run: buildTutorials -live.
 
@@ -233,7 +233,7 @@ Escape closes Help and returns to the same place.
 
 Screen reader:
 
-- View output check box, not checked
+- View output directory check box, not checked
 
 Confirm the wording with a live run: buildTutorials -live.
 
@@ -249,37 +249,37 @@ Confirm the wording with a live run: buildTutorials -live.
 
 ### Step 18: Enter
 
-I choose Source urls.
+I choose Source paths.
 
 Screen reader:
 
-- Source urls edit
+- Source paths edit
 
 Confirm the wording with a live run: buildTutorials -live.
 
 ### Step 19: Tab
 
-Enter starts the check from any field, and Control plus Enter from any control. Escape closes the dialog without checking.
+Control plus Enter starts the check from any control. Escape presses Cancel from any control, closing the dialog without checking.
 
 Screen reader:
 
-- Browse source button
+- Browse local source button
 
 Confirm the wording with a live run: buildTutorials -live.
 
-### Step 20: Alt+G
+### Step 20: Alt+H
 
-Guide, G, opens the full guide and returns here; Default settings, D, clears every field and box.
+Two buttons sit in their own band, above OK and Cancel: Default settings, D, clears every field and box; Help, H, lists every field, says where the logs are kept, and checks for a newer version.
 
 Screen reader:
 
-- Guide button
+- Help button
 
 Confirm the wording with a live run: buildTutorials -live.
 
 ### Step 21
 
-The text fields remember earlier answers: Up Arrow in Source urls brings back the last addresses checked.
+The text fields remember earlier answers: Up Arrow in Source paths brings back the last addresses checked.
 
 ### Step 22
 
@@ -379,7 +379,7 @@ When I close it, urlCheck opens on its dialog.
 Screen reader:
 
 - urlCheck dialog
-- Source urls edit
+- Source paths edit
 
 Confirm the wording with a live run: buildTutorials -live.
 
@@ -465,12 +465,12 @@ One want: to know whether a site's home page has accessibility problems, before 
 
 ### Step 2: Alt+Control+Shift+U
 
-I open the dialog. The focus is on Source urls.
+I open the dialog. The focus is on Source paths.
 
 Screen reader:
 
 - urlCheck dialog
-- Source urls edit
+- Source paths edit
 
 Confirm the wording with a live run: buildTutorials -live.
 
@@ -486,11 +486,11 @@ Confirm the wording with a live run: buildTutorials -live.
 
 ### Step 4: Alt+V
 
-I leave Output folder blank, so reports go into the current folder, and I tick View output.
+I leave Output folder blank, so reports go into the current folder, and I tick View output directory.
 
 Screen reader:
 
-- View output check box, checked
+- View output directory check box, checked
 
 Confirm the wording with a live run: buildTutorials -live.
 
@@ -791,7 +791,7 @@ One want: to check every important page of a site, not just its home page, in on
 
 ### Step 2
 
-Several addresses can go into Source urls together, separated by spaces.
+Several addresses can go into Source paths together, separated by spaces.
 
 Screen reader:
 
@@ -809,7 +809,7 @@ Local web pages can be listed too, by their paths, for checking a site before it
 
 ### Step 5: Alt+B
 
-Browse source, B, picks that file.
+Browse local source, B, picks that file.
 
 Screen reader:
 
@@ -824,7 +824,7 @@ I choose my list and press Enter. urlCheck recognizes a list by what is in it, n
 
 Screen reader:
 
-- Source urls edit
+- Source paths edit
 - C colon backslash Lists backslash Site pages dot t x t
 
 Confirm the wording with a live run: buildTutorials -live.
@@ -839,13 +839,9 @@ Screen reader:
 
 Confirm the wording with a live run: buildTutorials -live.
 
-### Step 8: Alt+L
+### Step 8
 
-Log session, L, keeps a record of the whole run.
-
-Screen reader:
-
-- Log session check box, checked
+Logging is automatic, so there is no box to tick for it. Every run's log is kept in the program's logs folder, under your local application data, and Help names that folder.
 
 Confirm the wording with a live run: buildTutorials -live.
 
@@ -961,7 +957,7 @@ Confirm the wording with a live run: buildTutorials -live.
 
 ### Step 5: Enter
 
-I put the account page's address in Source urls and press Enter. Edge opens, and urlCheck waits.
+I put the account page's address in Source paths and press Enter. Edge opens, and urlCheck waits.
 
 Screen reader:
 
@@ -1011,7 +1007,7 @@ Your password never passes through urlCheck; you type it into Edge, as on any ot
 
 ### Step 13
 
-Leave Invisible mode off for a run that asks you to sign in, since the sign in needs a window to type into.
+Leave Invisible browser off for a run that asks you to sign in, since the sign in needs a window to type into.
 
 ### Step 14
 
@@ -1237,7 +1233,7 @@ Dash u reads the settings saved by the dialog's Use configuration box, so a run 
 
 ### Step 10
 
-Dash dash view output opens the folder at the end, as the dialog's box does.
+Dash dash view output directory opens the folder at the end, as the dialog's box does.
 
 ### Step 11
 
@@ -1287,7 +1283,7 @@ The session log of a scheduled run is in your application data, so a run nobody 
 
 ### Step 18
 
-Invisible mode suits a scheduled run, since no window appears to interrupt whatever else is happening.
+Invisible browser suits a scheduled run, since no window appears to interrupt whatever else is happening.
 
 ### Step 19
 
@@ -1375,13 +1371,13 @@ Screen reader:
 
 Confirm the wording with a live run: buildTutorials -live.
 
-### Step 11: Alt+G
+### Step 11: Alt+H
 
-Guide, Alt plus G, opens the full guide and returns to the dialog. F11 checks for a newer version.
+Help, Alt plus H, does what F1 does, and also says where the automatic logs are kept. F11 checks for a newer version, from any control.
 
 Screen reader:
 
-- Guide button
+- Help button
 
 Confirm the wording with a live run: buildTutorials -live.
 

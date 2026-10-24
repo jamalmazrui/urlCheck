@@ -13,7 +13,7 @@ Key=
 
 [step]
 
-Say=Several addresses can go into Source urls together, separated by spaces.
+Say=Several addresses can go into Source paths together, separated by spaces.
 Key=
 Hear=example.org example.org slash about
 Note=Confirm the wording with a live run: buildTutorials -live.
@@ -30,7 +30,7 @@ Key=
 
 [step]
 
-Say=Browse source, B, picks that file.
+Say=Browse local source, B, picks that file.
 Key=Alt+B
 Hear=Open dialog
 Hear=File name edit
@@ -40,7 +40,7 @@ Note=Confirm the wording with a live run: buildTutorials -live.
 
 Say=I choose my list and press Enter. urlCheck recognizes a list by what is in it, not by its extension.
 Key=Enter
-Hear=Source urls edit
+Hear=Source paths edit
 Hear=C colon backslash Lists backslash Site pages dot t x t
 Note=Confirm the wording with a live run: buildTutorials -live.
 
@@ -53,9 +53,8 @@ Note=Confirm the wording with a live run: buildTutorials -live.
 
 [step]
 
-Say=Log session, L, keeps a record of the whole run.
-Key=Alt+L
-Hear=Log session check box, checked
+Say=Logging is automatic, so there is no box to tick for it. Every run's log is kept in the program's logs folder, under your local application data, and Help names that folder.
+Key=
 Note=Confirm the wording with a live run: buildTutorials -live.
 
 [step]

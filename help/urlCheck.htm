@@ -353,23 +353,19 @@ hotkey)</li>
 <li>Double-clicking <code>urlCheck.exe</code> in the <code>exec</code>
 folder in File Explorer</li>
 </ul>
-<p>The parameter dialog has these controls. Each label has an underlined
-letter that you can press with <strong>Alt</strong> to jump straight to
-that control:</p>
+<p>The dialog is the one every Homer launch app shows, in rows called
+bands that read left to right. Tab moves through its controls in this
+order. Each label has an underlined letter that you can press with
+<strong>Alt</strong> to jump straight to that control:</p>
 <ul>
-<li><strong>Source urls</strong> [S] — one url (https://example.com), or
-a domain (microsoft.com), or several of either separated by spaces, or
-the path to a single plain text file that lists urls, domains, or local
-HTML file paths one per line. The list file may have any extension;
-urlCheck verifies it is plain text by inspecting its contents.</li>
-<li><strong>Browse source…</strong> [B] — pick a single source from a
-file picker</li>
-<li><strong>Output folder</strong> [O] — where the output is written.
-Blank means the current working folder.</li>
-<li><strong>Choose output…</strong> [C] — pick the output folder from a
-folder picker</li>
-<li><strong>Invisible mode</strong> [I] — run Edge with no visible
-browser window</li>
+<li><strong>Source paths</strong> [S] — one url (https://example.com),
+or a domain (microsoft.com), or several of either separated by spaces,
+or the path to a single plain text file that lists urls, domains, or
+local HTML file paths one per line. The list file may have any
+extension; urlCheck verifies it is plain text by inspecting its
+contents.</li>
+<li><strong>Browse local source</strong> [B] — pick a single source from
+a file picker</li>
 <li><strong>Authenticate credentials</strong> [A] — pause after each
 newly-encountered domain so you can sign in / dismiss cookie banners /
 accept popups, then press Enter (or click OK in GUI mode) to resume the
@@ -378,10 +374,12 @@ disconnects its automation channel from Edge during the user-interaction
 pause (which improves the chance of success against sites that detect
 active automation, such as WhatsApp Web); to use your real profile
 instead, also check <strong>Main profile</strong>. If both
-<strong>Invisible mode</strong> and <strong>Authenticate
-credentials</strong> are checked, urlCheck overrides Invisible mode at
-run time and launches Edge with a visible window (an auth prompt
+<strong>Invisible browser</strong> and <strong>Authenticate
+credentials</strong> are checked, urlCheck overrides Invisible browser
+at run time and launches Edge with a visible window (an auth prompt
 requires a visible browser); the override is logged.</li>
+<li><strong>Invisible browser</strong> [I] — run Edge with no visible
+browser window</li>
 <li><strong>Main profile</strong> [M] — launch Edge with your real
 (default) Edge user profile so saved logins, cookies, and session state
 are available. Without it, urlCheck uses a fresh temporary profile so
@@ -392,40 +390,45 @@ cannot share a profile across two processes. urlCheck checks at startup;
 if Edge is running, the CLI exits with a friendly message and the GUI
 shows a dialog explaining why it cannot proceed and asks you to close
 Edge before submitting again.</li>
-<li><strong>Force replacements</strong> [F] — reuse an existing per-page
-output folder by emptying its contents and writing a fresh set of files.
-Without this, urlCheck skips the url when its per-page output folder
-already exists, preserving previous scan results.</li>
-<li><strong>View output</strong> [V] — open the output folder in File
-Explorer when the run is done</li>
-<li><strong>Log session</strong> [L] — also write
-<code>urlCheck.log</code> in the output folder (or current folder if no
-output folder is set). A session log is always kept in
-<code>%LOCALAPPDATA%\urlCheck\logs</code> either way.</li>
+<li><strong>Output directory</strong> [O] — where the output is written.
+Blank means the current working folder.</li>
+<li><strong>Choose output directory</strong> [C] — pick the output
+folder from a folder picker</li>
+<li><strong>Force replacements</strong> [F] — do the work again for a
+source whose result is already there, replacing the old result once the
+new one is complete. Unchecked, that source is skipped, its result kept,
+and the Results box says how many.</li>
 <li><strong>Use configuration</strong> [U] — load these field values
 from the saved configuration at startup, and save them back when you
 press OK</li>
-<li><strong>Guide</strong> [G] — open this guide in your browser, then
-return to the dialog with everything as it was.</li>
-<li><strong>Help</strong> [H] — list every field with its tip, the
-dialog’s keys, and the version check. F1 also shows Help.</li>
+<li><strong>View output directory</strong> [V] — open the output folder
+in File Explorer when the run is done, after you close the Results
+box</li>
 <li><strong>Default settings</strong> [D] — clear all fields, uncheck
 all boxes, and delete the saved configuration if any</li>
-<li><strong>OK</strong> / <strong>Cancel</strong> — start the run, or
-cancel without running. Enter is OK; Escape is Cancel.</li>
+<li><strong>Help</strong> [H] — list every field with its tip, the
+dialog’s keys, where the logs are kept, and the version check. F1 also
+shows Help.</li>
+<li><strong>OK</strong> / <strong>Cancel</strong> — alone at the bottom
+right: start the run, or close without running. Control+Enter is OK and
+Escape is Cancel, from any control.</li>
 </ul>
 <p>More keys work anywhere in the dialog: <strong>F1</strong> shows
-Help, <strong>F11</strong> checks the web for a newer version of
-<code>urlCheck</code> (see Updating), <strong>Control+Enter</strong> is
-OK from any control, <strong>Shift+F1</strong> says the tip for the
-field you are on, and <strong>F7</strong> lists the dialog’s controls so
-you can move to one. The dialog is built with the Homer Lbc classes, so
-its text fields also have the Lbc editing keys, which Help lists.</p>
-<p><strong>Default settings</strong> and <strong>Guide</strong> return
-you to the dialog; Default settings first clears the fields and deletes
-any saved configuration. If OK finds a problem, such as a missing source
-or Edge running while Main profile is checked, it says so and returns
-you to the dialog with your entries kept.</p>
+Help, <strong>F11</strong> checks the web, from any control, for a newer
+version of <code>urlCheck</code> (see Updating),
+<strong>Control+Enter</strong> is OK from any control,
+<strong>Shift+F1</strong> says the tip for the field you are on, and
+<strong>F7</strong> lists the dialog’s controls so you can move to one.
+The dialog is built with the Homer Lbc classes, so its text fields also
+have the Lbc editing keys, which Help lists.</p>
+<p><strong>Default settings</strong> returns you to the dialog with the
+fields cleared and any saved configuration deleted. Every run ends with
+the urlCheck Results box. Its only button is OK, so Enter, Space or
+Escape closes it; then the output directory opens if View output
+directory is checked, and urlCheck closes. A long report shows its first
+15 lines and names a file with the rest. If OK finds a problem, such as
+a missing source or Edge running while Main profile is checked, it says
+so and returns you to the dialog with your entries kept.</p>
 <p><strong>Note on profiles and privacy.</strong> urlCheck’s default — a
 fresh temporary profile — matches the experience of an anonymous member
 of the public visiting a site for the first time. The scan captures and
@@ -436,11 +439,11 @@ content visible only to you, your name and avatar in the header), and
 the captured page.htm and screenshot may include that personal
 information. If you plan to share or publish the output, review it
 before doing so.</p>
-<p>The Browse source and Choose output pickers open at the folder
-derived from the corresponding text field’s current value when that
-value points to an existing path; otherwise they open at your Documents
-folder. With <strong>Use configuration</strong> checked, those text
-fields are pre-populated from your last session, so the pickers
+<p>The Browse local source and Choose output directory pickers open at
+the folder derived from the corresponding text field’s current value
+when that value points to an existing path; otherwise they open at your
+Documents folder. With <strong>Use configuration</strong> checked, those
+text fields are pre-populated from your last session, so the pickers
 naturally pick up where you left off.</p>
 <p>If you press OK with an output folder that does not yet exist,
 urlCheck prompts to create it (default Yes). Choosing No keeps the
@@ -465,8 +468,8 @@ class="sourceCode cmd"><code class="sourceCode dosbat"><span id="cb1-1"># Single
 <span id="cb1-10"># Output to a folder:</span>
 <span id="cb1-11">urlCheck *.htm <span class="at">-o</span> reports</span>
 <span id="cb1-12"></span>
-<span id="cb1-13"># View output when done:</span>
-<span id="cb1-14">urlCheck https:/<span class="at">/example</span>.com -<span class="at">-view-output</span></span>
+<span id="cb1-13"># View output directory when done:</span>
+<span id="cb1-14">urlCheck https:/<span class="at">/example</span>.com -<span class="at">-view-output-directory</span></span>
 <span id="cb1-15"></span>
 <span id="cb1-16"># Open the GUI:</span>
 <span id="cb1-17">urlCheck <span class="at">-g</span></span></code></pre></div>
@@ -478,42 +481,41 @@ without arguments from a console shell, it prints help and exits. The
 <hr />
 <h2 id="command-line-options">Command-line options</h2>
 <ul>
-<li><code>-a</code>, <code>--authenticate</code> — pause on the first
-url of each registrable domain so you can authenticate, then press Enter
-(or click OK) to resume. By default it uses a fresh temporary profile
-and disconnects Playwright during the pause; combine with
-<code>-m</code> to use your real profile (no disconnect). It turns off
-<code>-i</code>.</li>
-<li><code>-f</code>, <code>--force</code> — reuse an existing per-page
-output folder by emptying it and writing a fresh set of files.</li>
+<li><code>-a</code>, <code>--authenticate-credentials</code> — pause on
+the first url of each registrable domain so you can authenticate, then
+press Enter (or click OK) to resume. By default it uses a fresh
+temporary profile and disconnects Playwright during the pause; combine
+with <code>-m</code> to use your real profile (no disconnect). It turns
+off <code>-i</code>.</li>
+<li><code>-d</code>, <code>--default-settings</code> — forget the saved
+settings and exit.</li>
+<li><code>-f</code>, <code>--force-replacements</code> — do the work
+again for a source whose result is already there, replacing it; without
+it, that source is skipped and its result kept.</li>
 <li><code>-g</code>, <code>--gui-mode</code> — show the parameter
 dialog.</li>
 <li><code>-h</code>, <code>--help</code> — show usage and exit.</li>
-<li><code>-i</code>, <code>--invisible</code> — run Microsoft Edge with
-no visible browser window.</li>
-<li><code>-l</code>, <code>--log</code> — also write
-<code>urlCheck.log</code> (UTF-8 with BOM) in the output folder. It adds
-to the old log unless <code>-f</code> is also given, which replaces
-it.</li>
+<li><code>-i</code>, <code>--invisible-browser</code> — run Microsoft
+Edge with no visible browser window.</li>
 <li><code>-m</code>, <code>--main-profile</code> — launch Edge with your
 real (default) Edge profile so saved logins are available. Without
 <code>-m</code>, urlCheck uses a fresh temporary profile so the scan is
 anonymous. No Edge window may be open.</li>
 <li><code>-o &lt;folder&gt;</code>,
-<code>--output-folder &lt;folder&gt;</code> — write output under
+<code>--output-directory &lt;folder&gt;</code> — write output under
 <code>&lt;folder&gt;</code> (made if missing); the default is the
 current folder.</li>
 <li><code>-u</code>, <code>--use-configuration</code> — read saved
 settings from
 <code>%LOCALAPPDATA%\urlCheck\configs\urlCheck.inix</code>.</li>
-<li><code>-v</code>, <code>--version</code> — show the version and
-exit.</li>
-<li><code>--view-output</code> — after the run, open the output folder
-in File Explorer.</li>
+<li><code>--version</code> — show the version and exit.</li>
+<li><code>-v</code>, <code>--view-output-directory</code> — after the
+run, open the output folder in File Explorer.</li>
 </ul>
-<p>Every option in the GUI corresponds one-to-one with a command-line
-flag, so a workflow prototyped in the dialog can be translated to a
-batch file without surprises.</p>
+<p>Every option in the dialog has a command-line switch named after its
+label, whose letter is the control’s Alt letter, and switches may be
+written with /, - or –, in any case, so a workflow prototyped in the
+dialog can be translated to a batch file without surprises.</p>
 <hr />
 <h2 id="supported-sources">Supported sources</h2>
 <p>urlCheck accepts:</p>
@@ -572,17 +574,17 @@ sheet has an empty Image cell. No warning is printed: the Results sheet
 shows what was captured and what was not, and the CSS selector in the
 <strong>Path</strong> column lets you find the element by hand.</p>
 <p>If a page already has a folder, urlCheck skips that page by default,
-keeping the earlier results. Use <code>--force</code>, or check
-<strong>Force replacements</strong> in the dialog, to scan it again. The
-earlier reports are then set aside until the new scan finishes, put back
-if it fails, and removed only once it succeeds; files you added to the
-folder are never touched. The decision to skip is made right after the
-page’s title is read, before the slow accessibility scan, so running
-urlCheck again on a long list is quick when most pages have already been
-scanned.</p>
-<p>If <code>--view-output</code> is set, the <strong>parent</strong>
-output folder, the one holding the page folders, opens in File Explorer
-at the end of the run.</p>
+keeping the earlier results. Use <code>--force-replacements</code>, or
+check <strong>Force replacements</strong> in the dialog, to scan it
+again. The earlier reports are then set aside until the new scan
+finishes, put back if it fails, and removed only once it succeeds; files
+you added to the folder are never touched. The decision to skip is made
+right after the page’s title is read, before the slow accessibility
+scan, so running urlCheck again on a long list is quick when most pages
+have already been scanned.</p>
+<p>If <code>--view-output-directory</code> is set, the
+<strong>parent</strong> output folder, the one holding the page folders,
+opens in File Explorer at the end of the run.</p>
 <h3
 id="accessibility-conformance-report-acr.xlsx-and-acr.docx">Accessibility
 Conformance Report (ACR.xlsx and ACR.docx)</h3>
@@ -683,15 +685,15 @@ ACR. The user is expected to perform the manual checks listed in the
 Manual column, write a final verdict in the Result column, and save the
 curated workbook in a separate folder before publishing.</p>
 <h4 id="workbook-scope">Workbook scope</h4>
-<p>Without <code>--force</code>, urlCheck scopes the report to
-<strong>all</strong> subfolders under the parent that contain a
+<p>Without <code>--force-replacements</code>, urlCheck scopes the report
+to <strong>all</strong> subfolders under the parent that contain a
 <code>results.json</code> — every page that has ever been scanned into
 this output folder. To exclude a page from the report, simply delete its
 subfolder. Your edits to the Result and Remarks columns on the rollup
 sheet are preserved across re-runs (matched by criterion id).</p>
-<p>With <code>--force</code>, urlCheck scopes the report to only the
-URLs scanned in the current session, ignoring older subfolders. This is
-the way to start a fresh ACR.</p>
+<p>With <code>--force-replacements</code>, urlCheck scopes the report to
+only the URLs scanned in the current session, ignoring older subfolders.
+This is the way to start a fresh ACR.</p>
 <p>If no pages have been scanned yet (or all subfolders are excluded),
 <code>ACR.xlsx</code> is still written: it contains the criterion list
 with manual-test instructions and the Glossary, ready for the user to
@@ -752,14 +754,9 @@ Python and Windows versions, the working folder, the command line and
 every setting, then records each page and any error with its full
 traceback. If something goes wrong, zip the <code>logs</code> folder and
 send it.</p>
-<p><strong>Log session</strong> (or <code>-l</code>) additionally writes
-<code>urlCheck.log</code> in the output folder, beside
-<code>ACR.xlsx</code>, so a log can travel with a set of results. It
-adds to the log already there, with a blank line between sessions; add
-<strong>Force replacements</strong> (<code>-f</code>) to replace it
-instead.</p>
-<p>Both logs are UTF-8 with a byte-order mark, so Notepad opens them
-correctly.</p>
+<p>Logging is automatic: there is no checkbox or switch for it, and Help
+names the folder. The log is UTF-8 with a byte-order mark, so Notepad
+opens it correctly.</p>
 <hr />
 <h2 id="notes">Notes</h2>
 <ul>

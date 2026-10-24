@@ -65,9 +65,9 @@ Note=Confirm the wording with a live run: buildTutorials -live.
 
 [step]
 
-Say=Guide, Alt plus G, opens the full guide and returns to the dialog. F11 checks for a newer version.
-Key=Alt+G
-Hear=Guide button
+Say=Help, Alt plus H, does what F1 does, and also says where the automatic logs are kept. F11 checks for a newer version, from any control.
+Key=Alt+H
+Hear=Help button
 Note=Confirm the wording with a live run: buildTutorials -live.
 
 [step]

@@ -15,13 +15,13 @@ Key=
 
 Say=You know your screen reader's own keys already, and three of them are worth remembering whenever you feel lost or unsure. Insert plus Up Arrow says the line you are on again.
 Key=Insert+Up Arrow
-Hear=Source urls edit
+Hear=Source paths edit
 
 [step]
 
 Say=Insert plus Tab says what has the focus: its name, its role, and its value or state.
 Key=Insert+Tab
-Hear=Source urls edit, blank
+Hear=Source paths edit, blank
 
 [step]
 

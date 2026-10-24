@@ -61,7 +61,7 @@ set "app=urlCheck"
 
 rem ---- SETTINGS: the part an app edits -------------------------------
 rem The oldest kit with everything this build uses.
-set "kitNeeded=1.43.29"
+set "kitNeeded=1.89.0"
 rem The number to start from when version.txt is missing. A newer release
 rem tag, if the repository has one, wins. It is also a floor: a version.txt
 rem holding less is raised to it.
@@ -126,10 +126,17 @@ for /f "delims=" %%v in ('ver') do >> "%log%" echo Windows: %%v
 echo Building %app%. The log is %log%
 
 rem ---- the Homer Development Kit -------------------------------------
+rem THE NEWEST KIT FOUND IS USED (24 October 2026). The HomerDev variable, C:\HomerDev and the
+rem folders above this one are each considered, and the highest version wins. The variable was
+rem never honoured before 1.89.1, since set "homerDev=" also emptied it (names in cmd ignore
+rem case); once honoured, it named an installed kit in Program Files at 1.77.6, older than
+rem C:\HomerDev, and the build stopped. The log names every kit considered.
+set "sKitFromEnv=%HomerDev%"
 set "homerDev="
-if defined HomerDev if exist "%HomerDev%\exec\Python\log.py" set "homerDev=%HomerDev%"
-if not defined homerDev if exist "C:\HomerDev\exec\Python\log.py" set "homerDev=C:\HomerDev"
-if not defined homerDev if exist "%CD%\exec\Python\log.py" set "homerDev=%CD%"
+set "sKitVersion="
+call :considerKit "%sKitFromEnv%"
+call :considerKit "C:\HomerDev"
+if not defined homerDev if exist "%CD%\exec\Python\log.py" if exist "%CD%\HomerDev.cs" set "homerDev=%CD%"
 if not defined homerDev (
   echo %app% needs the Homer Development Kit and cannot find it.
   echo Unzip HomerDev.zip into C:\HomerDev, or set the HomerDev environment variable.
@@ -585,4 +592,20 @@ if not defined new (
   goto :eof
 )
 set "ver=!new!"
+goto :eof
+
+:considerKit
+rem One kit candidate: used when it is a kit (HomerDev.cs at its top, exec\Python\log.py
+rem inside) and newer than the kit chosen so far.
+set "sTry=%~1"
+if not defined sTry goto :eof
+if "!sTry:~-1!"=="\" set "sTry=!sTry:~0,-1!"
+if not exist "!sTry!\HomerDev.cs" goto :eof
+if not exist "!sTry!\exec\Python\log.py" goto :eof
+set "sTryVersion=0.0.0"
+if exist "!sTry!\version.txt" for /f "usebackq delims=" %%v in (`powershell -NoProfile -Command "(Get-Content -Raw -LiteralPath '!sTry!\version.txt').Trim([char]0xFEFF, ' ', [char]13, [char]10)"`) do set "sTryVersion=%%v"
+>> "%log%" echo Kit candidate: !sTry! version !sTryVersion!
+if not defined homerDev (set "homerDev=!sTry!" & set "sKitVersion=!sTryVersion!" & goto :eof)
+powershell -NoProfile -Command "try { if ([version]'!sTryVersion!' -gt [version]'!sKitVersion!') { exit 0 } else { exit 1 } } catch { exit 1 }"
+if not errorlevel 1 (set "homerDev=!sTry!" & set "sKitVersion=!sTryVersion!")
 goto :eof

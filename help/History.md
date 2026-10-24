@@ -5,6 +5,24 @@ author: "Jamal Mazrui"
 
 # urlCheck History
 
+## 24 October 2026
+
+- **The build uses the newest Homer kit it finds,** logging each one: your HomerDev variable, C:\HomerDev and the folders above. The variable named an older installed kit, which stopped BatCon's build.
+- **The help names the log folder again,** %LOCALAPPDATA%\urlCheck\logs, as its acceptance check expects; the line went with the old --log switch.
+- **The build honours the HomerDev environment variable,** and accepts a kit only where HomerDev.cs is too.
+
+## 23 October 2026 -- the Homer launch dialog
+
+- **The dialog is the one every Homer launch app shows,** built by the Homer kit's LaunchDialog (kit 1.89.0). It is in rows called bands, read left to right: Source paths and Browse local source; Authenticate credentials, Invisible browser and Main profile; Output directory and Choose output directory; Force replacements, Use configuration and View output directory; Default settings and Help; then OK and Cancel alone at the bottom right, as Microsoft's dialog guidance places them.
+- **Insert+Tab names the Source paths box again, and the Output directory box is found again.** The kit put a band's label after the band, so the box had no name and Browse seemed to come first.
+- **Control+Enter is OK and Escape is Cancel from any control, and F11 checks for a newer version from anywhere.** Help says so, and says where the logs are kept.
+- **Logging is automatic.** The Log session checkbox and -l are gone; every line is in %LOCALAPPDATA%\urlCheck\logs\urlCheck-yyyyMMdd-HHmmss.log. The Guide button is gone too.
+- **Every run ends with the Results box,** whose one OK button has the focus, so Enter, Space or Escape closes it; the output directory then opens if View output directory is checked, and urlCheck closes.
+- **Switches match the dialog:** a long switch is a control's label and a short one its Alt letter, written with /, - or --, in any case. New: -d, --default-settings; --output-directory, --force-replacements, --invisible-browser, --authenticate-credentials; -v is now View output directory, so the version is --version alone. The older names still work.
+- **urlCheck shows its work, in the kit's progress window,** LaunchProgress: "urlCheck, <status>" in its title, a Status box with the focus, the percentage done and time left ("2 of 5 done, 40%, about 3 min left"), Cancel (Escape) to stop after the current page, and speech only while urlCheck is the window in front. It had no progress window before.
+- **Force replacements works as in every launch app:** unchecked, a source whose result is already there is skipped and kept, and the Results box says how many and how to replace them; checked, the work is done again and the old result kept until the new one is complete. Its tip is now the kit's standard one.
+- **The build needs HomerDev 1.89.0 or later.**
+
 ## 14 October 2026 -- no folder claimed without evidence
 
 - **A folder named for a page's title is claimed only when urlCheck's own results show it scanned that address.** A folder with no address record was adopted for any address: an audit put unrelated notes in such a folder, and urlCheck claimed it for a new address, skipped the scan, and trusted the claim from then on. Now such a folder is left as it is and the next free name used, unless its own results.json names the address (from a second audit by another AI).

@@ -59,7 +59,7 @@ Note=Confirm the wording with a live run: buildTutorials -live.
 Say=When I close it, urlCheck opens on its dialog.
 Key=Enter
 Hear=urlCheck dialog
-Hear=Source urls edit
+Hear=Source paths edit
 Note=Confirm the wording with a live run: buildTutorials -live.
 
 [step]

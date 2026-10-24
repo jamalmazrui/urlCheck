@@ -19,7 +19,7 @@ You need Windows 10 or 11, 64-bit. Edge is already part of Windows, and nothing 
 
 ## Check a page
 
-1. Press **Alt+Control+Shift+U** from anywhere in Windows. The `urlCheck` dialog opens with focus in **Source urls**.
+1. Press **Alt+Control+Shift+U** from anywhere in Windows. The `urlCheck` dialog opens with focus in **Source paths**.
 2. Type a web address, such as `https://example.com`, or several separated by spaces.
 3. Press Enter.
 
@@ -31,7 +31,7 @@ In a Command Prompt in the program folder:
 
 ```cmd
 urlCheck https://example.com
-urlCheck urls.txt -o reports --view-output
+urlCheck urls.txt -o reports --view-output-directory
 urlCheck --help
 ```
 

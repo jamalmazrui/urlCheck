@@ -32,7 +32,7 @@ Note=Confirm the wording with a live run: buildTutorials -live.
 
 [step]
 
-Say=I put the account page's address in Source urls and press Enter. Edge opens, and urlCheck waits.
+Say=I put the account page's address in Source paths and press Enter. Edge opens, and urlCheck waits.
 Key=Enter
 Hear=Sign in, then press OK to continue
 Note=Confirm the wording with a live run: buildTutorials -live.
@@ -78,7 +78,7 @@ Key=
 
 [step]
 
-Say=Leave Invisible mode off for a run that asks you to sign in, since the sign in needs a window to type into.
+Say=Leave Invisible browser off for a run that asks you to sign in, since the sign in needs a window to type into.
 Key=
 
 [step]

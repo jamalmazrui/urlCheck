@@ -3250,6 +3250,9 @@ def parseArguments():
             f"url list file: {sProgramName} urls.txt\n"
             f"GUI dialog:    {sProgramName} -g\n"
             f"\n"
+            f"Logging is automatic: every run writes\n"
+            f"  %LOCALAPPDATA%\\{sProgramName}\\logs\\{sProgramName}-yyyyMMdd-HHmmss.log\n"
+            f"\n"
             f"Output files (in a folder named after each page title):\n"
             f"  report.htm   Accessibility report with headings and links\n"
             f"  report.xlsx  Excel workbook with summary and full results\n"
@@ -3274,26 +3277,39 @@ def parseArguments():
             "starting with # are ignored."
         ),
     )
-    argParser.add_argument("-v", "--version", action="version", version=f"%(prog)s {sProgramVersion}")
+    # THE LAUNCH SWITCHES (23 October 2026, help\\LaunchDialog.md in the kit): a long
+    # switch is the dialog's label and a short one its Alt letter; the older names still
+    # work. --log went with the Log session checkbox, since logging is automatic, and -v
+    # is View output directory, so the version is --version alone.
+    argParser.add_argument("--version", action="version", version=f"%(prog)s {sProgramVersion}")
+    argParser.add_argument("-d", "--default-settings", "--defaults", dest="bDefaultSettings", action="store_true",
+        help="Forget the saved settings and exit.")
     argParser.add_argument("-g", "--gui-mode", dest="bGuiMode", action="store_true",
         help="Show the parameter dialog. GUI mode is also entered automatically when urlCheck is launched without arguments from a GUI shell (File Explorer, Start menu, desktop hotkey).")
-    argParser.add_argument("-o", "--output-folder", dest="sOutputDir", default="",
+    argParser.add_argument("-o", "--output-directory", "--output-folder", "--output-dir", dest="sOutputDir", default="",
         help="Parent folder under which the per-scan output folder is created. Defaults to the current working folder. Created if it does not exist. The per-scan folder is always uniquely named based on the page title.")
-    argParser.add_argument("--view-output", dest="bViewOutput", action="store_true",
+    argParser.add_argument("-v", "--view-output-directory", "--view-output", dest="bViewOutput", action="store_true",
         help="After all scans complete, open the parent output folder (the -o folder, or the current working folder) in File Explorer.")
     argParser.add_argument("-u", "--use-configuration", dest="bUseConfig", action="store_true",
         help="Load saved settings from %%LOCALAPPDATA%%\\urlCheck\\configs\\urlCheck.inix at startup, and write them back on OK in GUI mode. Without this flag no settings are saved.")
-    argParser.add_argument("-l", "--log", dest="bLog", action="store_true",
-        help="Also write the diagnostics to urlCheck.log in the output folder (UTF-8 with BOM). Appends across runs by default; combine with -f / --force to replace the prior log instead. A session log is always kept in %%LOCALAPPDATA%%\\urlCheck\\logs whether or not this is given.")
-    argParser.add_argument("-f", "--force", dest="bForce", action="store_true",
+    argParser.add_argument("-f", "--force-replacements", "--force", dest="bForce", action="store_true",
         help="Reuse an existing per-page output folder by emptying its contents and writing a fresh set of files. Without this flag urlCheck skips a url whose per-page output folder already exists, so previous scans are preserved.")
-    argParser.add_argument("-i", "--invisible", dest="bInvisible", action="store_true",
+    argParser.add_argument("-i", "--invisible-browser", "--invisible", dest="bInvisible", action="store_true",
         help="Run Microsoft Edge invisibly (the headless browser mode): no visible browser window during the scan.")
-    argParser.add_argument("-a", "--authenticate", dest="bAuthenticate", action="store_true",
+    argParser.add_argument("-a", "--authenticate-credentials", "--authenticate", dest="bAuthenticate", action="store_true",
         help="When a url's domain is encountered for the first time in this run, pause after the page loads and prompt the user to authenticate (sign in, accept cookies, dismiss popups, etc.) and press Enter (or click OK in GUI mode) to resume. Within the same run, subsequent urls on the same domain reuse the established session without prompting. Without --main-profile, urlCheck disconnects its automation channel from Edge while the user authenticates and reconnects after, which improves the chance of success against sites that block automated browsers (e.g. WhatsApp Web). With --main-profile, the disconnect pattern is not used (browser security forbids it against your real profile). Forces visible browser mode (overrides --invisible).")
     argParser.add_argument("-m", "--main-profile", dest="bMainProfile", action="store_true",
         help="Launch Edge with your real (default) Edge user profile so saved logins, cookies, and session state are available. Without -m, urlCheck launches Edge with a fresh ephemeral profile so the scan is anonymous and your real profile is not exposed to the scanned site. Requires that no Microsoft Edge process is already running, since Edge cannot share a profile across two processes; urlCheck checks at startup and exits gracefully with a message if Edge is running.")
-    return argParser.parse_args()
+    # Switches in any case, and written /switch as well as -switch or --switch, as in
+    # every Homer app: each is folded to its --lowercase form before argparse reads it.
+    lsGiven = []
+    for sArg in sys.argv[1:]:
+        if sArg == "/?": sArg = "--help"
+        elif len(sArg) > 1 and sArg[0] == "/" and sArg[1].isalpha() and not os.path.exists(sArg):
+            sArg = ("-" if len(sArg) == 2 else "--") + sArg[1:]
+        if sArg.startswith("-") and not os.path.exists(sArg): sArg = sArg.lower()
+        lsGiven.append(sArg)
+    return argParser.parse_args(lsGiven)
 
 
 # Module-level state for the --authenticate feature. Tracks the set of
@@ -4519,18 +4535,16 @@ class configManager:
             arguments.bMainProfile = configManager.getBool(d, "MainProfile")
         if not getattr(arguments, "bForce", False):
             arguments.bForce = configManager.getBool(d, "ForceReplacements")
-        if not getattr(arguments, "bLog", False):
-            arguments.bLog = configManager.getBool(d, "LogSession")
 
     @staticmethod
-    def save(sSource, sOutputDir, bViewOutput, bInvisible, bForce, bLog, bAuthenticate=False, bMainProfile=False):
+    def save(sSource, sOutputDir, bViewOutput, bInvisible, bForce, bAuthenticate=False, bMainProfile=False):
         dValues = {}
         lHeader = []
         sPath = ""
 
         sPath = configManager.getConfigPath()
         dValues = {"Authenticate": bAuthenticate, "ForceReplacements": bForce, "Invisible": bInvisible,
-                   "LogSession": bLog, "MainProfile": bMainProfile, "OutputFolder": sOutputDir or "",
+                   "MainProfile": bMainProfile, "OutputFolder": sOutputDir or "",
                    "Source": sSource or "", "ViewOutput": bViewOutput}
         try:
             if not os.path.isfile(sPath):
@@ -6167,46 +6181,47 @@ def showGuiDialog(arguments):
     bAuth = bool(getattr(arguments, "bAuthenticate", False))
     bForce = bool(getattr(arguments, "bForce", False))
     bInvisible = bool(getattr(arguments, "bInvisible", False))
-    bLog = bool(getattr(arguments, "bLog", False))
     bMain = bool(getattr(arguments, "bMainProfile", False))
     bUseCfg = bool(getattr(arguments, "bUseConfig", False))
     bView = bool(getattr(arguments, "bViewOutput", False))
 
+    # THE DIALOG IS THE KIT'S LAUNCH DIALOG (23 October 2026, help\\LaunchDialog.md in
+    # HomerDev), through Homer.dll, the one every Homer launch app shows: Source paths
+    # and Browse local source; urlCheck's own Authenticate credentials, Invisible browser
+    # and Main profile; Output directory and Choose output directory; Force
+    # replacements, Use configuration and View output directory; Default settings and
+    # Help; then OK and Cancel alone. Control+Enter is OK and Escape is Cancel from any
+    # control, F1 is Help and F11 checks the web for a newer urlCheck. The pickers are
+    # urlCheck's own (ownPickers), because the shell pickers hang under pythonnet.
     while True:
-        dlg = Homer.LbcDialog(sProgramName, None)
+        oLaunch = Homer.LaunchDialog(sProgramName)
+        dlg = oLaunch.dialog
         try:
-            dlg.addBand()
-            tbSource = dlg.addInputBox("&Source urls:", sSource,
+            oLaunch.ownPickers = True
+            tbSource = oLaunch.addSourceBand(sSource,
                 "One url or domain, several separated by spaces, or the path "
                 "to a plain text file listing urls, domains or local files, "
-                "one per line.")
-            btnBrowse = dlg.addButton("&Browse source...",
-                "Choose a plain text file that lists urls.")
+                "one per line.",
+                "Choose a plain text file that lists urls. It opens where Source paths points, else in Documents.")
+            btnBrowse = oLaunch.browseButton
             dlg.addBand()
-            tbOut = dlg.addInputBox("&Output folder:", sOutputDir,
-                "The folder under which each page's results folder is made. "
-                "Blank means the current folder.")
-            btnChoose = dlg.addButton("&Choose output...",
-                "Choose the output folder.")
-            dlg.endBand()
-            dlg.addSeparator()
             cbAuth = dlg.addCheckBox("&Authenticate credentials", bAuth,
                 "Pause on each new site so you can sign in or dismiss pop-ups, "
-                "then resume. Wins over Invisible mode.")
+                "then resume. Wins over Invisible browser.")
+            cbInvisible = dlg.addCheckBox("&Invisible browser", bInvisible,
+                "Run Edge with no visible window.")
             cbMain = dlg.addCheckBox("&Main profile", bMain,
                 "Use your own Edge profile, with its sign-ins. Edge must be closed.")
-            cbInvisible = dlg.addCheckBox("&Invisible mode", bInvisible,
-                "Run Edge with no visible window.")
-            cbForce = dlg.addCheckBox("&Force replacements", bForce,
-                "Empty and reuse an existing results folder instead of skipping the url.")
-            cbView = dlg.addCheckBox("&View output", bView,
-                "Open the output folder in File Explorer when all scans are done.")
-            cbLog = dlg.addCheckBox("&Log session", bLog,
-                "Also write urlCheck.log in the output folder. A session log is "
-                "always kept in %LOCALAPPDATA%\\urlCheck\\logs.")
-            cbUseCfg = dlg.addCheckBox("&Use configuration", bUseCfg,
-                "Load these settings next time, and save them when you press "
-                "OK, in configs\\urlCheck.inix.")
+            dlg.endBand()
+            tbOut = oLaunch.addOutputBand(sOutputDir,
+                "The folder under which each page's results folder is made. "
+                "Blank means the current folder.",
+                "Choose the output directory.")
+            btnChoose = oLaunch.chooseButton
+            oLaunch.addOperationBands(bForce, "",
+                bUseCfg, "Load these settings next time, and save them when you press "
+                "OK, in configs\\urlCheck.inix.",
+                bView, "Open the output directory in File Explorer when all scans are done.")
 
             def fnPickFile(sender, args):
                 # Pythonnet deadlocks on the modern (Vista+) IFileOpenDialog
@@ -6261,25 +6276,11 @@ def showGuiDialog(arguments):
                     logger.info(f"Output dir set to: {sChosen}")
                 tbOut.Focus()
 
-            def fnOnKey(keys):
-                # F11: is there a newer urlCheck on the web? (Elevate sounds
-                # like eleven.) Claimed before any control sees the key. When
-                # the setup program starts, this copy steps aside.
-                if keys != Keys.F11: return False
-                logger.info("F11: checking the web for a newer version")
-                if Homer.Elevate.offer(dlg.form):
-                    logger.info("F11: the setup program was started; closing the dialog")
-                    dlg.form.DialogResult = DialogResult.Cancel
-                    dlg.form.Close()
-                return True
-
             btnBrowse.Click += EventHandler(fnPickFile)
             btnChoose.Click += EventHandler(fnPickFolder)
-            dlg.commandKey = lbcnet.keyHandler(fnOnKey)
 
-            logger.info("Showing the Lbc dialog")
-            sButton = dlg.runWithButtons(lbcnet.strings(
-                ["OK", "Guide", "Default settings", "Cancel"])) or ""
+            logger.info("Showing the launch dialog")
+            sButton = oLaunch.run() or "Cancel"
             logger.info(f"Dialog returned: {sButton!r}")
 
             # Every field is harvested before the dialog goes, so a return to
@@ -6287,25 +6288,21 @@ def showGuiDialog(arguments):
             sSource = (tbSource.Text or "").strip()
             sOutputDir = (tbOut.Text or "").strip()
             bAuth = bool(cbAuth.Checked)
-            bForce = bool(cbForce.Checked)
+            bForce = bool(oLaunch.forceBox.Checked)
             bInvisible = bool(cbInvisible.Checked)
-            bLog = bool(cbLog.Checked)
             bMain = bool(cbMain.Checked)
-            bUseCfg = bool(cbUseCfg.Checked)
-            bView = bool(cbView.Checked)
+            bUseCfg = bool(oLaunch.useConfigBox.Checked)
+            bView = bool(oLaunch.viewOutputBox.Checked)
         finally:
-            try: dlg.Dispose()
+            try: oLaunch.Dispose()
             except Exception: pass
 
-        if sButton == "" or sButton.lower() == "cancel":
+        if sButton.lower() == "cancel":
             return False
-        if sButton.lower() == "guide":
-            launchReadMe()
-            continue
         if sButton.lower() == "default settings":
             sSource = sDefaultSources
             sOutputDir = ""
-            bAuth = bForce = bInvisible = bLog = bMain = bUseCfg = bView = False
+            bAuth = bForce = bInvisible = bMain = bUseCfg = bView = False
             configManager.eraseAll()
             logger.info("Default settings restored")
             continue
@@ -6359,80 +6356,65 @@ def showGuiDialog(arguments):
         arguments.bAuthenticate = bAuth
         arguments.bForce = bForce
         arguments.bInvisible = bInvisible
-        arguments.bLog = bLog
         arguments.bMainProfile = bMain
         arguments.bUseConfig = bUseCfg
         arguments.bViewOutput = bView
         return True
 
 
-def launchReadMe():
-    """
-    Opens the full guide in the default browser. The Homer layout puts it in
-    help\\urlCheck.htm, beside exec\\ where the program runs, in the installed
-    tree and in the project alike; paths finds that folder. ReadMe.htm
-    at the top is the fallback, then the Markdown forms, then a notice.
-    """
-    lsCandidates = []
-    sFolder = ""
-    sTarget = ""
+def keptLine(iCount, sNoun):
+    """The kit's Results line for results kept because Force replacements was off,
+    LaunchDialog.keptLine through Homer.dll, so every launch app words it the same;
+    the same words here when Homer.dll cannot be loaded."""
+    Homer = lbcnet.load()
+    if Homer is not None:
+        try: return str(Homer.LaunchDialog.keptLine(int(iCount), sNoun))
+        except Exception: pass
+    if iCount <= 0: return ""
+    sNouns = sNoun if iCount == 1 else sNoun + "s"
+    return (f"Skipped {iCount} {sNouns} " + ("whose result was" if iCount == 1 else "whose results were")
+            + " already there. Check Force replacements, or use -f, to replace " + ("it." if iCount == 1 else "them."))
 
-    sFolder = paths.installedFolder()
-    lsCandidates = [os.path.join(sFolder, "help", f"{sProgramName}.htm"), os.path.join(sFolder, "ReadMe.htm"),
-                    os.path.join(sFolder, "help", f"{sProgramName}.md"), os.path.join(sFolder, "ReadMe.md")]
-    for sTarget in lsCandidates:
-        if os.path.isfile(sTarget): break
-    else:
-        sTarget = ""
-    if not sTarget:
-        logger.warn(f"No guide found under {sFolder}")
-        try:
-            d = _loadDotNetForms()
-            if d is not None:
-                d["MessageBox"].Show(
-                    "The guide was not found in:\r\n\r\n" + sFolder,
-                    f"{sProgramName} - Guide not found",
-                    d["MessageBoxButtons"].OK, d["MessageBoxIcon"].Warning)
-                return False
-        except Exception:
-            pass
-        print(f"[WARN] No guide in {sFolder}")
-        return False
+
+def openLaunchProgress(bGuiMode, iTotal):
+    """The kit's LaunchProgress window, through Homer.dll, from the dialog only.
+    Its status lines go to the session log. None from the command line, or when
+    Homer.dll cannot be loaded, which the log records."""
+    if not bGuiMode: return None
+    Homer = lbcnet.load()
+    if Homer is None: return None
     try:
-        os.startfile(sTarget)
-        return True
+        from System import Action, String
+        fnLog = Action[String](lambda sLine: logger.info(str(sLine)))
+        return Homer.LaunchProgress(sProgramName, f"Checking {iTotal} {'page' if iTotal == 1 else 'pages'}", fnLog)
     except Exception as ex:
-        print(f"[WARN] Could not open {sTarget}: {ex}")
-        return False
+        logger.info(f"The progress window could not be opened: {ex}")
+        return None
 
 
-def showFinalGuiMessage(sText, sTitle):
+def showFinalGuiMessage(sText, vProblem=False):
     """
-    Shows a captured-stdout message after a GUI-mode scan completes. Short
-    text uses the native MessageBox; long text an LbcDialog holding only a
-    read-only multi-line field, which fills the dialog, and OK.
+    The Results box every Homer launch ends with: the kit's
+    LaunchDialog.showResults, through Homer.dll, with one focused OK button,
+    so Enter, Space or Escape closes it. A long report shows its first lines
+    and names the file holding the rest. Without Homer.dll, a plain message box.
     """
+    # The early-exit callers still pass their old box title, each naming an error;
+    # any title means a problem, and True or False says so plainly.
+    bProblem = vProblem if isinstance(vProblem, bool) else True
+    Homer = lbcnet.load()
+    if Homer is not None:
+        try:
+            Homer.LaunchDialog.showResults(sProgramName, sText or "Done. No output.", bool(bProblem))
+            return
+        except Exception as ex:
+            logger.info(f"LaunchDialog.showResults failed, using a plain box: {ex}")
     d = _loadDotNetForms()
     if d is None:
         print(sText)
         return
-    bLong = len(sText) > 800 or sText.count("\n") > 15
-    Homer = lbcnet.load() if bLong else None
-    if Homer is None:
-        d["MessageBox"].Show(sText or "Done. No output.", sTitle,
-            d["MessageBoxButtons"].OK, d["MessageBoxIcon"].Information)
-        return
-    dlg = Homer.LbcDialog(sTitle, None)
-    try:
-        tbResults = dlg.addMemo(sText.replace("\r\n", "\n").replace("\n", "\r\n"), None)
-        tbResults.ReadOnly = True
-        # Focus in a multi-line field starts at the top.
-        tbResults.SelectionStart = 0
-        tbResults.SelectionLength = 0
-        dlg.runWithButtons(lbcnet.strings(["OK"]), False)
-    finally:
-        try: dlg.Dispose()
-        except Exception: pass
+    d["MessageBox"].Show(sText or "Done. No output.", f"{sProgramName} Results",
+        d["MessageBoxButtons"].OK, d["MessageBoxIcon"].Warning if bProblem else d["MessageBoxIcon"].Information)
 
 
 # --- Entry point ---
@@ -6460,6 +6442,7 @@ def main():
     context = None
     lArgs = []
     capture = None
+    oLaunchProgress = None
     edgeProcess = None
     streamOriginalErr = sys.stderr
     streamOriginalOut = sys.stdout
@@ -6496,6 +6479,13 @@ def main():
     # to a url list file). Empty list -> empty string -> "no input given."
     if isinstance(arguments.sSource, list):
         arguments.sSource = " ".join(arguments.sSource).strip()
+
+    # -d, --default-settings: forget the saved settings, as the dialog's Default
+    # settings button does, and stop.
+    if getattr(arguments, "bDefaultSettings", False):
+        configManager.eraseAll()
+        print("Default settings restored.")
+        return 0
 
     # Logging strategy: the logger buffers all info/warn/error/debug
     # messages until logger.open() is called with the final pathLogDir.
@@ -6560,7 +6550,6 @@ def main():
                 arguments.bViewOutput,
                 arguments.bInvisible,
                 arguments.bForce,
-                arguments.bLog,
                 bAuthenticate=bool(getattr(arguments, "bAuthenticate", False)),
                 bMainProfile=bool(getattr(arguments, "bMainProfile", False)))
         logger.info(f"After dialog: input={arguments.sSource!r} "
@@ -6570,7 +6559,7 @@ def main():
             f"mainProfile={bool(getattr(arguments, 'bMainProfile', False))} "
             f"force={arguments.bForce} "
             f"viewOutput={arguments.bViewOutput} "
-            f"log={arguments.bLog} useConfig={arguments.bUseConfig}")
+            f"useConfig={arguments.bUseConfig}")
 
     if not arguments.sSource:
         print("No urls to scan.")
@@ -6584,21 +6573,16 @@ def main():
         except Exception as ex:
             sErr = f"Output folder '{arguments.sOutputDir}' could not be created: {ex}"
             print(sErr)
-            if bGuiMode: showFinalGuiMessage(sErr, f"{sProgramName} - Error")
+            if bGuiMode: showFinalGuiMessage(sErr, True)
             return 1
     else:
         pathBaseDir = pathlib.Path.cwd()
 
-    # Open the log file now that pathBaseDir is final. This is the
-    # ONLY logger.open call site in main(); buffered diagnostics from
-    # earlier in the run are flushed to the file in their original
-    # order. The log file lands in pathBaseDir alongside ACR.xlsx
-    # and the per-page subfolders. If bLog is False, discard the
-    # buffer to free memory and stop further buffering.
-    if arguments.bLog:
-        logger.open(bReplace=bool(getattr(arguments, "bForce", False)), pathDir=pathBaseDir)
-    else:
-        logger.discardBuffer()
+    # LOGGING IS AUTOMATIC (23 October 2026): every line is in the session log,
+    # %LOCALAPPDATA%\\urlCheck\\logs\\urlCheck-yyyyMMdd-HHmmss.log. The extra
+    # urlCheck.log beside the results went with the Log session checkbox, so the
+    # buffer kept for it is dropped.
+    logger.discardBuffer()
 
     logger.info(f"Output base: {pathBaseDir}")
     logger.info(f"Target: {arguments.sSource}")
@@ -6608,15 +6592,14 @@ def main():
     # defaulted values). The parameter labels mirror the GUI dialog
     # controls so the user can map a logged run to the dialog state.
     lHeaderParams = [
-        ("Source urls",        str(arguments.sSource or "(none)")),
-        ("Output folder",      str(pathBaseDir)),
+        ("Source paths",       str(arguments.sSource or "(none)")),
+        ("Output directory",   str(pathBaseDir)),
         ("Force replacements", str(bool(arguments.bForce)).lower()),
-        ("Invisible mode",     str(bool(arguments.bInvisible)).lower()),
+        ("Invisible browser",  str(bool(arguments.bInvisible)).lower()),
         ("Authenticate credentials", str(bool(getattr(arguments, "bAuthenticate", False))).lower()),
         ("Main profile",  str(bool(getattr(arguments, "bMainProfile", False))).lower()),
-        ("View output",        str(bool(arguments.bViewOutput)).lower()),
+        ("View output directory", str(bool(arguments.bViewOutput)).lower()),
         ("Use configuration",  str(bool(arguments.bUseConfig)).lower()),
-        ("Log session",        str(bool(arguments.bLog)).lower()),
         ("GUI mode",           str(bool(bGuiMode)).lower()),
         ("Working folder",     os.getcwd()),
         ("Command line",       " ".join(sys.argv)),
@@ -7049,12 +7032,23 @@ def main():
                     break
                 except Exception:
                     continue
+            # THE KIT'S PROGRESS WINDOW (23 October 2026, help\\LaunchDialog.md in
+            # HomerDev): "urlCheck, <status>" in its title, a status box, Cancel
+            # (Escape), and speech only while urlCheck is the window in front. It
+            # replaces having no progress window at all. Between pages the window is
+            # pumped; within one page Playwright holds this thread, so a long page
+            # can leave the window unrepainted until the page is done.
+            oLaunchProgress = openLaunchProgress(bGuiMode, len(lUrls))
             iUrlIndex = 0
             lScanned = []        # URLs that scanned successfully
             lFailed = []         # list of (sUrl, sReason)
             lSkippedExisting = []  # URLs whose output folder already exists
             lThisRunPaths = []   # per-page output folder paths (used by ACR builder)
             for sUrl in lUrls:
+                if oLaunchProgress is not None and oLaunchProgress.cancelled:
+                    print(f"Cancelled: {len(lUrls) - iUrlIndex} not checked.")
+                    break
+                if oLaunchProgress is not None: oLaunchProgress.step(str(sUrl), iUrlIndex, len(lUrls))
                 iUrlIndex += 1
                 # lUrls is already a list of normalized targets regardless of
                 # which dispatch case produced it; we pass each entry through
@@ -7151,8 +7145,7 @@ def main():
                         else:       print(sUrlF)
             if iSkipped > 0:
                 print()
-                print(f"Skipped {iSkipped} {'url' if iSkipped == 1 else 'urls'}. "
-                      f"Check \"Force replacements\" to overwrite.")
+                print(keptLine(iSkipped, "url"))
             if iScanned == 0 and iFailed == 0 and iSkipped == 0:
                 print()
                 print("No urls scanned.")
@@ -7163,7 +7156,9 @@ def main():
             # Open the parent output directory once at the end of the run, if
             # requested. This shows the user all per-page subdirectories at
             # once rather than focusing on any single page's folder.
-            if arguments.bViewOutput: openFolderInExplorer(str(pathBaseDir))
+            # From the dialog it opens after the Results box is closed, so File
+            # Explorer does not take the focus from the results (23 October 2026).
+            if arguments.bViewOutput and not bGuiMode: openFolderInExplorer(str(pathBaseDir))
     finally:
         try:
             if context is not None: context.close()
@@ -7195,13 +7190,22 @@ def main():
         except Exception:
             pass
 
+        # The progress window closes before the Results box opens.
+        try:
+            if oLaunchProgress is not None: oLaunchProgress.Dispose()
+        except Exception:
+            pass
         # Restore stdout/stderr and surface captured output in a GUI dialog.
         if bGuiMode and capture is not None:
             sys.stdout = streamOriginalOut
             sys.stderr = streamOriginalErr
             sCaptured = capture.getvalue()
-            sTitle = f"{sProgramName} - Results" if iErrorCount == 0 else f"{sProgramName} - Completed with errors"
-            showFinalGuiMessage(sCaptured if sCaptured else "Done. No output.", sTitle)
+            # THE RESULTS BOX ENDS THE RUN, then the output directory opens if
+            # asked, and urlCheck closes.
+            showFinalGuiMessage(sCaptured if sCaptured else "Done. No output.", iErrorCount != 0)
+            if arguments.bViewOutput:
+                try: openFolderInExplorer(str(pathBaseDir))
+                except NameError: pass
 
         # Write the session-level Accessibility Conformance Report.
         # See acrBuilder for the source-of-truth rules: --force uses

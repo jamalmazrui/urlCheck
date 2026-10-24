@@ -57,7 +57,7 @@ Key=
 
 [step]
 
-Say=Dash dash view output opens the folder at the end, as the dialog's box does.
+Say=Dash dash view output directory opens the folder at the end, as the dialog's box does.
 Key=
 
 [step]
@@ -103,7 +103,7 @@ Key=
 
 [step]
 
-Say=Invisible mode suits a scheduled run, since no window appears to interrupt whatever else is happening.
+Say=Invisible browser suits a scheduled run, since no window appears to interrupt whatever else is happening.
 Key=
 
 [step]
