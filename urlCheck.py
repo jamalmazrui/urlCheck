@@ -4615,6 +4615,31 @@ class configManager:
 #   na       -> Not Applicable
 #   unknown  -> Not Evaluated
 
+def saveReplacing(oDocument, pathFinal):
+    """Save an openpyxl workbook or python-docx document over pathFinal without risking the one already there.
+
+    SAVED BESIDE, THEN SWAPPED IN (30 October 2026, from an audit by another AI). The ACR workbook and document
+    were saved straight over the reviewed ones, and a differently cased old name was deleted first, so a save
+    that failed part way lost a person's Result and Remarks. Now the new file is saved beside the final one, any
+    case variant is removed only after that save worked, the earlier file is kept as <name>.previous, and the
+    new file then takes the final name in one step."""
+    pathFinal = pathlib.Path(pathFinal)
+    pathStage = pathFinal.with_name(pathFinal.stem + ".saving" + pathFinal.suffix)
+    try: oDocument.save(str(pathStage))
+    except Exception:
+        try: pathStage.unlink()
+        except OSError: pass
+        raise
+    pathPrevious = pathFinal.with_name(pathFinal.stem + ".previous" + pathFinal.suffix)
+    for child in pathFinal.parent.iterdir():
+        if child.is_file() and child.name.lower() == pathFinal.name.lower():
+            try:
+                shutil.copy2(str(child), str(pathPrevious))
+                if child.name != pathFinal.name: child.unlink()
+            except Exception as ex: logger.info(f"ACR: cannot set aside {child.name}: {ex}")
+    os.replace(str(pathStage), str(pathFinal))
+
+
 class acrBuilder:
     """
     Build ACR.xlsx for the urlCheck session.
@@ -5536,11 +5561,7 @@ class acrBuilder:
             )
             # Save and return early.
             pathDocx = pathParent / sAcrDocxName
-            for child in pathParent.iterdir():
-                if child.is_file() and child.name.lower() == sAcrDocxName.lower() and child.name != sAcrDocxName:
-                    try: child.unlink()
-                    except Exception as ex: logger.info(f"ACR: cannot remove case-variant {child.name}: {ex}")
-            d.save(str(pathDocx))
+            saveReplacing(d, pathDocx)
             logger.info(f"ACR: wrote {pathDocx} (no-pages template)")
             return
 
@@ -5839,11 +5860,7 @@ class acrBuilder:
 
         # Save. Same case-enforcement as the XLSX.
         pathDocx = pathParent / sAcrDocxName
-        for child in pathParent.iterdir():
-            if child.is_file() and child.name.lower() == sAcrDocxName.lower() and child.name != sAcrDocxName:
-                try: child.unlink()
-                except Exception as ex: logger.info(f"ACR: cannot remove case-variant {child.name}: {ex}")
-        d.save(str(pathDocx))
+        saveReplacing(d, pathDocx)
         logger.info(f"ACR: wrote {pathDocx}")
 
     @classmethod
@@ -5856,6 +5873,9 @@ class acrBuilder:
         (datetime). It's surfaced in ACR.docx metadata header so
         users can correlate a draft ACR with a specific scan session.
         """
+        # WHAT WENT WRONG IS RETURNED (30 October 2026, from an audit by another AI): "" when every ACR file
+        # asked for was written, else a sentence for the run's Results, which now comes after this.
+        sAcrProblem = ""
         try:
             pathParent = pathlib.Path(arguments.sOutputDir).resolve() if arguments.sOutputDir else pathlib.Path.cwd()
             pathParent.mkdir(parents=True, exist_ok=True)
@@ -5870,7 +5890,7 @@ class acrBuilder:
             # sheets. A blank template is still made when there is no ACR yet.
             if not lFolders and pathWorkbook.exists():
                 logger.info(f"ACR: no scanned page was found, so the existing {sAcrWorkbookName} was left as it is")
-                return None
+                return sAcrProblem
             dCaptured = cls.captureExistingRemarks(pathWorkbook) if not bForceMode else {}
             # Compute per-page buckets (empty when no pages)
             lPageBuckets = []
@@ -5910,12 +5930,8 @@ class acrBuilder:
             # run, wb.save("ACR.xlsx") writes to the existing file and
             # keeps the lowercase casing. Removing it first lets the
             # new write create the file with the desired casing.
-            for child in pathParent.iterdir():
-                if child.is_file() and child.name.lower() == sAcrWorkbookName.lower() and child.name != sAcrWorkbookName:
-                    try: child.unlink()
-                    except Exception as ex: logger.info(f"ACR: cannot remove case-variant {child.name}: {ex}")
             neutralizeFormulas(wb)
-            wb.save(str(pathWorkbook))
+            saveReplacing(wb, pathWorkbook)
             logger.info(f"ACR: wrote {pathWorkbook} ({len(lFolders)} pages, "
                 f"{len(lOrderedCrits)} criteria)")
             # Generate the companion narrative DOCX. Same scope rules
@@ -5925,12 +5941,15 @@ class acrBuilder:
                 cls.writeDocx(pathParent, lFolders, lPageBuckets, lPageNames, lOrderedCrits, dtRunStart=dtRunStart)
             except Exception as ex:
                 logger.info(f"ACR: DOCX generation failed: {ex}")
+                sAcrProblem = f"{sAcrDocxName} was not written: {ex}"
                 try: logger.info(traceback.format_exc())
                 except Exception: pass
         except Exception as ex:
             logger.info(f"ACR: failed to write {sAcrWorkbookName}: {ex}")
+            sAcrProblem = f"{sAcrWorkbookName} was not written: {ex}"
             try: logger.info(traceback.format_exc())
             except Exception: pass
+        return sAcrProblem
 
 
 # --- GUI dialog (Python.NET / WinForms) ---
@@ -7190,6 +7209,18 @@ def main():
         except Exception:
             pass
 
+        # Write the session-level Accessibility Conformance Report.
+        # See acrBuilder for the source-of-truth rules: --force uses
+        # only this run's output paths; otherwise walk the parent for
+        # all subfolders containing a results.json.
+        # BEFORE THE RESULTS (30 October 2026, from an audit by another AI): the ACR was written after
+        # the Results box had closed, so a failure to write it showed only in the log. It is written
+        # first now, and a failure is said in the Results and makes the exit code 1.
+        sAcrProblem = ""
+        try: sAcrProblem = acrBuilder.buildIfApplicable(arguments, lThisRunPaths, dtRunStart=dtRunStart) or ""
+        except NameError: pass  # lThisRunPaths may not be defined on early-exit paths
+        if sAcrProblem: print(f"[WARNING] The conformance report is incomplete: {sAcrProblem}. The page reports are kept.")
+
         # The progress window closes before the Results box opens.
         try:
             if oLaunchProgress is not None: oLaunchProgress.Dispose()
@@ -7202,22 +7233,15 @@ def main():
             sCaptured = capture.getvalue()
             # THE RESULTS BOX ENDS THE RUN, then the output directory opens if
             # asked, and urlCheck closes.
-            showFinalGuiMessage(sCaptured if sCaptured else "Done. No output.", iErrorCount != 0)
+            showFinalGuiMessage(sCaptured if sCaptured else "Done. No output.", iErrorCount != 0 or bool(sAcrProblem))
             if arguments.bViewOutput:
                 try: openFolderInExplorer(str(pathBaseDir))
                 except NameError: pass
 
-        # Write the session-level Accessibility Conformance Report.
-        # See acrBuilder for the source-of-truth rules: --force uses
-        # only this run's output paths; otherwise walk the parent for
-        # all subfolders containing a results.json.
-        try: acrBuilder.buildIfApplicable(arguments, lThisRunPaths, dtRunStart=dtRunStart)
-        except NameError: pass  # lThisRunPaths may not be defined on early-exit paths
-
         logger.info(f"Done. {iUrlTotal - iErrorCount} of {iUrlTotal} scanned. {iErrorCount} error(s).")
         logger.close()
 
-    return 0 if iErrorCount == 0 else 1
+    return 0 if iErrorCount == 0 and not sAcrProblem else 1
 
 
 def runLogged():

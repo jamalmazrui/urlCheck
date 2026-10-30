@@ -5,6 +5,14 @@ author: "Jamal Mazrui"
 
 # urlCheck History
 
+## 30 October 2026 -- more fixes from an audit by another AI
+
+- **A conformance report that could not be written is in the Results.** The ACR was written after the Results box had closed, so a failure showed only in the log. It is now written first, a failure is said in the Results, and the exit code is 1. The page reports are kept.
+
+## 30 October 2026 -- fixes from an audit by another AI
+
+- **Your reviewed ACR is never lost to a failed save.** The workbook and document are saved beside the old ones first and then take their place, and the earlier ones are kept as ACR.previous.xlsx and ACR.previous.docx, so Result and Remarks you wrote can be recovered.
+
 ## 24 October 2026
 
 - **The build uses the newest Homer kit it finds,** logging each one: your HomerDev variable, C:\HomerDev and the folders above. The variable named an older installed kit, which stopped BatCon's build.
