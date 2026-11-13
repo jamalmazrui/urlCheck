@@ -468,7 +468,9 @@ def checkEncoding():
     lsWrong = []
     iChecked = 0
     for sDirPath, lsDirs, lsNames in os.walk(sRoot):
-        lsDirs[:] = [s for s in lsDirs if s.lower() not in lsSkipFolders]
+        # HARVESTED PAGES KEEP THEIR OWN ENCODING (1.208.0): data\\harvests holds other people's web pages as they were
+        # fetched, read by the builder and never pushed; 111 of them refused AppHelpGuides' push on 11 November 2026.
+        lsDirs[:] = [s for s in lsDirs if s.lower() not in lsSkipFolders and not (s.lower() == "harvests" and os.path.basename(sDirPath).lower() == "data")]
         for sName in sorted(lsNames):
             if sName.lower() in lsGeneratedFiles: continue
             if not sName.lower().endswith(lsTextExtensions): continue
@@ -792,8 +794,8 @@ def finishEntries(sText):
 
 def checkFinishPage():
     r"""THE FINISH PAGE'S RULES (1.43.51; help\FinishPage.md). In every installer
-    script: an Install or Update box is ticked, a Reinstall box never is, and
-    Launch is ticked; every component box says Install, Update or Reinstall;
+    script: an Install or Update box is marked, a Reinstall box never is, and
+    Launch is marked; every component box says Install, Update or Reinstall;
     nothing starts NVDA (opening an .nvda-addon or running nvda.exe), and no
     label says NVDA must be running. EdSharp's and DbDo's installers broke the
     first rule on 30 September after being called migrated."""
@@ -809,7 +811,7 @@ def checkFinishPage():
                     oMatch = re.search(sName + r':\s*("(?:[^"]|"")*"|[^;]+)', sEntry, re.I)
                     return oMatch.group(1).strip().strip('"') if oMatch else ""
                 sCheck = field("Check"); sFlags = field("Flags").lower(); sDesc = field("Description"); sFile = field("Filename")
-                bUnticked = "unchecked" in sFlags
+                bUnmarked = "unchecked" in sFlags
                 oVerb = re.search(r"is(Install|Update|Reinstall)|(?:Needs?)(Install|Update)|(IsCurrent|AreCurrent)|isModel(Install|Reinstall)", sCheck)
                 sVerb = ""
                 if oVerb:
@@ -818,9 +820,9 @@ def checkFinishPage():
                 elif re.match(r"^(Install|Update|Reinstall)\b", sDesc):
                     sVerb = sDesc.split()[0]
                 sWhat = sDesc or sFile
-                if sVerb in ("Install", "Update") and bUnticked: lsBad.append("%s: %s box not ticked: %s" % (sRel, sVerb, sWhat))
-                if sVerb == "Reinstall" and not bUnticked: lsBad.append("%s: Reinstall box ticked: %s" % (sRel, sWhat))
-                if re.search(r"launch", sDesc, re.I) and bUnticked: lsBad.append("%s: Launch box not ticked" % sRel)
+                if sVerb in ("Install", "Update") and bUnmarked: lsBad.append("%s: %s box not marked: %s" % (sRel, sVerb, sWhat))
+                if sVerb == "Reinstall" and not bUnmarked: lsBad.append("%s: Reinstall box marked: %s" % (sRel, sWhat))
+                if re.search(r"launch", sDesc, re.I) and bUnmarked: lsBad.append("%s: Launch box not marked" % sRel)
                 if not sVerb and not re.search(r"launch|open|guide|read|view", sDesc, re.I):
                     lsBad.append("%s: box without Install, Update or Reinstall: %s" % (sRel, sWhat))
                 if re.search(r"nvda-addon|nvda\.exe|GetNvdaPath", sFile, re.I): lsBad.append("%s: box starts NVDA: %s" % (sRel, sFile))
@@ -986,7 +988,15 @@ def checkKeys():
         else:
             lsCombos = re.findall(r"\b(?:Alt\+Control|Control\+Alt)(?:\+Shift)?\+\w+", sText)
         for sKey in lsCombos:
-            if sKey.rsplit("+", 1)[1].lower() in lsNavigation: continue
+            # A MODIFIER NAMED IN PROSE IS NOT A KEY (1 November 2026): "Alt+Control+Shift
+            # with an arrow" names a set of modifiers, and the pattern took Shift for the
+            # key. Number Pad 5 (NumPad5, Clear) is a navigation key with the arrows: the
+            # screen readers' table keys use it to read the cell.
+            sLast = sKey.rsplit("+", 1)[1].lower()
+            if sLast in ("shift", "alt", "control", "ctrl"): continue
+            # Number-pad 1 to 9, as NVDA names them, are Home, the arrows and the page keys with NumLock off
+            # (2 November 2026): DbDo's NVDA add-on binds Alt+Control with them for the same table keys.
+            if sLast in lsNavigation or sLast in ("numpad5", "clear", "number", "numpad") or re.match(r"^numpad[1-9]$", sLast): continue
             # The app's own desktop shortcut, as its installer declares it,
             # is the sanctioned use: FileDir's Hotkeys.inix lists Alt+Control+F
             # because that is how FileDir is opened, and HomerView's NVDA
@@ -1072,6 +1082,44 @@ def checkKeys():
     return finding("keys", "pass", "0 reserved combinations, 0 access keys claimed twice")
 
 
+def checkLaunchWords():
+    """ONE NAME, ONE SENTENCE IN EVERY LAUNCH APP (1.221.0, the author's ruling of 12 November 2026: the same command has
+    the same name, description and binding in every launch app). Browse local source, Choose output directory, Use
+    configuration and View output directory do the same thing in 2htm, BatCon, extCheck, HomerScribe, urlCheck and
+    urlFido, so each takes the kit's sentence, passed as "" to LaunchDialog; an app that words its own fails. Source
+    paths and Output directory say what the app reads and writes, so their tips are its own."""
+    lsHits = []
+    for sPath in sourceFiles():
+        if not sPath.lower().endswith((".cs", ".py")): continue
+        if os.path.dirname(os.path.abspath(sPath)) != os.path.abspath(sRoot): continue
+        sText = readText(sPath)
+        for sCall, lsWhich in (("addSourceBand", [(2, "Browse local source")]), ("addOutputBand", [(2, "Choose output directory")]),
+                               ("addOperationBands", [(3, "Use configuration"), (5, "View output directory")])):
+            for oCall in re.finditer(r"\b" + sCall + r"\s*\(", sText):
+                lsArgs, sCur, iDepth, sQuote, k = [], "", 1, "", oCall.end()
+                while k < len(sText) and iDepth:
+                    ch = sText[k]
+                    if sQuote:
+                        if ch == "\\": sCur += sText[k:k + 2]; k += 2; continue
+                        if ch == sQuote: sQuote = ""
+                    elif ch in "\"'": sQuote = ch
+                    elif ch in "([{": iDepth += 1
+                    elif ch in ")]}":
+                        iDepth -= 1
+                        if not iDepth: break
+                    elif ch == "," and iDepth == 1: lsArgs.append(sCur.strip()); sCur = ""; k += 1; continue
+                    sCur += ch; k += 1
+                lsArgs.append(sCur.strip())
+                for iArg, sLabel in lsWhich:
+                    if iArg < len(lsArgs) and lsArgs[iArg] not in ('""', "''", "null", "None"):
+                        lsHits.append("%s: %s has its own tip, %s; pass \"\" for the kit's sentence" % (os.path.basename(sPath), sLabel, lsArgs[iArg][:60]))
+    if not lsHits:
+        return finding("launch words", "pass" if any(re.search(r"\baddOperationBands\s*\(", readText(p)) for p in sourceFiles() if p.lower().endswith((".cs", ".py"))) else "skip",
+                       "the standard launch controls use the kit's sentences" )
+    for sHit in lsHits: logLine("launch words: " + sHit)
+    return finding("launch words", "fail", "; ".join(lsHits))
+
+
 def checkConversions():
     """ONE COPY OF EVERY CONVERSION (1.74.0): an app converts files only through the kit's Conversion.
 
@@ -1098,7 +1146,10 @@ def checkConversions():
         oMatch = re.search(r"(?im)^\s*conversionsMoved\s*=\s*(.*)$", readText(sManifest))
         if oMatch: lsMoved = [s.strip().lower() for s in oMatch.group(1).split(",") if s.strip()]
     lsPatterns = [(r"pandoc\.exe", "its own Pandoc finder"), (r"2htm\.exe", "a 2htm call"),
-                  (r"\"(Word|Excel|PowerPoint)\.Application\"", "an Office COM object"), (r"pymupdf4llm", "its own PDF reader")]
+                  (r"\"(Word|Excel|PowerPoint)\.Application\"", "an Office COM object"), (r"pymupdf4llm", "its own PDF reader"),
+                  # ONLY VALID CONVERSIONS (1.220.0, the author's ruling of 12 November 2026): a picker of target formats
+                  # lists what the chosen sources can become -- Conversion.targetsForPaths -- never every format.
+                  (r"\ballTargets\s*\(", "a target list of every format; offer only what the sources can become, by Conversion.targetsForPaths")]
     lsHits = []
     for sPath in sourceFiles():
         if not sPath.lower().endswith(".cs"): continue
@@ -1289,7 +1340,7 @@ def checkInstallerNames():
     try:
         import kind
         sKit = kind.findKit([sRoot])
-        sComponents = os.path.join(sKit, "Templates", "HomerComponents.iss") if sKit else ""
+        sComponents = os.path.join(sKit, "templates", "HomerComponents.iss") if sKit else ""
         if not os.path.isfile(sComponents): return finding("installer", "skip", "the kit's HomerComponents.iss was not found")
         lsClash = kind.issFunctionClashes(sAppText, readText(sComponents))
     except Exception as oError:
@@ -1448,7 +1499,7 @@ def checkIssComments():
 
 
 # THE HOMER INSTALLER PATTERN, CHECKED (1.65.21, 10 October 2026). Every installer was meant to share one Finish
-# page -- each component's verb (Install, Update, Reinstall) and tick decided by the kit, so pressing Enter installs
+# page -- each component's verb (Install, Update, Reinstall) and mark decided by the kit, so pressing Enter installs
 # what is missing, updates what is stale and starts the app -- and to reuse the folder of an earlier install. The
 # rule lived only in the homer-installer skill, and DbDo, EdSharp and HomerView kept code of their own: DbDo's JAWS
 # box said Update on every new version though its scripts had not changed, and EdSharp asked for the folder again on
@@ -1675,6 +1726,296 @@ def checkSmoke(bBuild):
     return finding("smoke", "fail", "%s --help returned %d" % (sExe, iCode))
 
 
+def checkAccessibility(bScan):
+    """ACCESSIBILITY SCAN (5 November 2026): a windowed program is started, its window scanned with Axe.Windows --
+    the rule engine of Accessibility Insights for Windows -- and closed by WM_CLOSE, nothing pressed. The verdict is a
+    warning at most, never a failure: a finding is a question to review, and the report says what to check first --
+    above all, never an accessible name where a label before the control, its own caption, or the window title
+    already names it, which the reader would then say twice. Findings reviewed and accepted go in a11yAccepted.txt."""
+    # AT EVERY PUSH, SAID ALOUD (5 November 2026, night). It had opened DbDo silently for a minute, through a
+    # command-line tool that scans a whole program; the kit's axeWindow now scans the main window by its handle, says
+    # why the program opens and how the scan goes every 10 seconds, and gives up after two minutes, saying so.
+    if not bScan:
+        return finding("accessibility", "skip", "--noscan was given")
+    if os.name != "nt":
+        return finding("accessibility", "skip", "scans need Windows")
+    lsExe = [s for s in glob.glob(os.path.join(sRoot, "exec", "*.exe")) + glob.glob(os.path.join(sRoot, "*.exe"))
+             if not s.lower().endswith("_setup.exe")]
+    sApp = appName()
+    lsOwn = [s for s in lsExe if os.path.splitext(os.path.basename(s))[0].lower() == sApp.lower()]
+    lsExe = lsOwn or lsExe
+    if not lsExe or not isWindowed(lsExe[0]):
+        return finding("accessibility", "skip", "no windowed program here to scan")
+    oAxe = None
+    sKit = ""
+    try:
+        import kind
+        sKit = kind.findKit([sRoot]) or ""
+    except Exception:
+        sKit = ""
+    # THE KIT'S COPY FIRST, AND SAID WHICH (9 November 2026). An app's own scripts folder came first, so an old
+    # axeWindow.py left there outranked the kit's: DbDo's main window kept the fingerprint and the 5-minute rescans the
+    # kit had fixed. The kit's copy wins now, and the log names the file that ran.
+    for sFolder in (os.path.join(sKit, "scripts") if sKit else "", os.path.dirname(os.path.abspath(__file__))):
+        if sFolder and os.path.isfile(os.path.join(sFolder, "axeWindow.py")) and os.path.isfile(os.path.join(sFolder, "axeScan.py")):
+            if sFolder in sys.path: sys.path.remove(sFolder)
+            sys.path.insert(0, sFolder)
+            import importlib
+            if "axeWindow" in sys.modules: del sys.modules["axeWindow"]
+            oAxe = importlib.import_module("axeWindow")
+            logLine("accessibility: axeWindow from " + os.path.abspath(getattr(oAxe, "__file__", "?")))
+            break
+    if oAxe is None:
+        return finding("accessibility", "skip", "the kit's axeWindow.py was not found")
+    oAxe.useLog(logLine)
+    try:
+        sVerdict, sEvidence, sReport = oAxe.scanProgramWindow(os.path.abspath(lsExe[0]), sRoot, sApp, os.path.join(sRoot, "logs"))
+    except Exception as oError:
+        logLine("accessibility scan: " + traceback.format_exc())
+        return finding("accessibility", "skip", "the scan could not run: %s" % oError)
+    return finding("accessibility", sVerdict, sEvidence)
+
+
+def checkMenuLetters():
+    """HOMER'S LETTER RULES IN EVERY APP (10 November 2026, strengthened the same day after a walk of DbDo's menus).
+    Reads each app's menu items as the app writes them -- DbDo's addItem, EdSharp's CreateMenuItem, FileDir's
+    menu_Helper -- with the menu each is added to, and checks five rules:
+      1. no two items in one menu share an access letter;
+      2. an access letter starts a word of the item's name, never sits inside one;
+      3. an item whose key is a letter has that letter as its access letter, if it has one -- Shift or not;
+      4. an item whose key is a function key, an arrow or a symbol has no access letter;
+      5. a key's letter starts a word of the item's name;
+      6. a caption marks at most one access letter.
+    Standing exceptions, as in DbDo's audit: X for the "ex" sound, V for "voke", Z for a toggle or status; Windows' own
+    keys -- Control+X, C and V, Control+Z and Y -- and the keys built on them; a letter a command family shares, as
+    Proper Case keeps Upper Case's U; and Shift, which keeps a command's letter for rule 5. A failure, so a break
+    stops the release; each is logged."""
+    lItems = []   # (sMenu, sCaption, sKeys)
+    for sPath in glob.glob(os.path.join(sRoot, "*.cs")):
+        sText = readText(sPath)
+        sCode = "\n".join(s for s in sText.splitlines() if not s.lstrip().startswith("//"))
+        for sMenu, sCaption, sKeys in re.findall(r'addItem\((mi[A-Za-z]+),\s*"([^"]*)",\s*"[^"]*",\s*([^,]+?),', sCode):
+            lItems.append((sMenu, sCaption, sKeys.replace("Keys.", "").replace(" | ", "+").replace("|", "+").strip()))
+        dParent = {}
+        for sParent, sList in re.findall(r'(\w+)\.DropDownItems\.AddRange\(new ToolStripItem\[\]\s*\{([^}]*)\}', sCode):
+            for sChild in re.findall(r"\w+", sList): dParent[sChild] = sParent
+        for sParent, sChild in re.findall(r'(\w+)\.DropDownItems\.Add\((\w+)\)', sCode): dParent[sChild] = sParent
+        for sVar, sCaption, sKeys in re.findall(r'(\w+)\s*=\s*(?:CreateMenuItem|menu_Helper)\("([^"]*)",\s*"([^"]*)"', sCode):
+            lItems.append((dParent.get(sVar, ""), sCaption, sKeys))
+        # SUBMENUS AND MENUS TOO (10 November 2026): a submenu's own caption -- DbDo's Say, Tools and Bulk Marking, made
+        # with new ToolStripMenuItem("...") -- and each menu on the menu bar share letters with the items beside them,
+        # and were not counted: Query's Say and Show Schema both had S. They carry no key.
+        for sParent, sList in re.findall(r'(\w+)\.Items\.AddRange\(new ToolStrip(?:Menu)?Item\[\]\s*\{([^}]*)\}', sCode):
+            for sChild in re.findall(r"\w+", sList): dParent.setdefault(sChild, "menu bar")
+        for sParent, sList in re.findall(r'(\w+)\.DropDownItems\.AddRange\(new ToolStripMenuItem\[\]\s*\{([^}]*)\}', sCode):
+            for sChild in re.findall(r"\w+", sList): dParent[sChild] = sParent
+        for sVar, sCaption in re.findall(r'(\w+)\s*=\s*(?:new\s+\w*MenuItem|CreateMenu|menu_Helper|addMenu)\("([^"]*)"\)', sCode):
+            lItems.append((dParent.get(sVar, "menu bar" if re.match(r"^&?[A-Za-z]+$", sCaption) and sVar in re.findall(r"\w+", " ".join(re.findall(r"Items\.AddRange\([^)]*\)", sCode))) else ""), sCaption, ""))
+        for sVar, sCaption in re.findall(r'(mi[A-Za-z]+)\s*=\s*addMenu\("([^"]*)"\)', sCode):
+            lItems.append(("menu bar", sCaption, ""))
+    if not lItems:
+        return finding("menu letters", "skip", "no menu items found in the app's code")
+    setWindows = {"X", "C", "V", "Z", "Y"}
+    def mainKey(sKeys):
+        lParts = [s for s in re.split(r"\+", sKeys.split(" or ")[0].strip()) if s]
+        lMain = [s for s in lParts if s not in ("Alt", "Control", "Shift", "Ctrl")]
+        return lMain[-1] if lMain else ""
+    def keyLetter(sKeys):
+        sMain = mainKey(sKeys)
+        return sMain.upper() if len(sMain) == 1 and sMain.isalpha() else ""
+    def symbolKey(sKeys):
+        sMain = mainKey(sKeys)
+        return sMain != "" and sMain != "None" and not (len(sMain) == 1 and sMain.isalnum()) and not re.match(r"^D\d$", sMain)
+    def exempt(sLetter, sPlain):
+        if sLetter == "X" and re.search(r"ex", sPlain, re.I): return True
+        if sLetter == "V" and re.search(r"voke", sPlain, re.I): return True
+        if sLetter == "Z" and re.search(r"toggle|status", sPlain, re.I): return True
+        if sLetter in setWindows and re.search(r"cut|copy|paste|undo|redo|repeat", sPlain, re.I): return True
+        return False
+    lFacts = []
+    for sMenu, sCaption, sKeys in lItems:
+        sPlain = sCaption.replace("&", "").replace("...", "").strip()
+        lFacts.append((sPlain, keyLetter(sKeys), set(s.lower() for s in re.findall(r"[A-Za-z][A-Za-z0-9']*", sPlain))))
+    def family(sLetter, sPlain):
+        setWords = set(s.lower() for s in re.findall(r"[A-Za-z][A-Za-z0-9']*", sPlain))
+        for sOther, sOtherLetter, setOther in lFacts:
+            if sOther == sPlain or sOtherLetter != sLetter: continue
+            if sLetter.lower() in [s[0] for s in setOther] and setWords & setOther: return True
+        return False
+    lBreaks = []
+    dByMenu = {}
+    for sMenu, sCaption, sKeys in lItems:
+        sPlain = sCaption.replace("&", "").replace("...", "").strip()
+        lInitials = [s[0].upper() for s in re.findall(r"[A-Za-z][A-Za-z0-9']*", sPlain)]
+        sHot = keyLetter(sKeys)
+        oAmp = re.search(r"&([^&])", sCaption)
+        if len(re.findall(r"&[^&]", sCaption.replace("&&", ""))) > 1:
+            lBreaks.append("%s: more than one access letter is marked in its caption" % sPlain)
+        if oAmp:
+            sAmp = oAmp.group(1).upper()
+            if sMenu: dByMenu.setdefault(sMenu, []).append((sAmp, sPlain))
+            iAt = sCaption.index("&")
+            if iAt > 0 and sCaption[iAt - 1].isalnum() and not exempt(sAmp, sPlain):
+                lBreaks.append("%s: access letter %s is inside a word" % (sPlain, sAmp))
+            if sHot and sAmp != sHot and not exempt(sHot, sPlain):
+                lBreaks.append("%s: access letter %s, but its key %s has the letter %s" % (sPlain, sAmp, sKeys, sHot))
+            if symbolKey(sKeys):
+                lBreaks.append("%s: key %s is not a letter, so the item takes no access letter, but it has %s" % (sPlain, sKeys, sAmp))
+        if sHot and sHot not in lInitials and not exempt(sHot, sPlain) and "Shift" not in sKeys and not family(sHot, sPlain):
+            lBreaks.append("%s: key %s, and %s starts none of its words" % (sPlain, sKeys, sHot))
+    for sMenu, lLetters in sorted(dByMenu.items()):
+        dSeen = {}
+        for sAmp, sPlain in lLetters: dSeen.setdefault(sAmp, []).append(sPlain)
+        for sAmp, lNames in sorted(dSeen.items()):
+            if len(lNames) > 1: lBreaks.append("%s menu: access letter %s is shared by %s" % (sMenu, sAmp, "; ".join(lNames)))
+    for sBreak in lBreaks: logLine("MENU LETTER: " + sBreak)
+    if lBreaks:
+        # A GATE, NOT A WARNING (10 November 2026): Jamal heard shared letters and a letter that was not its key's in a
+        # walk of DbDo's menus, and a warning had let them through; every app passes, so a break now stops the release.
+        return finding("menu letters", "fail", "%d break(s) of Homer's letter rules among %d menu items; each is in the log" % (len(lBreaks), len(lItems)))
+    return finding("menu letters", "pass", "%d menu items: no letter shared in a menu, each letter starts a word and matches its key, none on a function or symbol key" % len(lItems))
+
+
+def checkSuiteCommands():
+    """THE HOMER SUITE SPEAKS WITH ONE VOICE (10 November 2026). A command DbDo, EdSharp and FileDir share has one name,
+    one suite key and one sentence, word for word but for the app's own words, as HomerDev\\data\\SuiteCatalog.inix
+    keeps them. This reads the app's key file -- configs\\<App>.inix's [Hotkeys], else configs\\Hotkeys.inix -- and fails
+    when a shared command lacks its suite key or says a different sentence. A command the catalog does not list is
+    the app's own, and is not judged here."""
+    # THE KIT AS THE OTHER CHECKS FIND IT (10 November 2026): kind is imported here, and findKit takes the folders to
+    # look from; the first version called a kind never imported, with the wrong argument, and stopped every release.
+    try:
+        import kind
+        sKit = kind.findKit([sRoot]) or ""
+    except Exception as exceptionError:
+        logLine("suite commands: the kit could not be found: %s" % exceptionError)
+        sKit = ""
+    sCatalog = os.path.join(sKit or "", "data", "SuiteCatalog.inix")
+    if not sKit or not os.path.isfile(sCatalog):
+        return finding("suite commands", "skip", "no SuiteCatalog.inix in the kit")
+    sApp = os.path.basename(os.path.normpath(sRoot))
+    sKeyFile = os.path.join(sRoot, "configs", sApp + ".inix")
+    if not (os.path.isfile(sKeyFile) and re.search(r"(?mi)^\[hotkeys\]", readText(sKeyFile))):
+        sKeyFile = os.path.join(sRoot, "configs", "Hotkeys.inix")
+    if not os.path.isfile(sKeyFile):
+        return finding("suite commands", "skip", "no key file in configs")
+    # [keys <App>] in the catalog names a key an app keeps instead of the suite's, for a reason the catalog gives --
+    # HomerView's Elevate Version is Control+F11, since F11 is Microsoft Edge's full screen (10 November 2026).
+    dCommands, dWords, dKeyExceptions, sSection = {}, {}, {}, ""
+    for sLine in readText(sCatalog).splitlines():
+        sTrim = sLine.strip()
+        if not sTrim or sTrim.startswith(";"): continue
+        if sTrim.startswith("["): sSection = sTrim[1:-1]; continue
+        if "=" not in sTrim: continue
+        sKey, sValue = sTrim.split("=", 1)
+        if sSection.startswith("command "): dCommands.setdefault(sSection[8:], {})[sKey.strip()] = sValue.strip()
+        elif sSection.startswith("words "): dWords.setdefault(sSection[6:], {})[sKey.strip()] = sValue.strip()
+        elif sSection.startswith("keys "): dKeyExceptions.setdefault(sSection[5:], {})[sKey.strip()] = sValue.strip()
+    def normKey(sKey):
+        dRep = {"Ctrl": "Control", "Apostrophe": "'", "OemQuotes": "'", "Semicolon": ";", "Semi-colon": ";", "Backslash": "\\",
+                "Slash": "/", "Grave": "`", "Equals": "=", "Return": "Enter", "Comma": ",", "Period": ".", "SemiColon": ";"}
+        lParts = [dRep.get(s, s) for s in sKey.strip().split("+") if s]
+        lMods = [s for s in ("Control", "Alt", "Shift") if s in lParts]
+        lRest = [re.sub(r"^D(\d)$", r"\1", s) for s in lParts if s not in ("Control", "Alt", "Shift")]
+        return "+".join(lMods + lRest)
+    def render(sName):
+        sText = dCommands[sName].get("description", "")
+        dAll = dict(dWords.get(sApp, {})); dAll["app"] = sApp; dAll.update(dWords.get(sName + "|" + sApp, {}))
+        for sKey, sValue in dAll.items(): sText = sText.replace("{" + sKey + "}", sValue)
+        return sText
+    lBreaks, iShared = [], 0
+    for sLine in readText(sKeyFile).splitlines():
+        if "=" not in sLine or sLine.lstrip().startswith((";", "[")): continue
+        sName, sRest = sLine.split("=", 1)
+        sCanon = sName.strip().replace(sApp, "{app}")
+        if sCanon not in dCommands: continue
+        iShared += 1
+        lParts = sRest.split(",")
+        iAt = 1
+        while iAt < len(lParts) and re.match(r"^\s*(or|through)\b", lParts[iAt]): iAt += 1
+        lKeys = [normKey(s) for sPart in lParts[:iAt] for s in re.split(r"\s+or\s+|^\s*or\s+|^\s*through\s+", sPart.strip()) if s.strip() and s.strip().lower() != "none"]
+        sDescription = ",".join(lParts[iAt:]).strip()
+        sSuiteKey = normKey(dCommands[sCanon].get("key", "").replace("{app}", sApp))
+        sOwnKey = normKey(dKeyExceptions.get(sApp, {}).get(sCanon, ""))
+        if sOwnKey: sSuiteKey = sOwnKey
+        if sSuiteKey and sSuiteKey not in lKeys:
+            lBreaks.append("%s: the suite's key is %s, but %s binds %s" % (sName.strip(), sSuiteKey, sApp, " or ".join(lKeys) or "none"))
+        sWanted = render(sCanon)
+        if sDescription.rstrip(".") != sWanted.rstrip("."):   # a closing period is a matter of each app's style
+            lBreaks.append("%s: says \"%s\", where the suite says \"%s\"" % (sName.strip(), sDescription, sWanted))
+    for sBreak in lBreaks: logLine("SUITE: " + sBreak)
+    if lBreaks:
+        iDiffer = len(set(s.split(":", 1)[0] for s in lBreaks))   # commands, not breaks: one can differ in key and words
+        return finding("suite commands", "fail", "%d of %d shared commands differ from the suite's catalog; each is in the log" % (iDiffer, iShared))
+    return finding("suite commands", "pass", "%d shared commands, each with the suite's key and sentence" % iShared)
+
+
+def checkKitClasses():
+    """ONE COPY OF EACH SHARED CLASS (5 November 2026). Every Homer app is to use the kit's classes, compiled from
+    C:\\HomerDev\\exec\\CSharp, not keep its own. This lists each class an app defines under a name the kit already
+    provides -- its own MdiFrame, MdiChild, Util or KeyMap beside the kit's -- so the integration still to do is named
+    at every push until none is left. A warning, not a failure: each is moved to the kit's in its own step."""
+    sKit = ""
+    try:
+        import kind
+        sKit = kind.findKit([sRoot]) or ""
+    except Exception:
+        sKit = ""
+    if not sKit or os.path.normcase(os.path.abspath(sKit)) == os.path.normcase(os.path.abspath(sRoot)):
+        return finding("kit classes", "skip", "this is the kit itself, or the kit was not found")
+    # TOP-LEVEL CLASSES ONLY (6 November 2026): DbDo's KeyBinding and Result are helpers nested inside its own classes and
+    # only share a name with the kit's; counting them overstated the work left. A class counts when it sits at the
+    # file's outermost class indentation -- column 0, or inside one namespace.
+    oClass = re.compile(r"^([ \t]*)(?:public\s+|internal\s+)?(?:static\s+|sealed\s+|abstract\s+|partial\s+)*class\s+([A-Za-z_]\w*)", re.M)
+    def topClasses(sText):
+        lFound = [(len(m.group(1).expandtabs(4)), m.group(2)) for m in oClass.finditer(sText)]
+        if not lFound: return []
+        iTop = min(i for i, _ in lFound)
+        return [sName for i, sName in lFound if i == iTop]
+    setKit = set()
+    for sPath in glob.glob(os.path.join(sKit, "exec", "CSharp", "*.cs")):
+        setKit.update(topClasses(readText(sPath)))
+    dOwn = {}
+    lKept = []
+    for sPath in glob.glob(os.path.join(sRoot, "*.cs")):
+        sText = readText(sPath)
+        for sName in topClasses(sText):
+            if sName not in setKit: continue
+            # KEPT ON PURPOSE (10 November 2026): a class whose declaration has "KEPT ON PURPOSE" in the comment just
+            # above it keeps the kit's name for a reason given there -- EdSharp's Util is the interface its scripts
+            # call -- and is reported, not warned about.
+            oDecl = re.search(r"((?:^[ \t]*//[^\n]*\n){1,6})[ \t]*(?:public\s+|internal\s+)?(?:static\s+|sealed\s+|abstract\s+|partial\s+)*class\s+" + re.escape(sName) + r"\b", sText, re.M)
+            if oDecl and "KEPT ON PURPOSE" in oDecl.group(1): lKept.append("%s (%s)" % (sName, os.path.basename(sPath))); continue
+            dOwn.setdefault(sName, os.path.basename(sPath))
+    if lKept: logLine("kit classes: kept on purpose, as their comments say: " + ", ".join(lKept))
+    if not dOwn:
+        return finding("kit classes", "pass", "no class here repeats one of the kit's %d%s" % (len(setKit), "; kept on purpose: " + ", ".join(lKept) if lKept else ""))
+    return finding("kit classes", "warn", "%d class%s here repeat%s the kit's, to move to the kit's: %s" % (
+        len(dOwn), "" if len(dOwn) == 1 else "es", "s" if len(dOwn) == 1 else "",
+        ", ".join("%s (%s)" % (k, v) for k, v in sorted(dOwn.items()))))
+
+
+def checkWalk():
+    """A WALK IS AN OCCASIONAL TEST; THE GATE SAYS WHEN ONE IS DUE (5 November 2026). recordWalk drives the app through
+    the real screen reader and writes logs\\<App>-recordWalk-<time>.md. This reads the newest: a pass when it is under
+    two weeks old and heard every expected line; a warning when it missed some, or is older; not checked when the app
+    has no walks. Nothing to remember: the gate says when to run scripts\\recordWalk."""
+    if not os.path.isdir(os.path.join(sRoot, "scripts", "walks")):
+        return finding("walk", "skip", "this app has no walks in scripts\\walks")
+    lsReports = glob.glob(os.path.join(sRoot, "logs", appName() + "-recordWalk-*.md"))
+    if not lsReports:
+        return finding("walk", "warn", "no walk has been recorded; run scripts\\recordWalk with the app installed")
+    sNewest = max(lsReports, key=os.path.getmtime)
+    nDays = (time.time() - os.path.getmtime(sNewest)) / 86400.0
+    oMatch = re.search(r"\*\*(\d+) of (\d+) expected lines heard", readText(sNewest))
+    sHeard = ("%s of %s lines heard" % (oMatch.group(1), oMatch.group(2))) if oMatch else "its count not read"
+    if oMatch and oMatch.group(1) != oMatch.group(2):
+        return finding("walk", "warn", "the newest walk, %s, %s; read it, or run scripts\\recordWalk again" % (os.path.basename(sNewest), sHeard))
+    if nDays > 14:
+        return finding("walk", "warn", "the newest walk is %d days old (%s); run scripts\\recordWalk" % (int(nDays), sHeard))
+    return finding("walk", "pass", "the newest walk, %d day%s old, %s" % (int(nDays), "" if int(nDays) == 1 else "s", sHeard))
+
+
 def checkAccept():
     """The app's own acceptance criteria, which only the app can state."""
     sPath = os.path.join(sRoot, "accept.inix")
@@ -1790,6 +2131,8 @@ def main():
     oParser.add_argument("--build", action="store_true",
                          help="build the app first, and count the build as evidence")
     oParser.add_argument("--path", default="", help="the app folder; this one by default")
+    oParser.add_argument("--scan", action="store_true", help=argparse.SUPPRESS)   # kept for old command lines; scans are on
+    oParser.add_argument("--noscan", action="store_true", help="leave out the accessibility scan of the program's window")
     oParser.add_argument("--quiet", action="store_true", help="write the report, say little")
     oParser.add_argument("--fresh", action="store_true",
                          help="run every check even when a pass with exactly these files is on record")
@@ -1823,6 +2166,17 @@ def main():
         sayLine("This is the kit; running checkHomerDev, which builds the samples ...")
         iCode = subprocess.call([sys.executable, sChecker], cwd=sRoot)
         logLine("checkHomerDev exit code %d" % iCode)
+        # THE KIT'S OWN WINDOW IS SCANNED TOO (6 November 2026). The kit's gate stopped after checkHomerDev, so
+        # HomerDev.exe -- the program that opens after installing the kit -- was never scanned, though every app's is.
+        # It gets the same scan, with the same five-minute limit, spoken progress and fingerprint; a warning never
+        # fails the kit's push, which checkHomerDev's result decides.
+        try:
+            checkAccessibility("--noscan" not in [sArg.lower() for sArg in sys.argv[1:]])
+            sName, sVerdict, sEvidence = lsFindings[-1]
+            if sVerdict in ("warn", "fail"): sayLine("  warning: %s -- %s" % (sName, sEvidence))
+            else: logLine("the kit's own program: %s %s" % (sVerdict, sEvidence))
+        except Exception:
+            logLine("the kit's own program could not be scanned: " + traceback.format_exc())
         logLine("check end")
         return iCode
 
@@ -1904,8 +2258,14 @@ def main():
         checkKeys()
         checkSuite()
         checkConversions()
+        checkLaunchWords()
         checkBuild(dArguments.build)
         checkSmoke(dArguments.build)
+        checkAccessibility(not dArguments.noscan)
+        checkWalk()
+        checkKitClasses()
+        checkMenuLetters()
+        checkSuiteCommands()
         checkAccept()
 
     sReport = writeReport()

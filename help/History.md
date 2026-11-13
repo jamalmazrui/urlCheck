@@ -5,6 +5,11 @@ author: "Jamal Mazrui"
 
 # urlCheck History
 
+## 12 November 2026 -- The same words as every launch app
+
+- **Browse local source, Choose output directory, Use configuration and View output directory** now say the same sentence as in every Homer launch app, from the kit; the kit's check keeps it so.
+- **The switches -f, -u, -v, -d and -h** are described in the same words as every launch app's.
+
 ## 30 October 2026 -- more fixes from an audit by another AI
 
 - **A conformance report that could not be written is in the Results.** The ACR was written after the Results box had closed, so a failure showed only in the log. It is now written first, a failure is said in the Results, and the exit code is 1. The page reports are kept.

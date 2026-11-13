@@ -3283,17 +3283,17 @@ def parseArguments():
     # is View output directory, so the version is --version alone.
     argParser.add_argument("--version", action="version", version=f"%(prog)s {sProgramVersion}")
     argParser.add_argument("-d", "--default-settings", "--defaults", dest="bDefaultSettings", action="store_true",
-        help="Forget the saved settings and exit.")
+        help="Forget the saved settings and stop.")
     argParser.add_argument("-g", "--gui-mode", dest="bGuiMode", action="store_true",
         help="Show the parameter dialog. GUI mode is also entered automatically when urlCheck is launched without arguments from a GUI shell (File Explorer, Start menu, desktop hotkey).")
     argParser.add_argument("-o", "--output-directory", "--output-folder", "--output-dir", dest="sOutputDir", default="",
         help="Parent folder under which the per-scan output folder is created. Defaults to the current working folder. Created if it does not exist. The per-scan folder is always uniquely named based on the page title.")
     argParser.add_argument("-v", "--view-output-directory", "--view-output", dest="bViewOutput", action="store_true",
-        help="After all scans complete, open the parent output folder (the -o folder, or the current working folder) in File Explorer.")
+        help="Open the output directory in File Explorer when the run is done.")
     argParser.add_argument("-u", "--use-configuration", dest="bUseConfig", action="store_true",
-        help="Load saved settings from %%LOCALAPPDATA%%\\urlCheck\\configs\\urlCheck.inix at startup, and write them back on OK in GUI mode. Without this flag no settings are saved.")
+        help="Load the saved settings at startup, and in the dialog save them when you press OK.")
     argParser.add_argument("-f", "--force-replacements", "--force", dest="bForce", action="store_true",
-        help="Reuse an existing per-page output folder by emptying its contents and writing a fresh set of files. Without this flag urlCheck skips a url whose per-page output folder already exists, so previous scans are preserved.")
+        help="Do the work again for a source whose result is already there, replacing the old result; without it, that source is skipped and its result kept.")
     argParser.add_argument("-i", "--invisible-browser", "--invisible", dest="bInvisible", action="store_true",
         help="Run Microsoft Edge invisibly (the headless browser mode): no visible browser window during the scan.")
     argParser.add_argument("-a", "--authenticate-credentials", "--authenticate", dest="bAuthenticate", action="store_true",
@@ -6217,11 +6217,12 @@ def showGuiDialog(arguments):
         dlg = oLaunch.dialog
         try:
             oLaunch.ownPickers = True
+            oLaunch.sourcePick = "list"  # Browse picks a text file of urls; the kit's tip says so (kit 1.221.0)
             tbSource = oLaunch.addSourceBand(sSource,
                 "One url or domain, several separated by spaces, or the path "
                 "to a plain text file listing urls, domains or local files, "
                 "one per line.",
-                "Choose a plain text file that lists urls. It opens where Source paths points, else in Documents.")
+                "")
             btnBrowse = oLaunch.browseButton
             dlg.addBand()
             cbAuth = dlg.addCheckBox("&Authenticate credentials", bAuth,
@@ -6235,12 +6236,11 @@ def showGuiDialog(arguments):
             tbOut = oLaunch.addOutputBand(sOutputDir,
                 "The folder under which each page's results folder is made. "
                 "Blank means the current folder.",
-                "Choose the output directory.")
+                "")
             btnChoose = oLaunch.chooseButton
             oLaunch.addOperationBands(bForce, "",
-                bUseCfg, "Load these settings next time, and save them when you press "
-                "OK, in configs\\urlCheck.inix.",
-                bView, "Open the output directory in File Explorer when all scans are done.")
+                bUseCfg, "",
+                bView, "")
 
             def fnPickFile(sender, args):
                 # Pythonnet deadlocks on the modern (Vista+) IFileOpenDialog
