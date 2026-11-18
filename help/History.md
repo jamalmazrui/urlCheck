@@ -5,6 +5,11 @@ author: "Jamal Mazrui"
 
 # urlCheck History
 
+## 18 November 2026 -- Updates are called updates
+
+- **The installer calls an update an update.** It looked for the version already installed under its AppId with a doubled brace, which Inno writes with one, so it never found it and said "Installed" on the welcome page and in the Results box for every update. It now asks the kit's homerPriorVersion, which finds it.
+- **This needs HomerDev 1.261.0.**
+
 ## 18 November 2026 -- Built with a kit that compiles
 
 - **The output-directory question works with an older Homer.dll.** urlCheck 1.12 was built while the kit's C# did not compile, so it carries a Homer.dll without the kit's new question; it now asks the same question itself when Homer.dll lacks it.

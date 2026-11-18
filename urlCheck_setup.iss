@@ -211,13 +211,10 @@ var
   sPriorVersion: String;
 
 function priorVersion(): String;
-var
-  sKey, sFound: String;
+//  The kit's homerPriorVersion (1.261.0): this looked for the AppId with its doubled brace, found nothing, and called
+//  every update a fresh install.
 begin
-  Result := '';
-  sKey := 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{#SetupSetting("AppId")}_is1';
-  if RegQueryStringValue(HKLM, sKey, 'DisplayVersion', sFound) then Result := sFound
-  else if RegQueryStringValue(HKCU, sKey, 'DisplayVersion', sFound) then Result := sFound;
+  Result := homerPriorVersion();
 end;
 
 //  The previous install is read ONCE, before anything is installed: read
