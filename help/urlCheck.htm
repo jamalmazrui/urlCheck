@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US" xml:lang="en-US">
 <head>
   <meta charset="utf-8" />
-  <meta name="generator" content="pandoc 3.12.1" />
+  <meta name="generator" content="pandoc 3.14" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
   <meta name="author" content="Jamal Mazrui" />
   <meta name="description" content="Accessibility Checker for Web Pages" />
@@ -37,27 +37,6 @@
       }
       h1 {
         font-size: 1.8em;
-      }
-    }
-    @media print {
-      html {
-        color-scheme: light only;
-      }
-      html, body, pre, code {
-        background-color: transparent;
-      }
-      body, a, a:visited, blockquote {
-        color: black;
-      }
-      pre, code {
-        padding: 0;
-      }
-      p, h2, h3 {
-        orphans: 3;
-        widows: 3;
-      }
-      h2, h3, h4 {
-        page-break-after: avoid;
       }
     }
     p {
@@ -165,6 +144,12 @@
       text-decoration: none;
     }
     span.smallcaps{font-variant: small-caps;}
+    em, em em em, em em em em em {
+      font-style: italic;
+    }
+    em em, em em em em {
+      font-style: normal;
+    }
     div.columns{display: flex; gap: 1.5em;}
     div.column{flex: auto;}
     @media screen {
@@ -246,7 +231,27 @@
     code span.va { color: #19177c; } /* Variable */
     code span.vs { color: #4070a0; } /* VerbatimString */
     code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
-  </style>
+    @media print {
+      html {
+        color-scheme: light only;
+      }
+      html, body, pre, code {
+        background-color: transparent;
+      }
+      body, a, a:visited, blockquote {
+        color: black;
+      }
+      pre, code {
+        padding: 0;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }  </style>
 </head>
 <body>
 <header id="title-block-header">
@@ -328,7 +333,7 @@ license is installed as <code>License.htm</code>.</li>
 <code>urlCheck</code> dialog.</li>
 </ul>
 <p>The last page offers two checkboxes. <strong>Launch urlCheck
-now</strong> is checked; <strong>Open the user guide</strong> is not.
+now</strong> is marked; <strong>Open the user guide</strong> is not.
 When you press Finish, a short results box says what was installed and
 where the logs are. <code>urlCheck</code> starts after you close that
 box, so the box is never hidden behind it.</p>
@@ -373,10 +378,10 @@ scan. By default, urlCheck uses a fresh temporary Edge profile and
 disconnects its automation channel from Edge during the user-interaction
 pause (which improves the chance of success against sites that detect
 active automation, such as WhatsApp Web); to use your real profile
-instead, also check <strong>Main profile</strong>. If both
+instead, also mark <strong>Main profile</strong>. If both
 <strong>Invisible browser</strong> and <strong>Authenticate
-credentials</strong> are checked, urlCheck overrides Invisible browser
-at run time and launches Edge with a visible window (an auth prompt
+credentials</strong> are marked, urlCheck overrides Invisible browser at
+run time and launches Edge with a visible window (an auth prompt
 requires a visible browser); the override is logged.</li>
 <li><strong>Invisible browser</strong> [I] — run Edge with no visible
 browser window</li>
@@ -415,9 +420,12 @@ Escape is Cancel, from any control.</li>
 </ul>
 <p>More keys work anywhere in the dialog: <strong>F1</strong> shows
 Help, <strong>F11</strong> checks the web, from any control, for a newer
-version of <code>urlCheck</code> (see Updating),
-<strong>Control+Enter</strong> is OK from any control,
-<strong>Shift+F1</strong> says the tip for the field you are on, and
+version of <code>urlCheck</code> (see Updating), and
+<strong>Control+Enter</strong> is OK from any control.
+<strong>Shift+F1</strong>, What This Does, says what the control with
+focus does, and <strong>Control+Slash</strong>, Where Am I, says where
+you are, what has focus and its keys; both work in every dialog and
+message, and pressed twice, each shows what it said in a window.
 <strong>F7</strong> lists the dialog’s controls so you can move to one.
 The dialog is built with the Homer Lbc classes, so its text fields also
 have the Lbc editing keys, which Help lists.</p>
@@ -425,9 +433,9 @@ have the Lbc editing keys, which Help lists.</p>
 fields cleared and any saved configuration deleted. Every run ends with
 the urlCheck Results box. Its only button is OK, so Enter, Space or
 Escape closes it; then the output directory opens if View output
-directory is checked, and urlCheck closes. A long report shows its first
+directory is marked, and urlCheck closes. A long report shows its first
 15 lines and names a file with the rest. If OK finds a problem, such as
-a missing source or Edge running while Main profile is checked, it says
+a missing source or Edge running while Main profile is marked, it says
 so and returns you to the dialog with your entries kept.</p>
 <p><strong>Note on profiles and privacy.</strong> urlCheck’s default — a
 fresh temporary profile — matches the experience of an anonymous member
@@ -487,14 +495,15 @@ press Enter (or click OK) to resume. By default it uses a fresh
 temporary profile and disconnects Playwright during the pause; combine
 with <code>-m</code> to use your real profile (no disconnect). It turns
 off <code>-i</code>.</li>
-<li><code>-d</code>, <code>--default-settings</code> — forget the saved
-settings and exit.</li>
-<li><code>-f</code>, <code>--force-replacements</code> — do the work
-again for a source whose result is already there, replacing it; without
-it, that source is skipped and its result kept.</li>
+<li><code>-d</code>, <code>--default-settings</code> — Forget the saved
+settings and stop.</li>
+<li><code>-f</code>, <code>--force-replacements</code> — Do the work
+again for a source whose result is already there, replacing the old
+result; without it, that source is skipped and its result kept.</li>
 <li><code>-g</code>, <code>--gui-mode</code> — show the parameter
 dialog.</li>
-<li><code>-h</code>, <code>--help</code> — show usage and exit.</li>
+<li><code>-h</code>, <code>--help</code> — Show these switches and
+stop.</li>
 <li><code>-i</code>, <code>--invisible-browser</code> — run Microsoft
 Edge with no visible browser window.</li>
 <li><code>-m</code>, <code>--main-profile</code> — launch Edge with your
@@ -505,12 +514,13 @@ anonymous. No Edge window may be open.</li>
 <code>--output-directory &lt;folder&gt;</code> — write output under
 <code>&lt;folder&gt;</code> (made if missing); the default is the
 current folder.</li>
-<li><code>-u</code>, <code>--use-configuration</code> — read saved
-settings from
+<li><code>-u</code>, <code>--use-configuration</code> — Load the saved
+settings at startup, and in the dialog save them when you press OK. The
+settings are in
 <code>%LOCALAPPDATA%\urlCheck\configs\urlCheck.inix</code>.</li>
 <li><code>--version</code> — show the version and exit.</li>
-<li><code>-v</code>, <code>--view-output-directory</code> — after the
-run, open the output folder in File Explorer.</li>
+<li><code>-v</code>, <code>--view-output-directory</code> — Open the
+output directory in File Explorer when the run is done.</li>
 </ul>
 <p>Every option in the dialog has a command-line switch named after its
 label, whose letter is the control’s Alt letter, and switches may be
@@ -575,7 +585,7 @@ shows what was captured and what was not, and the CSS selector in the
 <strong>Path</strong> column lets you find the element by hand.</p>
 <p>If a page already has a folder, urlCheck skips that page by default,
 keeping the earlier results. Use <code>--force-replacements</code>, or
-check <strong>Force replacements</strong> in the dialog, to scan it
+mark <strong>Force replacements</strong> in the dialog, to scan it
 again. The earlier reports are then set aside until the new scan
 finishes, put back if it fails, and removed only once it succeeds; files
 you added to the folder are never touched. The decision to skip is made
@@ -729,7 +739,7 @@ remediates issues, the rate should drop from one scan session to the
 next. Accessibility is a journey, not a destination.</p>
 <hr />
 <h2 id="configuration-file">Configuration file</h2>
-<p>When <strong>Use configuration</strong> is checked in the dialog (or
+<p>When <strong>Use configuration</strong> is marked in the dialog (or
 <code>-u</code> is on the command line), <code>urlCheck</code> reads and
 writes its settings in:</p>
 <pre><code>%LOCALAPPDATA%\urlCheck\configs\urlCheck.inix</code></pre>

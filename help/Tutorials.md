@@ -283,7 +283,7 @@ The text fields remember earlier answers: Up Arrow in Source paths brings back t
 
 ### Step 22
 
-Each box's state is saved the moment you answer it when Use configuration is ticked, so closing the dialog by Escape loses nothing.
+Each box's state is saved the moment you answer it when Use configuration is marked, so closing the dialog by Escape loses nothing.
 
 ### Step 23: Alt+D
 
@@ -486,7 +486,7 @@ Confirm the wording with a live run: buildTutorials -live.
 
 ### Step 4: Alt+V
 
-I leave Output folder blank, so reports go into the current folder, and I tick View output directory.
+I leave Output folder blank, so reports go into the current folder, and I mark View output directory.
 
 Screen reader:
 
@@ -841,7 +841,7 @@ Confirm the wording with a live run: buildTutorials -live.
 
 ### Step 8
 
-Logging is automatic, so there is no box to tick for it. Every run's log is kept in the program's logs folder, under your local application data, and Help names that folder.
+Logging is automatic, so there is no box to mark for it. Every run's log is kept in the program's logs folder, under your local application data, and Help names that folder.
 
 Confirm the wording with a live run: buildTutorials -live.
 

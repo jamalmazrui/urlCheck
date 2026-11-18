@@ -28,7 +28,7 @@ Note=Confirm the wording with a live run: buildTutorials -live.
 
 [step]
 
-Say=I leave Output folder blank, so reports go into the current folder, and I tick View output directory.
+Say=I leave Output folder blank, so reports go into the current folder, and I mark View output directory.
 Key=Alt+V
 Hear=View output directory check box, checked
 Note=Confirm the wording with a live run: buildTutorials -live.

@@ -35,7 +35,7 @@ Download `urlCheck_setup.exe` from the [urlCheck releases page](https://github.c
 - Shows a short MIT license summary on the welcome page. The full license is installed as `License.htm`.
 - Adds a Start-menu group and a desktop shortcut whose hotkey is **Alt+Control+Shift+U**. Pressing **Alt+Control+Shift+U** from anywhere in Windows opens the `urlCheck` dialog.
 
-The last page offers two checkboxes. **Launch urlCheck now** is checked; **Open the user guide** is not. When you press Finish, a short results box says what was installed and where the logs are. `urlCheck` starts after you close that box, so the box is never hidden behind it.
+The last page offers two checkboxes. **Launch urlCheck now** is marked; **Open the user guide** is not. When you press Finish, a short results box says what was installed and where the logs are. `urlCheck` starts after you close that box, so the box is never hidden behind it.
 
 The program itself is in the `exec` folder of the installation, and this guide and the other documents are in the `help` folder. `ReadMe.htm` and `License.htm` are at the top.
 
@@ -59,7 +59,7 @@ The dialog is the one every Homer launch app shows, in rows called bands that re
 
 - **Source paths** [S] — one url (https://example.com), or a domain (microsoft.com), or several of either separated by spaces, or the path to a single plain text file that lists urls, domains, or local HTML file paths one per line. The list file may have any extension; urlCheck verifies it is plain text by inspecting its contents.
 - **Browse local source** [B] — pick a single source from a file picker
-- **Authenticate credentials** [A] — pause after each newly-encountered domain so you can sign in / dismiss cookie banners / accept popups, then press Enter (or click OK in GUI mode) to resume the scan. By default, urlCheck uses a fresh temporary Edge profile and disconnects its automation channel from Edge during the user-interaction pause (which improves the chance of success against sites that detect active automation, such as WhatsApp Web); to use your real profile instead, also check **Main profile**. If both **Invisible browser** and **Authenticate credentials** are checked, urlCheck overrides Invisible browser at run time and launches Edge with a visible window (an auth prompt requires a visible browser); the override is logged.
+- **Authenticate credentials** [A] — pause after each newly-encountered domain so you can sign in / dismiss cookie banners / accept popups, then press Enter (or click OK in GUI mode) to resume the scan. By default, urlCheck uses a fresh temporary Edge profile and disconnects its automation channel from Edge during the user-interaction pause (which improves the chance of success against sites that detect active automation, such as WhatsApp Web); to use your real profile instead, also mark **Main profile**. If both **Invisible browser** and **Authenticate credentials** are marked, urlCheck overrides Invisible browser at run time and launches Edge with a visible window (an auth prompt requires a visible browser); the override is logged.
 - **Invisible browser** [I] — run Edge with no visible browser window
 - **Main profile** [M] — launch Edge with your real (default) Edge user profile so saved logins, cookies, and session state are available. Without it, urlCheck uses a fresh temporary profile so the scan is anonymous and your real profile is not exposed to the scanned site. Independent of **Authenticate credentials**. Requires that no Microsoft Edge process is already running, since Edge cannot share a profile across two processes. urlCheck checks at startup; if Edge is running, the CLI exits with a friendly message and the GUI shows a dialog explaining why it cannot proceed and asks you to close Edge before submitting again.
 - **Output directory** [O] — where the output is written. Blank means the current working folder.
@@ -71,9 +71,9 @@ The dialog is the one every Homer launch app shows, in rows called bands that re
 - **Help** [H] — list every field with its tip, the dialog's keys, where the logs are kept, and the version check. F1 also shows Help.
 - **OK** / **Cancel** — alone at the bottom right: start the run, or close without running. Control+Enter is OK and Escape is Cancel, from any control.
 
-More keys work anywhere in the dialog: **F1** shows Help, **F11** checks the web, from any control, for a newer version of `urlCheck` (see Updating), **Control+Enter** is OK from any control, **Shift+F1** says the tip for the field you are on, and **F7** lists the dialog's controls so you can move to one. The dialog is built with the Homer Lbc classes, so its text fields also have the Lbc editing keys, which Help lists.
+More keys work anywhere in the dialog: **F1** shows Help, **F11** checks the web, from any control, for a newer version of `urlCheck` (see Updating), and **Control+Enter** is OK from any control. **Shift+F1**, What This Does, says what the control with focus does, and **Control+Slash**, Where Am I, says where you are, what has focus and its keys; both work in every dialog and message, and pressed twice, each shows what it said in a window. **F7** lists the dialog's controls so you can move to one. The dialog is built with the Homer Lbc classes, so its text fields also have the Lbc editing keys, which Help lists.
 
-**Default settings** returns you to the dialog with the fields cleared and any saved configuration deleted. Every run ends with the urlCheck Results box. Its only button is OK, so Enter, Space or Escape closes it; then the output directory opens if View output directory is checked, and urlCheck closes. A long report shows its first 15 lines and names a file with the rest. If OK finds a problem, such as a missing source or Edge running while Main profile is checked, it says so and returns you to the dialog with your entries kept.
+**Default settings** returns you to the dialog with the fields cleared and any saved configuration deleted. Every run ends with the urlCheck Results box. Its only button is OK, so Enter, Space or Escape closes it; then the output directory opens if View output directory is marked, and urlCheck closes. A long report shows its first 15 lines and names a file with the rest. If OK finds a problem, such as a missing source or Edge running while Main profile is marked, it says so and returns you to the dialog with your entries kept.
 
 **Note on profiles and privacy.** urlCheck's default — a fresh temporary profile — matches the experience of an anonymous member of the public visiting a site for the first time. The scan captures and analyzes whatever a brand-new visitor would see. Choosing **Main profile** is a deliberate departure from that: pages may be personalized to your account (recommendations tailored to your history, content visible only to you, your name and avatar in the header), and the captured page.htm and screenshot may include that personal information. If you plan to share or publish the output, review it before doing so.
 
@@ -116,16 +116,16 @@ When invoked without arguments from a GUI shell (Explorer double-click, Start-me
 ## Command-line options
 
 - `-a`, `--authenticate-credentials` — pause on the first url of each registrable domain so you can authenticate, then press Enter (or click OK) to resume. By default it uses a fresh temporary profile and disconnects Playwright during the pause; combine with `-m` to use your real profile (no disconnect). It turns off `-i`.
-- `-d`, `--default-settings` — forget the saved settings and exit.
-- `-f`, `--force-replacements` — do the work again for a source whose result is already there, replacing it; without it, that source is skipped and its result kept.
+- `-d`, `--default-settings` — Forget the saved settings and stop.
+- `-f`, `--force-replacements` — Do the work again for a source whose result is already there, replacing the old result; without it, that source is skipped and its result kept.
 - `-g`, `--gui-mode` — show the parameter dialog.
-- `-h`, `--help` — show usage and exit.
+- `-h`, `--help` — Show these switches and stop.
 - `-i`, `--invisible-browser` — run Microsoft Edge with no visible browser window.
 - `-m`, `--main-profile` — launch Edge with your real (default) Edge profile so saved logins are available. Without `-m`, urlCheck uses a fresh temporary profile so the scan is anonymous. No Edge window may be open.
 - `-o <folder>`, `--output-directory <folder>` — write output under `<folder>` (made if missing); the default is the current folder.
-- `-u`, `--use-configuration` — read saved settings from `%LOCALAPPDATA%\urlCheck\configs\urlCheck.inix`.
+- `-u`, `--use-configuration` — Load the saved settings at startup, and in the dialog save them when you press OK. The settings are in `%LOCALAPPDATA%\urlCheck\configs\urlCheck.inix`.
 - `--version` — show the version and exit.
-- `-v`, `--view-output-directory` — after the run, open the output folder in File Explorer.
+- `-v`, `--view-output-directory` — Open the output directory in File Explorer when the run is done.
 
 Every option in the dialog has a command-line switch named after its label, whose letter is the control's Alt letter, and switches may be written with /, - or --, in any case, so a workflow prototyped in the dialog can be translated to a batch file without surprises.
 
@@ -164,7 +164,7 @@ The links are **relative**, such as `violations/image-001.png`, not full paths. 
 
 Sometimes the browser cannot find what axe's CSS selector names. Typical cases are selectors that reach inside a shadow DOM, hidden or zero-size elements, and selectors that match more than one element. urlCheck then skips that element quietly, and its row in the Results sheet has an empty Image cell. No warning is printed: the Results sheet shows what was captured and what was not, and the CSS selector in the **Path** column lets you find the element by hand.
 
-If a page already has a folder, urlCheck skips that page by default, keeping the earlier results. Use `--force-replacements`, or check **Force replacements** in the dialog, to scan it again. The earlier reports are then set aside until the new scan finishes, put back if it fails, and removed only once it succeeds; files you added to the folder are never touched. The decision to skip is made right after the page's title is read, before the slow accessibility scan, so running urlCheck again on a long list is quick when most pages have already been scanned.
+If a page already has a folder, urlCheck skips that page by default, keeping the earlier results. Use `--force-replacements`, or mark **Force replacements** in the dialog, to scan it again. The earlier reports are then set aside until the new scan finishes, put back if it fails, and removed only once it succeeds; files you added to the folder are never touched. The decision to skip is made right after the page's title is read, before the slow accessibility scan, so running urlCheck again on a long list is quick when most pages have already been scanned.
 
 If `--view-output-directory` is set, the **parent** output folder, the one holding the page folders, opens in File Explorer at the end of the run.
 
@@ -241,7 +241,7 @@ The metric is meant to be tracked over time. As the page owner remediates issues
 
 ## Configuration file
 
-When **Use configuration** is checked in the dialog (or `-u` is on the command line), `urlCheck` reads and writes its settings in:
+When **Use configuration** is marked in the dialog (or `-u` is on the command line), `urlCheck` reads and writes its settings in:
 
 ```
 %LOCALAPPDATA%\urlCheck\configs\urlCheck.inix

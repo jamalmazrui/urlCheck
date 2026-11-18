@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US" xml:lang="en-US">
 <head>
   <meta charset="utf-8" />
-  <meta name="generator" content="pandoc 3.13" />
+  <meta name="generator" content="pandoc 3.14" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
   <title>Tutorials</title>
   <style>
@@ -35,27 +35,6 @@
       }
       h1 {
         font-size: 1.8em;
-      }
-    }
-    @media print {
-      html {
-        color-scheme: light only;
-      }
-      html, body, pre, code {
-        background-color: transparent;
-      }
-      body, a, a:visited, blockquote {
-        color: black;
-      }
-      pre, code {
-        padding: 0;
-      }
-      p, h2, h3 {
-        orphans: 3;
-        widows: 3;
-      }
-      h2, h3, h4 {
-        page-break-after: avoid;
       }
     }
     p {
@@ -163,6 +142,12 @@
       text-decoration: none;
     }
     span.smallcaps{font-variant: small-caps;}
+    em, em em em, em em em em em {
+      font-style: italic;
+    }
+    em em, em em em em {
+      font-style: normal;
+    }
     div.columns{display: flex; gap: 1.5em;}
     div.column{flex: auto;}
     @media screen {
@@ -179,7 +164,27 @@
       margin: 0 0.8em 0.2em -1.6em;
       vertical-align: middle;
     }
-  </style>
+    @media print {
+      html {
+        color-scheme: light only;
+      }
+      html, body, pre, code {
+        background-color: transparent;
+      }
+      body, a, a:visited, blockquote {
+        color: black;
+      }
+      pre, code {
+        padding: 0;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }  </style>
 </head>
 <body>
 <main>
@@ -421,7 +426,7 @@ says where the logs are kept, and checks for a newer version.</p>
 brings back the last addresses checked.</p>
 <h3 id="step-22">Step 22</h3>
 <p>Each box’s state is saved the moment you answer it when Use
-configuration is ticked, so closing the dialog by Escape loses
+configuration is marked, so closing the dialog by Escape loses
 nothing.</p>
 <h3 id="step-23-altd">Step 23: Alt+D</h3>
 <p>Default settings clears every field and box and deletes the saved
@@ -579,7 +584,7 @@ problems, before writing to its owner about them.</p>
 <p>Confirm the wording with a live run: buildTutorials -live.</p>
 <h3 id="step-4-altv">Step 4: Alt+V</h3>
 <p>I leave Output folder blank, so reports go into the current folder,
-and I tick View output directory.</p>
+and I mark View output directory.</p>
 <p>Screen reader:</p>
 <ul>
 <li>View output directory check box, checked</li>
@@ -859,7 +864,7 @@ is in it, not by its extension.</p>
 </ul>
 <p>Confirm the wording with a live run: buildTutorials -live.</p>
 <h3 id="step-8-2">Step 8</h3>
-<p>Logging is automatic, so there is no box to tick for it. Every run’s
+<p>Logging is automatic, so there is no box to mark for it. Every run’s
 log is kept in the program’s logs folder, under your local application
 data, and Help names that folder.</p>
 <p>Confirm the wording with a live run: buildTutorials -live.</p>

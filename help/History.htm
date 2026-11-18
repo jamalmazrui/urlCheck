@@ -2,14 +2,20 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US" xml:lang="en-US">
 <head>
   <meta charset="utf-8" />
-  <meta name="generator" content="pandoc" />
+  <meta name="generator" content="pandoc 3.14" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
   <meta name="author" content="Jamal Mazrui" />
-  <title>urlCheck History</title>
+  <title>History</title>
   <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
     html {
       color: #1a1a1a;
+      color: light-dark(#1a1a1a, #fdfdfd);
       background-color: #fdfdfd;
+      background-color: light-dark(#fdfdfd, #1a1a1a);
+      color-scheme: light dark;
     }
     body {
       margin: 0 auto;
@@ -32,33 +38,17 @@
         font-size: 1.8em;
       }
     }
-    @media print {
-      html {
-        background-color: white;
-      }
-      body {
-        background-color: transparent;
-        color: black;
-        font-size: 12pt;
-      }
-      p, h2, h3 {
-        orphans: 3;
-        widows: 3;
-      }
-      h2, h3, h4 {
-        page-break-after: avoid;
-      }
-    }
     p {
       margin: 1em 0;
     }
-    a {
-      color: #1a1a1a;
-    }
-    a:visited {
-      color: #1a1a1a;
+    a, a:visited {
+      color: inherit;
     }
     img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
       max-width: 100%;
     }
     h1, h2, h3, h4, h5, h6 {
@@ -81,10 +71,14 @@
     blockquote {
       margin: 1em 0 1em 1.7em;
       padding-left: 1em;
-      border-left: 2px solid #e6e6e6;
+      border-left: 2px solid;
+      border-color: #e6e6e6;
+      border-color: light-dark(#e6e6e6, #4c4c4c);
       color: #606060;
+      color: light-dark(#606060, #b6b6b6);
     }
     code {
+      white-space: pre-wrap;
       font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
       font-size: 85%;
       margin: 0;
@@ -104,8 +98,8 @@
      overflow: visible;
     }
     hr {
-      background-color: #1a1a1a;
       border: none;
+      border-top: 1px solid currentColor;
       height: 1px;
       margin: 1em 0;
     }
@@ -122,11 +116,11 @@
     }
     tbody {
       margin-top: 0.5em;
-      border-top: 1px solid #1a1a1a;
-      border-bottom: 1px solid #1a1a1a;
+      border-top: 1px solid currentColor;
+      border-bottom: 1px solid currentColor;
     }
     th {
-      border-top: 1px solid #1a1a1a;
+      border-top: 1px solid currentColor;
       padding: 0.25em 0.5em 0.25em 0.5em;
     }
     td {
@@ -148,10 +142,19 @@
     #TOC a:not(:hover) {
       text-decoration: none;
     }
-    code{white-space: pre-wrap;}
     span.smallcaps{font-variant: small-caps;}
-    div.columns{display: flex; gap: min(4vw, 1.5em);}
-    div.column{flex: auto; overflow-x: auto;}
+    em, em em em, em em em em em {
+      font-style: italic;
+    }
+    em em, em em em em {
+      font-style: normal;
+    }
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
     div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
     /* The extra [class] is a hack that increases specificity enough to
        override a similar rule in reveal.js */
@@ -162,8 +165,27 @@
       margin: 0 0.8em 0.2em -1.6em;
       vertical-align: middle;
     }
-    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
-  </style>
+    @media print {
+      html {
+        color-scheme: light only;
+      }
+      html, body, pre, code {
+        background-color: transparent;
+      }
+      body, a, a:visited, blockquote {
+        color: black;
+      }
+      pre, code {
+        padding: 0;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }  </style>
 </head>
 <body>
 <header id="title-block-header">
@@ -174,9 +196,11 @@
 <li><a href="#urlcheck-history" id="toc-urlcheck-history">urlCheck
 History</a>
 <ul>
-<li><a href="#november-2026-the-same-words-as-every-launch-app"
-id="toc-november-2026-the-same-words-as-every-launch-app">12 November
-2026 – The same words as every launch app</a></li>
+<li><a
+href="#november-2026-one-set-of-dialog-keys-names-and-words-across-homer"
+id="toc-november-2026-one-set-of-dialog-keys-names-and-words-across-homer">18
+November 2026 – One set of dialog keys, names and words across
+Homer</a></li>
 <li><a href="#october-2026-more-fixes-from-an-audit-by-another-ai"
 id="toc-october-2026-more-fixes-from-an-audit-by-another-ai">30 October
 2026 – more fixes from an audit by another AI</a></li>
@@ -241,15 +265,33 @@ id="toc-version-1.12.0-september-2026">Version 1.12.0 (September
 </nav>
 <main>
 <h1 id="urlcheck-history">urlCheck History</h1>
-<h2 id="november-2026-the-same-words-as-every-launch-app">12 November
-2026 – The same words as every launch app</h2>
+<h2
+id="november-2026-one-set-of-dialog-keys-names-and-words-across-homer">18
+November 2026 – One set of dialog keys, names and words across
+Homer</h2>
 <ul>
-<li><strong>Browse local source, Choose output directory, Use
-configuration and View output directory</strong> now say the same
-sentence as in every Homer launch app, from the kit; the kit’s check
-keeps it so.</li>
-<li><strong>The switches -f, -u, -v, -d and -h</strong> are described in
-the same words as every launch app’s.</li>
+<li><strong>Shift+F1 and Control+Slash work in every message, as in
+every Homer dialog.</strong> urlCheck’s messages were Windows message
+boxes, which answer neither: the sign-in pause in front of Edge, the
+question that offers to make an output directory, and the problems found
+in the sources. Each is now an Lbc dialog, through the kit’s LbcMessage,
+so What This Does and Where Am I work there too, Yes is Alt+Y and No is
+Alt+N, and Control+Enter and Escape answer as everywhere.</li>
+<li><strong>The Hotkeys page uses the suite’s names and layout,</strong>
+as DbDo, EdSharp and FileDir do: By Command Name, By Key, In Tab Order,
+Text Box Keys and Why These Keys. F11 is Elevate Version, Shift+F1 is
+What This Does, and Control+Slash, Where Am I, is listed for the first
+time.</li>
+<li><strong>A checkbox is marked, not ticked or checked,</strong> in the
+installer, the guides, the tutorials and every message, as across
+Homer.</li>
+<li><strong>The standard controls and switches say the kit’s
+words.</strong> Browse local source, Choose output directory, Use
+configuration and View output directory take the kit’s sentence, and -f,
+-u, -v, -d and -h have the same sentence in every app’s help, -h
+included, which was argparse’s own. These were aligned on 12 November,
+but the change never reached the repository.</li>
+<li><strong>This needs HomerDev 1.258.0.</strong></li>
 </ul>
 <h2 id="october-2026-more-fixes-from-an-audit-by-another-ai">30 October
 2026 – more fixes from an audit by another AI</h2>

@@ -5,10 +5,13 @@ author: "Jamal Mazrui"
 
 # urlCheck History
 
-## 12 November 2026 -- The same words as every launch app
+## 18 November 2026 -- One set of dialog keys, names and words across Homer
 
-- **Browse local source, Choose output directory, Use configuration and View output directory** now say the same sentence as in every Homer launch app, from the kit; the kit's check keeps it so.
-- **The switches -f, -u, -v, -d and -h** are described in the same words as every launch app's.
+- **Shift+F1 and Control+Slash work in every message, as in every Homer dialog.** urlCheck's messages were Windows message boxes, which answer neither: the sign-in pause in front of Edge, the question that offers to make an output directory, and the problems found in the sources. Each is now an Lbc dialog, through the kit's LbcMessage, so What This Does and Where Am I work there too, Yes is Alt+Y and No is Alt+N, and Control+Enter and Escape answer as everywhere.
+- **The Hotkeys page uses the suite's names and layout,** as DbDo, EdSharp and FileDir do: By Command Name, By Key, In Tab Order, Text Box Keys and Why These Keys. F11 is Elevate Version, Shift+F1 is What This Does, and Control+Slash, Where Am I, is listed for the first time.
+- **A checkbox is marked, not ticked or checked,** in the installer, the guides, the tutorials and every message, as across Homer.
+- **The standard controls and switches say the kit's words.** Browse local source, Choose output directory, Use configuration and View output directory take the kit's sentence, and -f, -u, -v, -d and -h have the same sentence in every app's help, -h included, which was argparse's own. These were aligned on 12 November, but the change never reached the repository.
+- **This needs HomerDev 1.258.0.**
 
 ## 30 October 2026 -- more fixes from an audit by another AI
 

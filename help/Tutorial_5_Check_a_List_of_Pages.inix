@@ -53,7 +53,7 @@ Note=Confirm the wording with a live run: buildTutorials -live.
 
 [step]
 
-Say=Logging is automatic, so there is no box to tick for it. Every run's log is kept in the program's logs folder, under your local application data, and Help names that folder.
+Say=Logging is automatic, so there is no box to mark for it. Every run's log is kept in the program's logs folder, under your local application data, and Help names that folder.
 Key=
 Note=Confirm the wording with a live run: buildTutorials -live.
 

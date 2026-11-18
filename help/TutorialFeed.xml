@@ -5,7 +5,7 @@
     <link>Tutorials.htm</link>
     <description></description>
     <language>en-us</language>
-    <lastBuildDate>Fri, 13 Nov 2026 02:29:22 +0000</lastBuildDate>
+    <lastBuildDate>Wed, 18 Nov 2026 15:48:29 +0000</lastBuildDate>
     <itunes:author></itunes:author>
     <itunes:explicit>false</itunes:explicit>
     <itunes:category text="Technology"/>
@@ -23,7 +23,7 @@
       <description>urlCheck installed; the dialog open with Alt+Control+Shift+U. Full transcript: Tutorials.htm#0a-1-user-interface</description>
       <link>Tutorials.htm#0a-1-user-interface</link>
       <guid isPermaLink="false">homer-tutorial_1_user_interface</guid>
-      <enclosure url="tutorials/1_User_Interface.mp3" length="1363897" type="audio/mpeg"/>
+      <enclosure url="tutorials/1_User_Interface.mp3" length="1360146" type="audio/mpeg"/>
       <itunes:duration>00:03:20</itunes:duration>
       <itunes:explicit>false</itunes:explicit>
     </item>
@@ -41,7 +41,7 @@
       <description>urlCheck installed, and a web page you want to check. Full transcript: Tutorials.htm#0c-3-check-one-web-page</description>
       <link>Tutorials.htm#0c-3-check-one-web-page</link>
       <guid isPermaLink="false">homer-tutorial_3_check_one_web_page</guid>
-      <enclosure url="tutorials/3_Check_One_Web_Page.mp3" length="1361605" type="audio/mpeg"/>
+      <enclosure url="tutorials/3_Check_One_Web_Page.mp3" length="1358658" type="audio/mpeg"/>
       <itunes:duration>00:03:15</itunes:duration>
       <itunes:explicit>false</itunes:explicit>
     </item>
@@ -59,7 +59,7 @@
       <description>A text file listing several addresses, one to a line. Full transcript: Tutorials.htm#0e-5-check-a-list-of-pages</description>
       <link>Tutorials.htm#0e-5-check-a-list-of-pages</link>
       <guid isPermaLink="false">homer-tutorial_5_check_a_list_of_pages</guid>
-      <enclosure url="tutorials/5_Check_a_List_of_Pages.mp3" length="1074878" type="audio/mpeg"/>
+      <enclosure url="tutorials/5_Check_a_List_of_Pages.mp3" length="1073820" type="audio/mpeg"/>
       <itunes:duration>00:02:30</itunes:duration>
       <itunes:explicit>false</itunes:explicit>
     </item>

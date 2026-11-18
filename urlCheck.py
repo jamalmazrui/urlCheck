@@ -3233,7 +3233,9 @@ def parseSpaceSeparated(sText):
 def parseArguments():
     argParser = None
 
+    # -h, --help in the kit's words, as in every launch app (18 November 2026), so argparse's own is off.
     argParser = argparse.ArgumentParser(
+        add_help=False,
         prog=sProgramName,
         description=(
             "Check one or more web pages for accessibility problems and save "
@@ -3281,6 +3283,7 @@ def parseArguments():
     # switch is the dialog's label and a short one its Alt letter; the older names still
     # work. --log went with the Log session checkbox, since logging is automatic, and -v
     # is View output directory, so the version is --version alone.
+    argParser.add_argument("-h", "--help", action="help", help="Show these switches and stop.")
     argParser.add_argument("--version", action="version", version=f"%(prog)s {sProgramVersion}")
     argParser.add_argument("-d", "--default-settings", "--defaults", dest="bDefaultSettings", action="store_true",
         help="Forget the saved settings and stop.")
@@ -3291,13 +3294,13 @@ def parseArguments():
     argParser.add_argument("-v", "--view-output-directory", "--view-output", dest="bViewOutput", action="store_true",
         help="Open the output directory in File Explorer when the run is done.")
     argParser.add_argument("-u", "--use-configuration", dest="bUseConfig", action="store_true",
-        help="Load the saved settings at startup, and in the dialog save them when you press OK.")
+        help="Load the saved settings at startup, and in the dialog save them when you press OK. The settings are in %%LOCALAPPDATA%%\\urlCheck\\configs\\urlCheck.inix.")
     argParser.add_argument("-f", "--force-replacements", "--force", dest="bForce", action="store_true",
         help="Do the work again for a source whose result is already there, replacing the old result; without it, that source is skipped and its result kept.")
     argParser.add_argument("-i", "--invisible-browser", "--invisible", dest="bInvisible", action="store_true",
         help="Run Microsoft Edge invisibly (the headless browser mode): no visible browser window during the scan.")
     argParser.add_argument("-a", "--authenticate-credentials", "--authenticate", dest="bAuthenticate", action="store_true",
-        help="When a url's domain is encountered for the first time in this run, pause after the page loads and prompt the user to authenticate (sign in, accept cookies, dismiss popups, etc.) and press Enter (or click OK in GUI mode) to resume. Within the same run, subsequent urls on the same domain reuse the established session without prompting. Without --main-profile, urlCheck disconnects its automation channel from Edge while the user authenticates and reconnects after, which improves the chance of success against sites that block automated browsers (e.g. WhatsApp Web). With --main-profile, the disconnect pattern is not used (browser security forbids it against your real profile). Forces visible browser mode (overrides --invisible).")
+        help="When a url's domain is encountered for the first time in this run, pause after the page loads and prompt the user to authenticate (sign in, accept cookies, dismiss popups, etc.) and press Enter (or choose OK in the dialog) to resume. Within the same run, subsequent urls on the same domain reuse the established session without prompting. Without --main-profile, urlCheck disconnects its automation channel from Edge while the user authenticates and reconnects after, which improves the chance of success against sites that block automated browsers (e.g. WhatsApp Web). With --main-profile, the disconnect pattern is not used (browser security forbids it against your real profile). Forces visible browser mode (overrides --invisible).")
     argParser.add_argument("-m", "--main-profile", dest="bMainProfile", action="store_true",
         help="Launch Edge with your real (default) Edge user profile so saved logins, cookies, and session state are available. Without -m, urlCheck launches Edge with a fresh ephemeral profile so the scan is anonymous and your real profile is not exposed to the scanned site. Requires that no Microsoft Edge process is already running, since Edge cannot share a profile across two processes; urlCheck checks at startup and exits gracefully with a message if Edge is running.")
     # Switches in any case, and written /switch as well as -switch or --switch, as in
@@ -3436,7 +3439,7 @@ def pauseForAuthenticationIfNeeded(page, sUrl, bAuthenticate, bGuiMode):
     sPrompt = ("Authenticate credentials, if needed, to show the "
         "page. To resume automation, press Enter:")
     sPromptGui = ("Authenticate credentials, if needed, to show "
-        "the page in the open browser window. When ready, click OK "
+        "the page in the open browser window. When ready, choose OK "
         "to resume automation.")
 
     logger.info(f"Prompting for authentication on registrable domain "
@@ -3449,32 +3452,10 @@ def pauseForAuthenticationIfNeeded(page, sUrl, bAuthenticate, bGuiMode):
             # belongs to whatever process/window happens to have
             # focus -- and Edge typically does, after the user
             # clicked into it to sign in.
-            import clr  # type: ignore
-            clr.AddReference("System.Windows.Forms")
-            clr.AddReference("System.Drawing")
-            from System.Windows.Forms import (
-                Form, FormBorderStyle, FormStartPosition,
-                MessageBox, MessageBoxButtons, MessageBoxIcon,
-                MessageBoxDefaultButton)
-            from System.Drawing import Size
-            owner = Form()
-            owner.TopMost = True
-            owner.ShowInTaskbar = False
-            owner.FormBorderStyle = getattr(FormBorderStyle, "None")
-            owner.StartPosition = FormStartPosition.Manual
-            owner.Size = Size(1, 1)  # 1x1 pixel; effectively invisible
-            try:
-                owner.Show()
-                MessageBox.Show(
-                    owner,
-                    sPromptGui,
-                    f"{sProgramName} - Authenticate",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information,
-                    MessageBoxDefaultButton.Button1)
-            finally:
-                try: owner.Close(); owner.Dispose()
-                except Exception: pass
+            # IN FRONT OF EDGE, AS AN LBC DIALOG (18 November 2026): the kit's LbcMessage.showOnTop, through lbcnet,
+            # which answers Shift+F1 and Control+Slash like every Homer dialog; it replaced a Windows message box with
+            # a hidden, topmost owner of urlCheck's own.
+            lbcnet.message(sPromptGui, f"{sProgramName} - Authenticate", "ok", "information", bOnTop=True)
         else:
             # CLI mode: leading "\n" terminates the URL printed inline
             # by the per-url progress, so the prompt appears on its
@@ -3566,7 +3547,7 @@ def pauseForAuthenticationWithDisconnect(playwrightCtx, sWsEndpoint,
     sPrompt = ("Authenticate credentials, if needed, to show the "
         "page. To resume automation, press Enter:")
     sPromptGui = ("Authenticate credentials, if needed, to show "
-        "the page in the open browser window. When ready, click OK "
+        "the page in the open browser window. When ready, choose OK "
         "to resume automation.")
 
     logger.info(f"Disconnecting Playwright before authentication "
@@ -3581,32 +3562,10 @@ def pauseForAuthenticationWithDisconnect(playwrightCtx, sWsEndpoint,
 
     try:
         if bGuiMode:
-            import clr  # type: ignore
-            clr.AddReference("System.Windows.Forms")
-            clr.AddReference("System.Drawing")
-            from System.Windows.Forms import (
-                Form, FormBorderStyle, FormStartPosition,
-                MessageBox, MessageBoxButtons, MessageBoxIcon,
-                MessageBoxDefaultButton)
-            from System.Drawing import Size
-            owner = Form()
-            owner.TopMost = True
-            owner.ShowInTaskbar = False
-            owner.FormBorderStyle = getattr(FormBorderStyle, "None")
-            owner.StartPosition = FormStartPosition.Manual
-            owner.Size = Size(1, 1)
-            try:
-                owner.Show()
-                MessageBox.Show(
-                    owner,
-                    sPromptGui,
-                    f"{sProgramName} - Authenticate",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information,
-                    MessageBoxDefaultButton.Button1)
-            finally:
-                try: owner.Close(); owner.Dispose()
-                except Exception: pass
+            # IN FRONT OF EDGE, AS AN LBC DIALOG (18 November 2026): the kit's LbcMessage.showOnTop, through lbcnet,
+            # which answers Shift+F1 and Control+Slash like every Homer dialog; it replaced a Windows message box with
+            # a hidden, topmost owner of urlCheck's own.
+            lbcnet.message(sPromptGui, f"{sProgramName} - Authenticate", "ok", "information", bOnTop=True)
         else:
             sys.stdout.write("\n" + sPrompt + " ")
             sys.stdout.flush()
@@ -4548,7 +4507,7 @@ class configManager:
                    "Source": sSource or "", "ViewOutput": bViewOutput}
         try:
             if not os.path.isfile(sPath):
-                lHeader = ["; urlCheck settings, written when Use configuration is checked at OK.",
+                lHeader = ["; urlCheck settings, written when Use configuration is marked at OK.",
                            "; Delete this file to reset, or press Default settings in the dialog.",
                            "[" + sConfigSection + "]"]
                 inix.write(sPath, inix.parseLines(lHeader))
@@ -6217,7 +6176,8 @@ def showGuiDialog(arguments):
         dlg = oLaunch.dialog
         try:
             oLaunch.ownPickers = True
-            oLaunch.sourcePick = "list"  # Browse picks a text file of urls; the kit's tip says so (kit 1.221.0)
+            # Browse local source picks a text file listing urls, so the kit's sentence says so (18 November 2026).
+            oLaunch.sourcePick = "list"
             tbSource = oLaunch.addSourceBand(sSource,
                 "One url or domain, several separated by spaces, or the path "
                 "to a plain text file listing urls, domains or local files, "
@@ -6238,6 +6198,8 @@ def showGuiDialog(arguments):
                 "Blank means the current folder.",
                 "")
             btnChoose = oLaunch.chooseButton
+            # THE KIT'S SENTENCES (18 November 2026): Browse local source, Choose output directory, Use configuration and
+            # View output directory say the same in every launch app, so each takes the kit's tip, passed as "".
             oLaunch.addOperationBands(bForce, "",
                 bUseCfg, "",
                 bView, "")
@@ -6268,9 +6230,8 @@ def showGuiDialog(arguments):
                     tbSource.Focus()
                 except Exception as ex:
                     logger.info(f"OpenFileDialog raised: {ex}")
-                    MessageBox.Show(f"Browse source failed: {ex}",
-                        f"{sProgramName} - Browse error",
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                    lbcnet.message(f"Browse source failed: {ex}",
+                        f"{sProgramName} - Browse error", "ok", "warning")
 
             def fnPickFolder(sender, args):
                 # FolderBrowserDialog deadlocks under pythonnet like the
@@ -6285,9 +6246,8 @@ def showGuiDialog(arguments):
                         "output folder will be created.", sInitial)
                 except Exception as ex:
                     logger.info(f"SHBrowseForFolder raised: {ex}")
-                    MessageBox.Show(f"Choose output failed: {ex}",
-                        f"{sProgramName} - Browse error",
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                    lbcnet.message(f"Choose output failed: {ex}",
+                        f"{sProgramName} - Browse error", "ok", "warning")
                     return
                 logger.info(f"SHBrowseForFolder returned: {sChosen!r}")
                 if sChosen:
@@ -6328,46 +6288,32 @@ def showGuiDialog(arguments):
 
         # OK. Each check that fails says why and returns to the dialog.
         if not sSource:
-            MessageBox.Show(
+            lbcnet.message(
                 "Please enter one or more urls separated by spaces, "
                 "or the path to a plain text file of urls.",
-                f"{sProgramName} - Missing source",
-                MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                f"{sProgramName} - Missing source", "ok", "warning")
             continue
         sKind, vDetail = classifyInput(sSource)
         if sKind == "error":
-            MessageBox.Show(str(vDetail), f"{sProgramName} - Invalid source",
-                MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            lbcnet.message(str(vDetail), f"{sProgramName} - Invalid source", "ok", "warning")
             continue
         # An output folder that does not exist yet: offer to make it
         # (default Yes). No, or a failure, returns to the dialog.
-        sOutCandidate = sOutputDir
-        if len(sOutCandidate) >= 2 and sOutCandidate[0] == '"' and sOutCandidate[-1] == '"':
-            sOutCandidate = sOutCandidate[1:-1].strip()
-        if sOutCandidate and not os.path.isdir(sOutCandidate):
-            dr = MessageBox.Show(f"Create {sOutCandidate}?", sProgramName,
-                MessageBoxButtons.YesNo, MessageBoxIcon.Question,
-                MessageBoxDefaultButton.Button1)
-            if dr != DialogResult.Yes: continue
-            try:
-                os.makedirs(sOutCandidate, exist_ok=True)
-            except Exception as ex:
-                MessageBox.Show(f"Could not create folder:\r\n{sOutCandidate}\r\n\r\n{ex}",
-                    sProgramName, MessageBoxButtons.OK, MessageBoxIcon.Warning)
-                continue
+        # The kit's question, the same in every launch app (18 November 2026), through Homer.dll.
+        Homer = lbcnet.load()
+        if not bool(Homer.LaunchDialog.confirmOutput(sProgramName, sOutputDir)): continue
         # Main profile needs Edge closed: Edge does not share its profile
         # across processes, and launching against one in use fails later and
         # confusingly. Saying so here lets the user close Edge and press OK
         # again without restarting urlCheck.
         if bMain and isEdgeRunning():
-            MessageBox.Show(
+            lbcnet.message(
                 "Microsoft Edge is currently running. urlCheck "
                 "cannot proceed because Main profile requires "
                 "exclusive access to your Edge profile, which Edge "
                 "does not share across processes. Please close all "
                 "Edge windows, then press OK in the dialog again.",
-                f"{sProgramName} - Edge is running",
-                MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                f"{sProgramName} - Edge is running", "ok", "warning")
             continue
 
         arguments.sSource = sSource
@@ -6392,7 +6338,7 @@ def keptLine(iCount, sNoun):
     if iCount <= 0: return ""
     sNouns = sNoun if iCount == 1 else sNoun + "s"
     return (f"Skipped {iCount} {sNouns} " + ("whose result was" if iCount == 1 else "whose results were")
-            + " already there. Check Force replacements, or use -f, to replace " + ("it." if iCount == 1 else "them."))
+            + " already there. Mark Force replacements, or use -f, to replace " + ("it." if iCount == 1 else "them."))
 
 
 def openLaunchProgress(bGuiMode, iTotal):

@@ -148,7 +148,7 @@ Key=
 
 [step]
 
-Say=Each box's state is saved the moment you answer it when Use configuration is ticked, so closing the dialog by Escape loses nothing.
+Say=Each box's state is saved the moment you answer it when Use configuration is marked, so closing the dialog by Escape loses nothing.
 Key=
 
 [step]

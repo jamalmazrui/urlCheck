@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US" xml:lang="en-US">
 <head>
   <meta charset="utf-8" />
-  <meta name="generator" content="pandoc 3.12.1" />
+  <meta name="generator" content="pandoc 3.14" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
   <meta name="author" content="Jamal Mazrui" />
   <title>Hotkeys</title>
@@ -36,27 +36,6 @@
       }
       h1 {
         font-size: 1.8em;
-      }
-    }
-    @media print {
-      html {
-        color-scheme: light only;
-      }
-      html, body, pre, code {
-        background-color: transparent;
-      }
-      body, a, a:visited, blockquote {
-        color: black;
-      }
-      pre, code {
-        padding: 0;
-      }
-      p, h2, h3 {
-        orphans: 3;
-        widows: 3;
-      }
-      h2, h3, h4 {
-        page-break-after: avoid;
       }
     }
     p {
@@ -164,6 +143,12 @@
       text-decoration: none;
     }
     span.smallcaps{font-variant: small-caps;}
+    em, em em em, em em em em em {
+      font-style: italic;
+    }
+    em em, em em em em {
+      font-style: normal;
+    }
     div.columns{display: flex; gap: 1.5em;}
     div.column{flex: auto;}
     @media screen {
@@ -180,7 +165,27 @@
       margin: 0 0.8em 0.2em -1.6em;
       vertical-align: middle;
     }
-  </style>
+    @media print {
+      html {
+        color-scheme: light only;
+      }
+      html, body, pre, code {
+        background-color: transparent;
+      }
+      body, a, a:visited, blockquote {
+        color: black;
+      }
+      pre, code {
+        padding: 0;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }  </style>
 </head>
 <body>
 <header id="title-block-header">
@@ -191,94 +196,187 @@
 <li><a href="#urlcheck-hotkeys" id="toc-urlcheck-hotkeys">urlCheck
 Hotkeys</a>
 <ul>
-<li><a href="#by-key" id="toc-by-key">By key</a></li>
-<li><a href="#by-command" id="toc-by-command">By command</a></li>
-<li><a href="#in-tab-order" id="toc-in-tab-order">In tab order</a></li>
-<li><a href="#why-these-keys" id="toc-why-these-keys">Why these
-keys</a></li>
+<li><a href="#by-command-name" id="toc-by-command-name">By Command
+Name</a></li>
+<li><a href="#by-key" id="toc-by-key">By Key</a></li>
+<li><a href="#in-tab-order" id="toc-in-tab-order">In Tab Order</a></li>
+<li><a href="#text-box-keys" id="toc-text-box-keys">Text Box
+Keys</a></li>
+<li><a href="#why-these-keys" id="toc-why-these-keys">Why These
+Keys</a></li>
 </ul></li>
 </ul>
 </nav>
 <main>
 <h1 id="urlcheck-hotkeys">urlCheck Hotkeys</h1>
-<p>The keys of the <code>urlCheck</code> dialog, listed three ways. Each
-Alt key is the letter underlined in its control’s label, so a screen
-reader reads it with the control. OK and Cancel have no letter:
-Control+Enter is OK and Escape is Cancel, from any control, and Enter is
-OK except on a button. The dialog is built with the Homer Lbc classes,
-so every text field also has the Lbc editing keys; Help (F1) lists
-them.</p>
-<h2 id="by-key">By key</h2>
+<p>The keys of the urlCheck dialog, which checks web pages for
+accessibility. The keys are given three ways: by command name, by key,
+and in the order Tab reaches the controls. Each Alt key is the letter
+underlined in its control’s label, so a screen reader says it with the
+control. OK and Cancel have no letter: Control+Enter is OK and Escape is
+Cancel, from any control. Shift+F1, Control+Slash, F7 and F11 work in
+every Homer dialog, the messages urlCheck shows included.</p>
+<h2 id="by-command-name">By Command Name</h2>
+<p>Commands in alphabetical order.</p>
 <ul>
-<li>Alt+A — Authenticate credentials</li>
-<li>Alt+B — Browse local source</li>
-<li>Alt+C — Choose output directory</li>
-<li>Alt+Control+Shift+U — open the <code>urlCheck</code> dialog from
-anywhere (the desktop shortcut)</li>
-<li>Alt+D — Default settings</li>
-<li>Alt+F — Force replacements</li>
-<li>Alt+H — Help</li>
-<li>Alt+I — Invisible browser</li>
-<li>Alt+M — Main profile</li>
-<li>Alt+O — Output folder</li>
-<li>Alt+S — Source paths</li>
-<li>Alt+U — Use configuration</li>
-<li>Alt+V — View output directory</li>
-<li>Control+Enter — OK, from any control</li>
-<li>Enter — OK: start the check</li>
-<li>Escape — Cancel, from any control: close without checking</li>
-<li>F1 — Help</li>
-<li>F11 — check for a newer version, from any control</li>
-<li>F7 — list the dialog’s controls, and move to the one chosen</li>
-<li>Shift+F1 — say the focus tip for the current field</li>
+<li><strong>Authenticate credentials</strong>, Alt+A – Pause on each new
+site so you can sign in or dismiss pop-ups, then resume.</li>
+<li><strong>Browse local source</strong>, Alt+B – Pick a text file that
+lists the sources, one per line, in a standard dialog; it opens where
+Source paths points, else in your Documents folder.</li>
+<li><strong>Cancel</strong>, Escape – Close the dialog without starting,
+from any control.</li>
+<li><strong>Choose output directory</strong>, Alt+C – Pick the output
+directory in a standard folder dialog.</li>
+<li><strong>Default settings</strong>, Alt+D – Put every field back as
+it was out of the box, and forget any saved configuration.</li>
+<li><strong>Elevate Version</strong>, F11 – Download and install the
+latest urlCheck.</li>
+<li><strong>Force replacements</strong>, Alt+F – Do the work again for a
+source whose result is already there, replacing the old result once the
+new one is complete.</li>
+<li><strong>Help</strong>, Alt+H or F1 – List each field with its tip,
+the dialog keys, where the logs are kept, and the version check.</li>
+<li><strong>Invisible browser</strong>, Alt+I – Run Edge with no visible
+window.</li>
+<li><strong>List Controls</strong>, F7 – List the dialog’s controls, and
+move to the one chosen.</li>
+<li><strong>Main profile</strong>, Alt+M – Use your own Edge profile,
+with its sign-ins; Edge must be closed.</li>
+<li><strong>OK</strong>, Control+Enter or Enter – Start the check:
+Control+Enter from any control, Enter from any but a button.</li>
+<li><strong>Open urlCheck</strong>, Alt+Control+Shift+U – Open the
+urlCheck dialog from anywhere in Windows, with its desktop
+shortcut.</li>
+<li><strong>Output directory</strong>, Alt+O – Type the folder under
+which each page’s results folder is made; blank means the current
+folder.</li>
+<li><strong>Source paths</strong>, Alt+S – Type one url or domain,
+several separated by spaces, or the path to a plain text file listing
+urls, domains or local files, one per line.</li>
+<li><strong>Use configuration</strong>, Alt+U – Load the saved settings
+at startup, and save them when you press OK.</li>
+<li><strong>View output directory</strong>, Alt+V – Open the output
+directory in File Explorer when the run is done.</li>
+<li><strong>What This Does</strong>, Shift+F1 – Say what the control
+with focus does.</li>
+<li><strong>Where Am I</strong>, Control+Slash – Say where you are, what
+has focus and its keys.</li>
 </ul>
-<h2 id="by-command">By command</h2>
+<h2 id="by-key">By Key</h2>
+<p>Keys in order of how many are pressed together, then
+alphabetically.</p>
 <ul>
-<li>Authenticate credentials — Alt+A</li>
-<li>Browse local source — Alt+B</li>
-<li>Cancel — Escape</li>
-<li>Check for a newer version — F11</li>
-<li>Choose output directory — Alt+C</li>
-<li>Default settings — Alt+D</li>
-<li>Force replacements — Alt+F</li>
-<li>Help — Alt+H or F1</li>
-<li>Invisible browser — Alt+I</li>
-<li>List the controls — F7</li>
-<li>Main profile — Alt+M</li>
-<li>OK — Enter, or Control+Enter from any control</li>
-<li>Open the dialog from anywhere — Alt+Control+Shift+U</li>
-<li>Output folder — Alt+O</li>
-<li>Say the focus tip — Shift+F1</li>
-<li>Source paths — Alt+S</li>
-<li>Use configuration — Alt+U</li>
-<li>View output directory — Alt+V</li>
+<li><strong>Enter</strong> – OK: Start the check: Control+Enter from any
+control, Enter from any but a button.</li>
+<li><strong>Escape</strong> – Cancel: Close the dialog without starting,
+from any control.</li>
+<li><strong>F1</strong> – Help: List each field with its tip, the dialog
+keys, where the logs are kept, and the version check.</li>
+<li><strong>F7</strong> – List Controls: List the dialog’s controls, and
+move to the one chosen.</li>
+<li><strong>F11</strong> – Elevate Version: Download and install the
+latest urlCheck.</li>
+<li><strong>Alt+A</strong> – Authenticate credentials: Pause on each new
+site so you can sign in or dismiss pop-ups, then resume.</li>
+<li><strong>Alt+B</strong> – Browse local source: Pick a text file that
+lists the sources, one per line, in a standard dialog; it opens where
+Source paths points, else in your Documents folder.</li>
+<li><strong>Alt+C</strong> – Choose output directory: Pick the output
+directory in a standard folder dialog.</li>
+<li><strong>Alt+D</strong> – Default settings: Put every field back as
+it was out of the box, and forget any saved configuration.</li>
+<li><strong>Alt+F</strong> – Force replacements: Do the work again for a
+source whose result is already there, replacing the old result once the
+new one is complete.</li>
+<li><strong>Alt+H</strong> – Help: List each field with its tip, the
+dialog keys, where the logs are kept, and the version check.</li>
+<li><strong>Alt+I</strong> – Invisible browser: Run Edge with no visible
+window.</li>
+<li><strong>Alt+M</strong> – Main profile: Use your own Edge profile,
+with its sign-ins; Edge must be closed.</li>
+<li><strong>Alt+O</strong> – Output directory: Type the folder under
+which each page’s results folder is made; blank means the current
+folder.</li>
+<li><strong>Alt+S</strong> – Source paths: Type one url or domain,
+several separated by spaces, or the path to a plain text file listing
+urls, domains or local files, one per line.</li>
+<li><strong>Alt+U</strong> – Use configuration: Load the saved settings
+at startup, and save them when you press OK.</li>
+<li><strong>Alt+V</strong> – View output directory: Open the output
+directory in File Explorer when the run is done.</li>
+<li><strong>Control+Enter</strong> – OK: Start the check: Control+Enter
+from any control, Enter from any but a button.</li>
+<li><strong>Control+Slash</strong> – Where Am I: Say where you are, what
+has focus and its keys.</li>
+<li><strong>Shift+F1</strong> – What This Does: Say what the control
+with focus does.</li>
+<li><strong>Alt+Control+Shift+U</strong> – Open urlCheck: Open the
+urlCheck dialog from anywhere in Windows, with its desktop
+shortcut.</li>
 </ul>
-<h2 id="in-tab-order">In tab order</h2>
+<h2 id="in-tab-order">In Tab Order</h2>
 <p>The dialog is in bands, rows read left to right, in this order:</p>
 <ol type="1">
-<li>Source paths — Alt+S</li>
-<li>Browse local source — Alt+B</li>
-<li>Authenticate credentials — Alt+A</li>
-<li>Invisible browser — Alt+I</li>
-<li>Main profile — Alt+M</li>
-<li>Output directory — Alt+O</li>
-<li>Choose output directory — Alt+C</li>
-<li>Force replacements — Alt+F</li>
-<li>Use configuration — Alt+U</li>
-<li>View output directory — Alt+V</li>
-<li>Default settings — Alt+D</li>
-<li>Help — Alt+H or F1</li>
+<li>Source paths – Alt+S</li>
+<li>Browse local source – Alt+B</li>
+<li>Authenticate credentials – Alt+A</li>
+<li>Invisible browser – Alt+I</li>
+<li>Main profile – Alt+M</li>
+<li>Output directory – Alt+O</li>
+<li>Choose output directory – Alt+C</li>
+<li>Force replacements – Alt+F</li>
+<li>Use configuration – Alt+U</li>
+<li>View output directory – Alt+V</li>
+<li>Default settings – Alt+D</li>
+<li>Help – Alt+H or F1</li>
 <li>OK and Cancel, alone at the bottom right: Control+Enter is OK and
 Escape is Cancel, from any control</li>
 </ol>
-<h2 id="why-these-keys">Why these keys</h2>
+<h2 id="text-box-keys">Text Box Keys</h2>
+<p>Every text box in the dialog is a Homer text box, with these keys
+too. A dialog’s own letter comes first: where a control’s underlined
+letter is the same as one of these, as Alt+C is Choose output directory,
+Alt and that letter goes to the control.</p>
+<ul>
+<li><strong>Control+A</strong> – Select All: Select all the text in the
+box.</li>
+<li><strong>Control+Shift+A</strong> – Unselect All: Clear the
+selection, keeping the cursor where it is.</li>
+<li><strong>Control+C</strong> – Copy: Copy the selection, or the
+current line when nothing is selected.</li>
+<li><strong>Control+X</strong> – Cut: Cut the selection, or the current
+line when nothing is selected.</li>
+<li><strong>Alt+X</strong> – Cut Append: Cut the selection or line and
+add it to what the clipboard holds, unless a control in the dialog has X
+as its letter.</li>
+<li><strong>Alt+C</strong> – Copy Append: Copy the selection or line and
+add it to what the clipboard holds, unless a control in the dialog has C
+as its letter.</li>
+<li><strong>Control+D</strong> – Delete Line: Delete the current line,
+without the clipboard.</li>
+<li><strong>F8</strong> – Start Selection: Mark where a selection
+starts.</li>
+<li><strong>Shift+F8</strong> – Complete Selection: Select from the
+start mark to the cursor.</li>
+<li><strong>Control+F8</strong> – Copy All: Copy all the text in the
+box.</li>
+<li><strong>Alt+F8</strong> – Read All: Read all the text in the box
+aloud.</li>
+<li><strong>Alt+Y</strong> – Say Yield: Say how many lines and
+characters the box holds, unless a control in the dialog has Y as its
+letter.</li>
+<li><strong>Alt+Apostrophe</strong> – Say Clipboard: Say what the
+clipboard holds.</li>
+</ul>
+<h2 id="why-these-keys">Why These Keys</h2>
 <p>F1 is help in every Windows program. F11 is the Homer key for
 updating a program to its newest release, because “elevate” sounds like
 “eleven”. Alt+Control+Shift+U belongs to the desktop shortcut;
 Alt+Control keys are for desktop shortcuts. U is the first letter of
-<code>urlCheck</code>. Shift is there because <code>urlFido</code>, the
-companion tool used more often, has Alt+Control+U: two shortcuts with
-one hotkey leave Windows to give it to whichever was made last.</p>
+urlCheck. Shift is there because urlFido, the companion tool used more
+often, has Alt+Control+U: two shortcuts with one hotkey leave Windows to
+give it to whichever was made last.</p>
 </main>
 </body>
 </html>
