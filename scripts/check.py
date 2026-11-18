@@ -1141,6 +1141,68 @@ def checkLaunchWords():
     return finding("launch words", "fail", "; ".join(lsHits))
 
 
+def checkReaderKeys():
+    """THE READER'S OWN KEYS STAY THE READER'S (1.259.0, 18 November 2026). Homer never breaks a screen reader's key
+    (the author's rule of 2 November 2026), and data\\KeyOwnership.inix marks JAWS's voice-rate keys, its mouse keys
+    and the like "never bind". The suite's key gate reads only SuiteCommands.inix, so DbDo's grid keys, handled outside
+    the router, went unread: Column Top and Column Bottom took Alt+Control+PageUp and PageDown, JAWS's temporary voice
+    rate, and DbDo's JAWS key map handed them on, though Control+Home and Control+End did the same thing. This reads
+    the app's own key file -- configs\\Hotkeys.inix, or the [Hotkeys] section of configs\\<App>.inix -- and fails a
+    key that KeyOwnership.inix gives to Windows or a reader everywhere and does not approve. HomerView, which runs in
+    the reader's own browser and adds keys only where its reader has none, is left to the suite gate."""
+    if appName().lower() == "homerview": return finding("reader keys", "skip", "HomerView's keys are checked by the suite gate")
+    lsFiles = [os.path.join(sRoot, "configs", "Hotkeys.inix"), os.path.join(sRoot, "configs", appName() + ".inix")]
+    dKeys = {}
+    for sPath in lsFiles:
+        if not os.path.isfile(sPath): continue
+        sSection = ""
+        for sLine in readText(sPath).splitlines():
+            sTrim = sLine.strip()
+            if not sTrim or sTrim.startswith(";"): continue
+            if sTrim.startswith("[") and sTrim.endswith("]"): sSection = sTrim[1:-1].strip().lower(); continue
+            if os.path.basename(sPath).lower() != "hotkeys.inix" and sSection != "hotkeys": continue
+            if "=" not in sTrim: continue
+            sName, sValue = sTrim.split("=", 1)
+            for sKey in re.split(r"\s+or\s+", sValue.split(",")[0].strip()):
+                if sKey.strip(): dKeys.setdefault(sKey.strip().lower(), []).append(sName.strip())
+    if not dKeys: return finding("reader keys", "skip", "no key file in configs")
+    try:
+        import kind
+        sOwnership = os.path.join(kind.findKit([sRoot]) or "", "data", "KeyOwnership.inix")
+    except Exception:
+        sOwnership = ""
+    if not os.path.isfile(sOwnership): return finding("reader keys", "skip", "the kit's KeyOwnership.inix was not found")
+    lsBad = []
+    sKey, dNow = "", {}
+    lsEntries = []
+    for sLine in readText(sOwnership).splitlines() + ["[end]"]:
+        sTrim = sLine.strip()
+        if sTrim.startswith("[") and sTrim.endswith("]"):
+            if sKey: lsEntries.append((sKey, dNow))
+            sKey, dNow = (sTrim[5:-1].strip() if sTrim.lower().startswith("[key ") else ""), {}
+        elif "=" in sTrim and not sTrim.startswith(";"):
+            sName, sValue = sTrim.split("=", 1); dNow[sName.strip().lower()] = sValue.strip()
+    for sOwned, dOwner in lsEntries:
+        if dOwner.get("kind", "") not in ("system", "reader global") or dOwner.get("disposition", "").startswith("approved"): continue
+        lsNames = dKeys.get(sOwned.lower())
+        if lsNames: lsBad.append("%s binds %s, %s's %s (%s)" % (", ".join(lsNames), sOwned, dOwner.get("owner", ""), dOwner.get("what", ""), dOwner.get("disposition", "")))
+    # A KEY JAWS OWNS EVERYWHERE IS NEVER HANDED ON BY HAND. DbDo's key map passed Alt+Control+PageUp and PageDown to
+    # DbDo with lines of its own, so JAWS lost its voice rate there; only the kit's pass-through block, written by tidy
+    # from passThrough=yes, may hand such a key on.
+    sJkm = os.path.join(sRoot, "scripts", "jaws", appName() + ".jkm")
+    if os.path.isfile(sJkm):
+        dGlobal = dict((s.lower(), d) for s, d in lsEntries if d.get("kind", "") == "reader global" and "jaws" in d.get("owner", "").lower() and d.get("passthrough", "").lower() != "yes")
+        for sLine in readText(sJkm).splitlines():
+            sTrim = sLine.strip()
+            if not sTrim or sTrim.startswith((";", "[")) or "=" not in sTrim: continue
+            sJkmKey = sTrim.split("=", 1)[0].strip()
+            if sJkmKey.lower() in dGlobal:
+                lsBad.append("%s.jkm hands %s to the app, taking JAWS's %s" % (appName(), sJkmKey, dGlobal[sJkmKey.lower()].get("what", "")))
+    if not lsBad: return finding("reader keys", "pass", "no key of Windows's or a reader's own is bound")
+    for sBad in lsBad: logLine("reader keys: " + sBad)
+    return finding("reader keys", "fail", "; ".join(lsBad))
+
+
 def checkLbcMessages():
     """EVERY DIALOG ANSWERS SHIFT+F1 AND CONTROL+SLASH (1.258.0, 18 November 2026, the author's ruling: "Shift+F1 and
     Control+Slash should work in every dialog"). A Windows message box answers neither, and six launch apps showed
@@ -2416,6 +2478,7 @@ def main():
         checkConversions()
         checkLaunchWords()
         checkLbcMessages()
+        checkReaderKeys()
         checkHelpKeysDocumented()
         checkBuild(dArguments.build)
         checkSmoke(dArguments.build)

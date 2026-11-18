@@ -6300,8 +6300,7 @@ def showGuiDialog(arguments):
         # An output folder that does not exist yet: offer to make it
         # (default Yes). No, or a failure, returns to the dialog.
         # The kit's question, the same in every launch app (18 November 2026), through Homer.dll.
-        Homer = lbcnet.load()
-        if not bool(Homer.LaunchDialog.confirmOutput(sProgramName, sOutputDir)): continue
+        if not confirmOutput(sOutputDir): continue
         # Main profile needs Edge closed: Edge does not share its profile
         # across processes, and launching against one in use fails later and
         # confusingly. Saying so here lets the user close Edge and press OK
@@ -6325,6 +6324,27 @@ def showGuiDialog(arguments):
         arguments.bUseConfig = bUseCfg
         arguments.bViewOutput = bView
         return True
+
+
+def confirmOutput(sOutputDir):
+    """Offer to make an output directory that does not exist yet, Yes by default; False returns to the dialog. The
+    kit's LaunchDialog.confirmOutput, through Homer.dll, so every launch app asks the same way (18 November 2026). A
+    Homer.dll older than kit 1.258.0 lacks it -- urlCheck 1.12 shipped with one, since the kit had not compiled -- so
+    the same question is asked through lbcnet.message then, in the kit's words."""
+    sCandidate = (sOutputDir or "").strip()
+    if len(sCandidate) >= 2 and sCandidate[0] == '"' and sCandidate[-1] == '"': sCandidate = sCandidate[1:-1].strip()
+    if not sCandidate or os.path.isdir(sCandidate): return True
+    Homer = lbcnet.load()
+    if Homer is not None:
+        try: return bool(Homer.LaunchDialog.confirmOutput(sProgramName, sCandidate))
+        except Exception as ex: logger.info(f"LaunchDialog.confirmOutput is not in this Homer.dll ({ex}); asking through lbcnet")
+    if lbcnet.message(f"Create the output directory {sCandidate}?", sProgramName, "yesno", "question") != "yes": return False
+    try:
+        os.makedirs(sCandidate, exist_ok=True)
+        return True
+    except Exception as ex:
+        lbcnet.message(f"Could not create the output directory {sCandidate}: {ex}", sProgramName, "ok", "warning")
+        return False
 
 
 def keptLine(iCount, sNoun):

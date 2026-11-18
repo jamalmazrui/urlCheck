@@ -5,6 +5,11 @@ author: "Jamal Mazrui"
 
 # urlCheck History
 
+## 18 November 2026 -- Built with a kit that compiles
+
+- **The output-directory question works with an older Homer.dll.** urlCheck 1.12 was built while the kit's C# did not compile, so it carries a Homer.dll without the kit's new question; it now asks the same question itself when Homer.dll lacks it.
+- **This needs HomerDev 1.259.0.** Kit 1.258.0's Say.cs lost a quotation mark, so no C# app could build with it.
+
 ## 18 November 2026 -- One set of dialog keys, names and words across Homer
 
 - **Shift+F1 and Control+Slash work in every message, as in every Homer dialog.** urlCheck's messages were Windows message boxes, which answer neither: the sign-in pause in front of Edge, the question that offers to make an output directory, and the problems found in the sources. Each is now an Lbc dialog, through the kit's LbcMessage, so What This Does and Where Am I work there too, Yes is Alt+Y and No is Alt+N, and Control+Enter and Escape answer as everywhere.
