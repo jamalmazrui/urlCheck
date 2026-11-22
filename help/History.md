@@ -5,6 +5,11 @@ author: "Jamal Mazrui"
 
 # urlCheck History
 
+## 22 November 2026 -- Every box decided before the last page
+
+- **The installer checks what is installed before its last page,** in alphabetical order, while the progress bar still shows, so each box already says Install, Update or Reinstall when the page appears.
+- **This needs HomerDev 1.273.0.**
+
 ## 18 November 2026 -- Updates are called updates
 
 - **The installer calls an update an update.** It looked for the version already installed under its AppId with a doubled brace, which Inno writes with one, so it never found it and said "Installed" on the welcome page and in the Results box for every update. It now asks the kit's homerPriorVersion, which finds it.
